@@ -1,0 +1,129 @@
+{
+  "bundles": [
+    "typescript-library"
+  ],
+  "documentation": {
+    "hotspots": []
+  },
+  "exceptions": [],
+  "freshness": {
+    "holds": [
+      {
+        "name": "@types/node",
+        "owner": "threadlabs-studio",
+        "reason": "Type declarations intentionally target the minimum supported Node line.",
+        "reviewDate": "2027-01-31"
+      }
+    ]
+  },
+  "modules": [],
+  "ownership": [
+    {
+      "mode": "local",
+      "path": ".compound-engineering/config.yaml"
+    },
+    {
+      "mode": "local",
+      "path": ".gitignore"
+    },
+    {
+      "mode": "local",
+      "path": "AGENTS.md"
+    },
+    {
+      "mode": "local",
+      "path": "README.md"
+    },
+    {
+      "mode": "local",
+      "path": "package.json"
+    },
+    {
+      "mode": "local",
+      "path": "src/index.ts"
+    },
+    {
+      "mode": "local",
+      "path": "tests/index.test.ts"
+    },
+    {
+      "mode": "local",
+      "path": "tests/package.test.ts"
+    },
+    {
+      "mode": "managed",
+      "path": ".gitattributes"
+    },
+    {
+      "mode": "managed",
+      "path": ".github/dependabot.yml"
+    },
+    {
+      "mode": "managed",
+      "path": ".github/workflows/ci.yml"
+    },
+    {
+      "mode": "managed",
+      "path": ".github/workflows/release.yml"
+    },
+    {
+      "mode": "managed",
+      "path": ".threadlabs.lock.json"
+    },
+    {
+      "mode": "managed",
+      "path": "CHANGELOG.md"
+    },
+    {
+      "mode": "managed",
+      "path": "CLAUDE.md"
+    },
+    {
+      "mode": "managed",
+      "path": "LICENSE"
+    },
+    {
+      "mode": "managed",
+      "path": "docs/code-documentation-standard.md"
+    },
+    {
+      "mode": "managed",
+      "path": "oxlint.json"
+    },
+    {
+      "mode": "managed",
+      "path": "pnpm-workspace.yaml"
+    },
+    {
+      "mode": "managed",
+      "path": "scripts/release.mjs"
+    },
+    {
+      "mode": "managed",
+      "path": "threadlabs.config.json"
+    },
+    {
+      "mode": "managed",
+      "path": "tsconfig.build.json"
+    },
+    {
+      "mode": "managed",
+      "path": "tsconfig.json"
+    },
+    {
+      "mode": "managed",
+      "path": "vitest.config.ts"
+    }
+  ],
+  "release": {
+    "strategy": "single-package"
+  },
+  "schemaVersion": "1.0",
+  "settings": {
+    "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
+    "licenseHolder": "threadlabs-studio",
+    "licenseYear": 2026,
+    "projectName": "markupress"
+  },
+  "standardVersion": "1.0.0"
+}

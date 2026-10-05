@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+.threadlabs/
+.context/
+.compound-engineering/config.local.yaml
+*.tgz
+.DS_Store

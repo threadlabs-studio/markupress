@@ -1,0 +1,6 @@
+docs_root: docs
+plan_output: md
+brainstorm_output: md
+cross_model_review_mode: off
+work_engine_mode: off
+auto_babysit: true

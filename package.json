@@ -1,0 +1,49 @@
+{
+  "name": "markupress",
+  "version": "0.0.2",
+  "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.13 <23 || >=24 <25"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "clean": "node --input-type=module --eval \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
+    "build": "pnpm clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "oxlint --deny-warnings .",
+    "test": "vitest run --exclude tests/package.test.ts --passWithNoTests",
+    "test:package": "vitest run tests/package.test.ts",
+    "verify:inner": "pnpm lint && pnpm typecheck && pnpm test",
+    "verify:pr": "pnpm verify:inner && pnpm build && pnpm test:package",
+    "verify:extended": "pnpm verify:pr",
+    "verify:release": "pnpm verify:pr && pnpm pack --dry-run",
+    "prepack": "pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "oxlint": "1.81.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.0"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/threadlabs-studio/markupress.git"
+  },
+  "homepage": "https://github.com/threadlabs-studio/markupress#readme",
+  "bugs": {
+    "url": "https://github.com/threadlabs-studio/markupress/issues"
+  }
+}
