@@ -2,8 +2,8 @@
   "artifacts": {
     ".gitattributes": "e54c83aec897237a7b75759915ef0634b3466eae3614a8d676db2012d49faa9e",
     ".github/dependabot.yml": "4c835c01213d922e37a495e4c027c9fc5a37afe86939ac216d848f18750b19d2",
-    ".github/workflows/ci.yml": "0cc1702cea6bb4d695d547a47cef1e0ad9426ae4ee33e5f896ade44abf5758e1",
-    ".github/workflows/release.yml": "2532ce714a7a82f043db97b08defe5cd3b58408885956b9cdc8d742d7cd44ce4",
+    ".github/workflows/ci.yml": "efe24ce5cbbaf44d0f899246c1b194d22530f9fc0c668a95a2b871e8c619da3d",
+    ".github/workflows/release.yml": "cab273c80e52ba40f7c8145a24f3a15da4755e993f6b3dfdcdcaaedde69882d3",
     "CHANGELOG.md": "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04",
     "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
     "LICENSE": "6bed3f63fdb93da6da00d91f2611a0f51cb1b9c0f0fc63d37084ee24babc8ff6",
