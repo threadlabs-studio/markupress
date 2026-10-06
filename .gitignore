@@ -6,3 +6,8 @@ coverage/
 .compound-engineering/config.local.yaml
 *.tgz
 .DS_Store
+/site/
+.markupress/
+.markupress-build-*/
+
+/examples/site/site/

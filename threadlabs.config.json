@@ -40,6 +40,10 @@
     },
     {
       "mode": "local",
+      "path": "pnpm-workspace.yaml"
+    },
+    {
+      "mode": "local",
       "path": "src/index.ts"
     },
     {
@@ -89,10 +93,6 @@
     {
       "mode": "managed",
       "path": "oxlint.json"
-    },
-    {
-      "mode": "managed",
-      "path": "pnpm-workspace.yaml"
     },
     {
       "mode": "managed",

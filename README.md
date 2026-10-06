@@ -1,29 +1,133 @@
 # Markupress
 
-Versioned Markdown documentation built on HTMLKit and native declarative components, with a Looma theme.
+Build a versioned Markdown documentation site with native HTML Next components, HTMLKit routing and a Looma theme. Markupress provides `build`, `dev`, `preview` and `snapshot` commands. Production output is a portable static directory; controllers enhance the rendered HTML in the browser.
 
-Markupress is under development. The npm package `markupress@0.0.1` reserves the name; it does not contain the documentation generator. This repository establishes the development baseline and [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md).
+The npm package `markupress@0.0.1` only reserves the name. The implementation below is being prepared for the first product release.
 
-## Product direction
-
-- Markdown supports native declarative components and resource dependency links.
-- Documentation versions have immutable snapshots and version-aware links and navigation.
-- HTMLKit owns ordered file routes and the reusable navigation component. Markupress supplies documentation policy and the Looma theme.
-- Maintained controllers use strict ESM TypeScript 7. HTML references their emitted `.js` names; development and production resolution must be verified before this convention is documented as supported.
-- Existing Markdown, code examples, assets, anchors, and route aliases remain migration inputs.
-
-## Development
+## Try the source build
 
 Use a supported Node 22 or 24 LTS release and pnpm through Corepack:
 
 ```sh
 corepack pnpm install --frozen-lockfile
-corepack pnpm verify:pr
+corepack pnpm build
+node dist/cli.js dev --root examples/site
+node dist/cli.js build --root examples/site
+node dist/cli.js preview --root examples/site
 ```
 
-Foundation pins TypeScript, Vitest, Oxlint, and pnpm. [AGENTS.md](AGENTS.md) is the canonical contributor contract; the [Foundation manifest](threadlabs.config.json) records ownership.
+The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. The dev server recompiles Markdown edits, additions and deletions; component modules use HTMLKit's Vite pipeline.
 
-Publishing uses the approval-gated GitHub release workflow and npm environment. No product release is ready yet.
+## Author a site
+
+Create `docs/01-index.md` and optionally `markupress.config.json`:
+
+```json
+{
+  "title": "Project documentation",
+  "contentDir": "docs",
+  "base": "/manual/",
+  "outDir": "site"
+}
+```
+
+Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite`, `previewSite` and `prepareSite` APIs accept the same options plus `root`, `host` and `port`.
+
+```markdown
+---
+title: Installation
+description: Install the project and run your first example.
+sidebarLabel: Install
+id: install
+aliases: [/getting-started/]
+---
+# Installation
+
+[Next steps](03-usage.md#usage)
+
+<link rel="component" href="../../components/counter.html">
+
+<demo-counter></demo-counter>
+```
+
+`01-guide/02-install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02-` to `10-` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
+
+Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Frontmatter title and description become metadata inside the owning page component. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
+
+Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+
+## TypeScript controllers
+
+Maintain controllers in strict ESM TypeScript, with `.js` references in HTML:
+
+```html
+<template component="demo-counter" controller="./counter.js">
+  <defs><state name="count" type="number" value="0"></state></defs>
+  <div><button>Increment</button><output $value="count"></output></div>
+</template>
+```
+
+```ts
+// counter.ts
+import type { ComponentHost } from '@nextwebwg/html-next/runtime';
+
+export default function counter(host: ComponentHost): void {
+  host.on('connect', () => {
+    const button = host.root.querySelector('button')!;
+    const click = () => { host.state.count = Number(host.state.count) + 1; };
+    button.addEventListener('click', click);
+    return () => button.removeEventListener('click', click);
+  });
+}
+```
+
+HTMLKit resolves `counter.js` to `counter.ts` in development and bundles its JavaScript for production. Vite transpiles; it does not type-check. Install TypeScript and `@nextwebwg/html-next` as direct development dependencies when importing its controller types, and run your project's strict TypeScript check separately. Markupress maintains its controllers with TypeScript 7. Checked JSDoc is an authoring option for your own controllers.
+
+## Versions
+
+Record active docs without overwriting an existing edition:
+
+```sh
+markupress snapshot v1
+markupress build
+```
+
+The command validates a build and writes `versioned_docs/v1/`, then atomically appends its descriptor to `versioned_docs/versions.json`. It mirrors Markdown, public assets and project-local component, controller, stylesheet and asset dependencies, preserving relative imports. Existing snapshots are never replaced. Keep those files in version control. Package imports continue to use the project's installed dependencies and lockfile; snapshots freeze authored sources rather than vendoring npm packages.
+
+Use relative project-local imports for snapshot content. Absolute filesystem imports and remote resources retain their external ownership. If a snapshot process crashes, check that it has stopped before removing its `versioned_docs/.snapshot-lock` directory and recovering any incomplete destination.
+
+For explicit versions, configure their order and labels:
+
+```json
+{
+  "versions": [
+    { "id": "current", "label": "Next", "directory": "docs" },
+    { "id": "v1", "label": "Version 1", "directory": "versioned_docs/v1/_source/docs", "publicDir": "versioned_docs/v1/_source/public" }
+  ],
+  "defaultVersion": "v1"
+}
+```
+
+Version IDs are URL slugs; they need not follow SemVer. A document's `id` identifies it across versions independently of its filename, route and generated component name. The version selector links to that identity in the other version, even if its route changed. If it is absent, the selector explains the fallback and links to that version's home. Selection lives in the URL and survives reloads.
+
+## Theme and migration inputs
+
+The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference. It uses the platform's existing runtime.
+
+Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
+
+## Verification and contribution
+
+```sh
+corepack pnpm verify:inner
+corepack pnpm verify:pr
+corepack pnpm exec playwright install chromium
+MARKUPRESS_BROWSER_TEST=1 corepack pnpm exec vitest run tests/package.test.ts --maxWorkers=1
+```
+
+The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers, keyboard version selection, reloads, mobile navigation and an axe accessibility audit. CI runs that browser proof separately.
+
+Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is the contributor contract; [threadlabs.config.json](threadlabs.config.json) records ownership. The [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md) defines product boundaries. Publishing uses the protected GitHub release workflow and npm environment.
 
 ## License
 
