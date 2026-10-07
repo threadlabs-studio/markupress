@@ -6,11 +6,13 @@
 - Markupress is a public MIT documentation product, published as the unscoped npm package `markupress`.
 - HTMLKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
 - Use the public HTML Next proposal for declarative component semantics. Do not introduce another component parser or runtime.
+- When Markupress exposes an HTMLKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
 - Keep document identity, URL paths, and component names separate. Preserve code examples literally and resolve dependency links relative to their original source.
 
 ## Implementation
 
 - Use strict ESM TypeScript 7, pnpm through Corepack, and Foundation's maintained Node LTS range and resolved pins.
+- Keep pnpm-workspace.yaml locally owned for exact verified dependency age exceptions; retain the age gate for other versions.
 - Controllers are authored in TypeScript and referenced as `.js` from HTML. Verify this through installed development and production consumers before claiming support.
 - Use Oxlint and project-owned CSS. Never add Prettier or Tailwind.
 - Audit native browser mechanisms before adding runtime behavior. Use Looma native component resources selectively rather than importing a second auto-registering runtime.

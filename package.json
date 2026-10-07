@@ -4,15 +4,18 @@
   "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
   "license": "MIT",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": ["**/*.css"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./controllers/shell.js": "./dist/controllers/shell.js",
+    "./styles/base.css": "./styles/base.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "styles"
   ],
   "engines": {
     "node": ">=22.13 <23 || >=24 <25"
@@ -23,7 +26,7 @@
     "build": "pnpm clean && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "oxlint --deny-warnings .",
-    "test": "vitest run --exclude tests/package.test.ts --passWithNoTests",
+    "test": "pnpm build && vitest run --exclude tests/package.test.ts",
     "test:package": "vitest run tests/package.test.ts",
     "verify:inner": "pnpm lint && pnpm typecheck && pnpm test",
     "verify:pr": "pnpm verify:inner && pnpm build && pnpm test:package",
@@ -35,9 +38,11 @@
     "@types/node": "22.20.1",
     "oxlint": "1.81.0",
     "typescript": "7.0.2",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "playwright": "1.63.0",
+    "@axe-core/playwright": "4.13.0"
   },
-  "private": true,
+  "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/threadlabs-studio/markupress.git"
@@ -45,5 +50,18 @@
   "homepage": "https://github.com/threadlabs-studio/markupress#readme",
   "bugs": {
     "url": "https://github.com/threadlabs-studio/markupress/issues"
+  },
+  "dependencies": {
+    "@nextwebwg/htmlkit": "1.0.0-alpha.31",
+    "marked": "18.1.0",
+    "parse5": "8.0.1",
+    "yaml": "2.9.1",
+    "@threadlabs/looma": "0.25.2",
+    "postcss": "8.5.29",
+    "postcss-value-parser": "4.2.0",
+    "@nextwebwg/html-next": "1.0.0-alpha.31"
+  },
+  "bin": {
+    "markupress": "./dist/cli.js"
   }
 }
