@@ -64,6 +64,14 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
     for (const mode of ['preview', 'dev'] as const) {
       server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ root: workspace, base: '/manual/', port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      await context.addInitScript(() => {
+        const record = () => {
+          const button = document.querySelector('[data-action="theme"]');
+          if (button && document.documentElement.dataset.theme === 'dark') (window as unknown as { firstDarkColor?: string }).firstDarkColor ??= getComputedStyle(button).color;
+          else requestAnimationFrame(record);
+        };
+        requestAnimationFrame(record);
+      });
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
@@ -74,6 +82,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
+      // A saved theme applies after first paint; its first dark frame must not fade out of the default theme.
+      const settledDark = await page.getByRole('button', { name: 'Dark theme' }).evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); return getComputedStyle(element).color; });
+      expect(await page.evaluate(() => (window as unknown as { firstDarkColor?: string }).firstDarkColor)).toBe(settledDark);
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
@@ -95,6 +107,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.getByRole('button', { name: 'Navigation', exact: true }).getAttribute('aria-expanded')).toBe('false');
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
       await expect.poll(() => page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
+      await expect.poll(() => page.getByRole('button', { name: 'Navigation', exact: true }).getAttribute('aria-expanded')).toBe('true');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
       expect(errors).toEqual([]); await context.close(); await server.close(); server = undefined;

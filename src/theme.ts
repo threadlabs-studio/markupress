@@ -9,11 +9,12 @@ export function themeResource(title: string, base: string): string {
 <title>${title}</title><defs>
 <prop name="navigation" type="list(object({ href: string, label: string, current: string, depth: number, pageName: string }))" required>Documentation links</prop>
 <prop name="versions" type="list(object({ href: string, label: string, current: string, note: string }))" required>Documentation versions</prop>
-<state name="menu" type="boolean" value="true"></state></defs>
+<state name="menu" type="boolean" value="true"></state>
+<state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
 <header><a class="brand" href="${base}">${title}</a><div class="actions">
-<ui-button variant="ghost" tone="neutral" data-action="menu" aria-expanded="true" aria-controls="documentation-navigation">Navigation</ui-button>
-<ui-button variant="ghost" tone="neutral" data-action="theme" aria-pressed="false">Dark theme</ui-button></div></header>
+<ui-button variant="ghost" tone="neutral" data-action="menu" from:aria-expanded="menu" aria-controls="documentation-navigation">Navigation</ui-button>
+<ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="dark">Dark theme</ui-button></div></header>
 <div class="columns"><aside id="documentation-navigation" $if="menu">
 <htmlkit-navigation from:items="navigation" label="Documentation"></htmlkit-navigation>
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of versions"><a from:href="version.href" from:aria-current="version.current" $value="version.label"></a><small $if="version.note" $value="version.note"></small></li></ul></nav>

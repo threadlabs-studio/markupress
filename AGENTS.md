@@ -6,6 +6,7 @@
 - Markupress is a public MIT documentation product, published as the unscoped npm package `markupress`.
 - HTMLKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
 - Use the public HTML Next proposal for declarative component semantics. Do not introduce another component parser or runtime.
+- When Markupress exposes an HTMLKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
 - Keep document identity, URL paths, and component names separate. Preserve code examples literally and resolve dependency links relative to their original source.
 
 ## Implementation

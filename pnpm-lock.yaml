@@ -167,11 +167,11 @@ importers:
   .:
     dependencies:
       '@nextwebwg/html-next':
-        specifier: 1.0.0-alpha.30
-        version: 1.0.0-alpha.30
+        specifier: 1.0.0-alpha.31
+        version: 1.0.0-alpha.31
       '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.30
-        version: 1.0.0-alpha.30(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: 1.0.0-alpha.31
+        version: 1.0.0-alpha.31(@types/node@22.20.1)(yaml@2.9.1)
       '@threadlabs/looma':
         specifier: 0.25.2
         version: 0.25.2
@@ -307,13 +307,13 @@ packages:
     engines: {node: '>=22.13 <23 || >=24 <25'}
     hasBin: true
 
-  '@nextwebwg/html-next@1.0.0-alpha.30':
-    resolution: {integrity: sha512-0LX+idC5xpIGgH1ZxS2cc1FdSkuTIXuF7YHZUHJgevpkRiZQy9pNtjslBi8y3E5ooxOjUUwBcpMJxOT17Yix4A==}
+  '@nextwebwg/html-next@1.0.0-alpha.31':
+    resolution: {integrity: sha512-RrV/6KEfsjgdoVTOTsDDkPlMk3F1gtnResOUT13N9Gj8tq8XFb9orVDTERgmrbPpgx4YTldqoa8/eULJQzpmTA==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
     hasBin: true
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.30':
-    resolution: {integrity: sha512-TqNoTdi3a9NAULlR1inEIuOob5TsQb5B/URtnTd+PNr2LWgJUQeYJwAQ9WwNyd7s9dFvTTOySOeMGVrClzfIVA==}
+  '@nextwebwg/htmlkit@1.0.0-alpha.31':
+    resolution: {integrity: sha512-rPsGhqT7+3R8qGHx2hqwotYZgm0VMftHChFvXDjF6MPIf0VjeqT+JWhsPBUqf0gTiVTEyLCMtYd30/bbi3OElg==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
     hasBin: true
 
@@ -1315,7 +1315,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@nextwebwg/html-next@1.0.0-alpha.30':
+  '@nextwebwg/html-next@1.0.0-alpha.31':
     dependencies:
       '@dprint/formatter': 0.5.1
       '@dprint/typescript': 0.96.1
@@ -1333,9 +1333,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.30(@types/node@22.20.1)(yaml@2.9.1)':
+  '@nextwebwg/htmlkit@1.0.0-alpha.31(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.30
+      '@nextwebwg/html-next': 1.0.0-alpha.31
       parse5: 8.0.1
       vite: 8.3.2(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:
@@ -1934,7 +1934,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
-      postcss: 8.5.28
+      postcss: 8.5.29
       rolldown: 1.2.12
       tinyglobby: 0.2.17
     optionalDependencies:
