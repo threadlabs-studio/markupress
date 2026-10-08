@@ -13,11 +13,11 @@ export function themeResource(title: string, base: string): string {
 <state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
 <header><a class="brand" href="${base}">${title}</a><div class="actions">
-<ui-button variant="ghost" tone="neutral" data-action="menu" from:aria-expanded="menu" aria-controls="documentation-navigation">Navigation</ui-button>
-<ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="dark">Dark theme</ui-button></div></header>
-<div class="columns"><aside id="documentation-navigation" $if="menu">
-<htmlkit-navigation from:items="navigation" label="Documentation"></htmlkit-navigation>
-<nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of versions"><a from:href="version.href" from:aria-current="version.current" $value="version.label"></a><small $if="version.note" $value="version.note"></small></li></ul></nav>
+<ui-button variant="ghost" tone="neutral" data-action="menu" from:aria-expanded="$menu" aria-controls="documentation-navigation">Navigation</ui-button>
+<ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
+<div class="columns"><aside id="documentation-navigation" $if="$menu">
+<htmlkit-navigation from:items="$navigation" label="Documentation"></htmlkit-navigation>
+<nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current" $value="$version.label"></a><small $if="$version.note" $value="$version.note"></small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><slot name="page"></slot></main></div></div>
 <style>
 @import "@threadlabs/looma/tokens.css";

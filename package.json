@@ -18,7 +18,7 @@
     "styles"
   ],
   "engines": {
-    "node": ">=22.13 <23 || >=24 <25"
+    "node": ">=22.22.2 <23 || >=24.15 <25"
   },
   "packageManager": "pnpm@12.9.1",
   "scripts": {
@@ -52,14 +52,14 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "@nextwebwg/htmlkit": "1.0.0-alpha.31",
+    "@nextwebwg/htmlkit": "1.0.0-alpha.35",
     "marked": "18.1.0",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
-    "@threadlabs/looma": "0.25.2",
+    "@threadlabs/looma": "0.26.0",
     "postcss": "8.5.29",
     "postcss-value-parser": "4.2.0",
-    "@nextwebwg/html-next": "1.0.0-alpha.31"
+    "@nextwebwg/html-next": "1.0.0-alpha.35"
   },
   "bin": {
     "markupress": "./dist/cli.js"
