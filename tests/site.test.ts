@@ -1,9 +1,9 @@
 import { linkDependencies } from './fixture.js';
-import { mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { buildSite, prepareSite } from '../src/site.js';
+import { buildSite, siteOptions } from '../src/site.js';
 import { createApplication } from '@nextwebwg/htmlkit';
 
 const roots: string[] = [];
@@ -18,30 +18,29 @@ async function fixture() {
   return root;
 }
 
-it('prepares ordered in-memory HTMLKit routes, original-source assets, and version-local document links', async () => {
-  const root = await fixture();
-  const prepared = await prepareSite({ root, base: '/manual/' });
-  const generated = await prepared.application.generate!();
-  // Each Markdown file is its own page component; nothing is written beside the content.
-  expect(generated.files?.get(join(root, 'docs/01-index.md'))).toContain('href="/manual/v/current/guide/install/"');
-  expect(generated.files?.get(join(root, 'docs/01-guide/02-install.md'))).toContain('/manual/_markupress/assets/');
-  expect([...generated.publicFiles!.values()]).toEqual([join(root, 'docs/mark.svg')]);
-  expect(prepared.documents.map(doc => doc.id).sort()).toEqual(['guide/install', 'index']);
-  expect(generated.routes?.map(route => route.pattern)).toContain('/guide/install/');
-  expect(generated.routes?.find(route => route.pattern === '/v/current/guide/install/')?.order).toEqual([null, null, '01', '02']);
+it('routes Markdown pages through HTMLKit with version-local links and served assets', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const application = await createApplication(siteOptions({ root, base: '/manual/' }));
+  try {
+    expect(application.routes.map(route => route.pattern)).toEqual(expect.arrayContaining(['/v/current/', '/v/current/guide/install/', '/', '/guide/install/']));
+    expect((await application.render('/manual/')).html).toContain('href="/manual/v/current/guide/install/"');
+    expect((await application.render('/manual/v/current/guide/install/')).html).toMatch(/src="\/manual\/_htmlkit\/files\/[0-9a-f]{16}-mark\.svg"/);
+    expect([...application.files.values()]).toEqual([await realpath(join(root, 'docs/mark.svg'))]);
+  } finally { await application.close(); }
+  // Markdown compiles in memory; nothing is written beside the content.
   await expect(stat(join(root, '.markupress'))).rejects.toThrow();
-});
+}, 30_000);
 
 it('reports URL and logical identity collisions against both Markdown sources', async () => {
   const root = await fixture();
   await write(root, 'docs/02-index.md', '# Other');
-  await expect(prepareSite({ root })).rejects.toThrow(/01-index\.md.*02-index\.md/s);
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/01-index\.md.*02-index\.md/s);
 });
 
 it('rejects missing local document links with the original source location', async () => {
   const root = await fixture();
   await write(root, 'docs/broken.md', '# Broken\n\n[Missing](missing.md)');
-  await expect(prepareSite({ root })).rejects.toThrow(/broken\.md.*missing\.md/s);
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/broken\.md.*missing\.md/s);
 });
 
 it('builds a static site using the installed HTMLKit package and native navigation', async () => {
@@ -56,7 +55,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   expect(page).toContain('data-component="htmlkit-navigation"');
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
-  expect((await readdir(join(result.outDir, '_markupress/assets'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
+  expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
 }, 30_000);
 
 it('reports native carrier build errors against the original Markdown file', async () => {
@@ -68,8 +67,7 @@ it('reports native carrier build errors against the original Markdown file', asy
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01-guide/02-install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
-  const prepared = await prepareSite({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] });
-  const application = await createApplication(prepared.application);
+  const application = await createApplication(siteOptions({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] }));
   try {
     const html = (await application.render('/v/current/start/')).html;
     expect(html).toContain('href="/v/v1/guide/install/"');

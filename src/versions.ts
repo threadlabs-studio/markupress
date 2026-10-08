@@ -1,9 +1,8 @@
-import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
-import { prepareSite, type DocumentationVersion, type MarkupressOptions } from './site.js';
+import { siteOptions, type DocumentationVersion, type MarkupressOptions } from './site.js';
 import { stylesheet } from './styles.js';
 
 export interface VersionLink {
@@ -51,11 +50,12 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
     }
     // Let HTMLKit/Vite identify the authored HTML, module, stylesheet and asset closure.
     // Mirroring project-relative paths keeps imports valid without rewriting source code.
-    const prepared = await prepareSite({ ...options, versions: [{ id: 'current', directory: relation }], defaultVersion: 'current' });
+    const site = siteOptions({ ...options, versions: [{ id: 'current', directory: relation }], defaultVersion: 'current' });
     const validation = join(destination, '.validation');
-    const built = await buildApplication({ ...prepared.application, outDir: validation });
-    const inputs = new Set([...built.browserInputs, ...prepared.sourceFiles]);
-    const application = await createApplication(prepared.application);
+    const built = await buildApplication({ ...site, outDir: validation });
+    const application = await createApplication(site);
+    // Files that Markdown references, which HTMLKit serves, belong to the snapshot too.
+    const inputs = new Set([...built.browserInputs, ...application.files.values()]);
     try {
       for (const pathname of await application.entries()) {
         for (const component of (await application.render(pathname)).components) {
@@ -76,7 +76,6 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
     for (const input of inputs) {
       const file = input.split('?')[0]!;
       if (file.endsWith('.htmlkit.css')) continue; // HTMLKit's virtual inline stylesheet, not an authored file.
-      if (!existsSync(file)) continue; // The in-memory shell layout and head script have no file.
       const path = relative(canonicalRoot, await realpath(file));
       if (isAbsolute(path) || path.startsWith('..') || path.split(/[/\\]/).some(part => ['node_modules', '.markupress', 'versioned_docs'].includes(part))) continue;
       const target = join(mirror, path); await mkdir(dirname(target), { recursive: true }); await cp(file, target);

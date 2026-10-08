@@ -16,7 +16,7 @@ node dist/cli.js build --root examples/site
 node dist/cli.js preview --root examples/site
 ```
 
-The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. The dev server is a live runtime. It renders each page from Markdown in memory through HTMLKit's `application.fetch` request handler, and any edit, addition or deletion reloads open pages; component modules use HTMLKit's Vite pipeline. `build` writes a static site, which is the only production output for now.
+The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. Markupress is a thin layer over HTMLKit: it translates Markdown and manages versions, and HTMLKit routes, orders, renders, watches and builds the pages. The dev server reloads open pages after any edit, addition or deletion. `build` writes a static site, which is the only production output for now.
 
 ## Author a site
 
@@ -31,7 +31,16 @@ Create `docs/01-index.md` and optionally `markupress.config.json`:
 }
 ```
 
-Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite`, `previewSite` and `prepareSite` APIs accept the same options plus `root`, `host` and `port`. `prepareSite` returns HTMLKit application options whose `generate()` compiles the site in memory; nothing is written beside your content.
+Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
+
+The same pieces work as HTMLKit plugins. `markupress(options)` adds versioned documentation with this theme. `markdown()` alone makes any HTMLKit site's `.md` files into pages, with no versions or theme:
+
+```ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+import { markdown } from 'markupress';
+
+export default defineConfig({ plugins: [markdown()] });
+```
 
 ```markdown
 ---
