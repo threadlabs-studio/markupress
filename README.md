@@ -63,7 +63,7 @@ Maintain controllers in strict ESM TypeScript, with `.js` references in HTML:
 ```html
 <template component="demo-counter" controller="./counter.js">
   <defs><state name="count" type="number" value="0"></state></defs>
-  <div><button>Increment</button><output $value="$count"></output></div>
+  <div><button>Increment</button><output>{$count}</output></div>
 </template>
 ```
 

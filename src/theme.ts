@@ -22,7 +22,7 @@ export function themeResource(title: string, base: string): string {
 <ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <div class="columns"><aside id="documentation-navigation" $if="$menu">
 <htmlkit-navigation from:items="$navigation" label="Documentation"></htmlkit-navigation>
-<nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current" $value="$version.label"></a><small $if="$version.note" $value="$version.note"></small></li></ul></nav>
+<nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><slot name="page"></slot></main></div></div>
 <style>
 @import "@threadlabs/looma/tokens.css";

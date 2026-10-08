@@ -36,11 +36,12 @@ Text {notAnExpression}.
 });
 
 it('preserves authored component expressions and emitted controller module spelling', () => {
-  const compiled = compileMarkdown(`<template component="helper-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><output $value="$count"></output></template>
+  const compiled = compileMarkdown(`<template component="helper-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><output>{$count}</output></template>
 
 <helper-counter></helper-counter>`, { file: '/project/docs/example.md', pageName: 'page-example' });
   expect(compiled.resource).toContain('controller="file:///project/docs/counter.js"');
-  expect(compiled.resource).toContain('$value="$count"');
+  // Braces inside a component carrier stay expressions; only Markdown prose escapes them.
+  expect(compiled.resource).toContain('<output>{$count}</output>');
   expect(compiled.resource).toContain('<meta name="htmlkit:page" content="page-example">');
 });
 
