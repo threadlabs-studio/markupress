@@ -6,7 +6,7 @@ The npm package `markupress@0.0.1` only reserves the name. The implementation be
 
 ## Try the source build
 
-Use a supported Node 22 or 24 LTS release and pnpm through Corepack:
+Use Node 22.22.2 or later in Node 22, or Node 24.15 or later in Node 24, and pnpm through Corepack:
 
 ```sh
 corepack pnpm install --frozen-lockfile
@@ -63,7 +63,7 @@ Maintain controllers in strict ESM TypeScript, with `.js` references in HTML:
 ```html
 <template component="demo-counter" controller="./counter.js">
   <defs><state name="count" type="number" value="0"></state></defs>
-  <div><button>Increment</button><output $value="count"></output></div>
+  <div><button>Increment</button><output $value="$count"></output></div>
 </template>
 ```
 

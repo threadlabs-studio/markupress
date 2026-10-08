@@ -24,6 +24,10 @@
     },
     {
       "mode": "local",
+      "path": ".github/workflows/ci.yml"
+    },
+    {
+      "mode": "local",
       "path": ".gitignore"
     },
     {
@@ -61,10 +65,6 @@
     {
       "mode": "managed",
       "path": ".github/dependabot.yml"
-    },
-    {
-      "mode": "managed",
-      "path": ".github/workflows/ci.yml"
     },
     {
       "mode": "managed",

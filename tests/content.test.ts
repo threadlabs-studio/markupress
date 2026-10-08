@@ -36,26 +36,26 @@ Text {notAnExpression}.
 });
 
 it('preserves authored component expressions and emitted controller module spelling', () => {
-  const compiled = compileMarkdown(`<template component="helper-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><output $value="count"></output></template>
+  const compiled = compileMarkdown(`<template component="helper-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><output $value="$count"></output></template>
 
 <helper-counter></helper-counter>`, { file: '/project/docs/example.md', pageName: 'page-example' });
   expect(compiled.resource).toContain('controller="file:///project/docs/counter.js"');
-  expect(compiled.resource).toContain('$value="count"');
+  expect(compiled.resource).toContain('$value="$count"');
   expect(compiled.resource).toContain('<meta name="htmlkit:page" content="page-example">');
 });
 
 it('keeps native carrier CSS and text expressions opaque to Markdown', () => {
-  const compiled = compileMarkdown('<template component="inline-example"><p>{count}</p><style>:host { color: teal; }</style></template>\n\n<inline-example></inline-example>', { file: '/project/demo.md', pageName: 'page-example' });
-  expect(compiled.resource).toContain('<p>{count}</p>');
+  const compiled = compileMarkdown('<template component="inline-example"><p>{$count}</p><style>:host { color: teal; }</style></template>\n\n<inline-example></inline-example>', { file: '/project/demo.md', pageName: 'page-example' });
+  expect(compiled.resource).toContain('<p>{$count}</p>');
   expect(compiled.resource).toContain(':host { color: teal; }');
 });
 
 it('resolves literal assets inside authored carriers while retaining dynamic attribute bindings', () => {
-  const compiled = compileMarkdown('<template component="inline-image"><div><img src="./image.svg"><img from:src="image"></div></template>', {
+  const compiled = compileMarkdown('<template component="inline-image"><div><img src="./image.svg"><img from:src="$image"></div></template>', {
     file: '/project/demo.md', pageName: 'page-example', resolveLink: href => '/assets/' + href.replace('./', ''),
   });
   expect(compiled.resource).toContain('src="/assets/image.svg"');
-  expect(compiled.resource).toContain('from:src="image"');
+  expect(compiled.resource).toContain('from:src="$image"');
 });
 
 it('reports duplicate frontmatter keys against the Markdown source', () => {
