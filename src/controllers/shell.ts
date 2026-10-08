@@ -6,17 +6,12 @@ export default function shell(host: ComponentHost): void {
   host.on('connect', () => {
     const document = host.root.ownerDocument;
     const window = document.defaultView!;
-    let saved: string | null = null;
-    try { saved = window.localStorage.getItem('markupress:theme'); } catch { /* Storage can be disabled while native controls remain usable. */ }
-    host.state.dark = saved === 'dark' || (saved === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    // app/head.js chose the theme before first paint.
+    host.state.dark = document.documentElement.dataset.theme === 'dark';
     const actions = host.root.querySelector(':scope > header > .actions')!;
     const applyTheme = () => {
       document.documentElement.dataset.theme = host.state.dark ? 'dark' : 'light';
     };
-    applyTheme();
-    // HTMLKit head metadata admits no script, so a saved theme lands after first paint. Settle it
-    // at once instead of animating controls out of the default theme; user toggles still animate.
-    for (const transition of document.getAnimations()) if (transition instanceof window.CSSTransition) transition.finish();
     const click = (event: Event) => {
       const target = event.target;
       if (!(target instanceof window.Element)) return;

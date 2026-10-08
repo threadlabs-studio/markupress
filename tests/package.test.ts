@@ -64,13 +64,16 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
     for (const mode of ['preview', 'dev'] as const) {
       server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ root: workspace, base: '/manual/', port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      // Records the theme in the first frame that shows the theme button, and any transition the button runs while loading.
       await context.addInitScript(() => {
+        const load = { theme: undefined as string | undefined, transitions: [] as string[] };
+        Object.assign(window, { load });
         const record = () => {
-          const button = document.querySelector('[data-action="theme"]');
-          if (button && document.documentElement.dataset.theme === 'dark') (window as unknown as { firstDarkColor?: string }).firstDarkColor ??= getComputedStyle(button).color;
+          if (document.querySelector('[data-action="theme"]')) load.theme = document.documentElement.dataset.theme;
           else requestAnimationFrame(record);
         };
         requestAnimationFrame(record);
+        document.addEventListener('transitionrun', event => { if (event.target instanceof Element && event.target.closest('[data-action="theme"]')) load.transitions.push(event.propertyName); }, true);
       });
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(server.url + 'v/current/guide/install/');
@@ -83,9 +86,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
-      // A saved theme applies after first paint; its first dark frame must not fade out of the default theme.
-      const settledDark = await page.getByRole('button', { name: 'Dark theme' }).evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); return getComputedStyle(element).color; });
-      expect(await page.evaluate(() => (window as unknown as { firstDarkColor?: string }).firstDarkColor)).toBe(settledDark);
+      // A saved theme is applied before first paint, so nothing fades out of the default theme.
+      expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [] });
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();

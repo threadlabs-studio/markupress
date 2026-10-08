@@ -16,7 +16,7 @@ node dist/cli.js build --root examples/site
 node dist/cli.js preview --root examples/site
 ```
 
-The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. The dev server recompiles Markdown edits, additions and deletions; component modules use HTMLKit's Vite pipeline.
+The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. The dev server is a live runtime. It renders each page from Markdown in memory through HTMLKit's `application.fetch` request handler, and any edit, addition or deletion reloads open pages; component modules use HTMLKit's Vite pipeline. `build` writes a static site, which is the only production output for now.
 
 ## Author a site
 
@@ -31,7 +31,7 @@ Create `docs/01-index.md` and optionally `markupress.config.json`:
 }
 ```
 
-Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite`, `previewSite` and `prepareSite` APIs accept the same options plus `root`, `host` and `port`.
+Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite`, `previewSite` and `prepareSite` APIs accept the same options plus `root`, `host` and `port`. `prepareSite` returns HTMLKit application options whose `generate()` compiles the site in memory; nothing is written beside your content.
 
 ```markdown
 ---
@@ -112,7 +112,7 @@ Version IDs are URL slugs; they need not follow SemVer. A document's `id` identi
 
 ## Theme and migration inputs
 
-The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference. It uses the platform's existing runtime.
+The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
 

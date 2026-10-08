@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +76,7 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
     for (const input of inputs) {
       const file = input.split('?')[0]!;
       if (file.endsWith('.htmlkit.css')) continue; // HTMLKit's virtual inline stylesheet, not an authored file.
+      if (!existsSync(file)) continue; // The in-memory shell layout and head script have no file.
       const path = relative(canonicalRoot, await realpath(file));
       if (isAbsolute(path) || path.startsWith('..') || path.split(/[/\\]/).some(part => ['node_modules', '.markupress', 'versioned_docs'].includes(part))) continue;
       const target = join(mirror, path); await mkdir(dirname(target), { recursive: true }); await cp(file, target);

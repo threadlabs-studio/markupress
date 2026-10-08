@@ -1,5 +1,5 @@
 import { linkDependencies } from './fixture.js';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -18,16 +18,18 @@ async function fixture() {
   return root;
 }
 
-it('prepares ordered HTMLKit routes, original-source assets, and version-local document links', async () => {
+it('prepares ordered in-memory HTMLKit routes, original-source assets, and version-local document links', async () => {
   const root = await fixture();
   const prepared = await prepareSite({ root, base: '/manual/' });
-  expect(prepared.application.routeOrdering).toBe(true);
-  const home = await readFile(join(prepared.application.root!, 'app/pages/v/current/01-index.html'), 'utf8');
-  expect(home).toContain('href="/manual/v/current/guide/install/"');
-  const install = await readFile(join(prepared.application.root!, 'app/pages/v/current/01-guide/02-install.html'), 'utf8');
-  expect(install).toContain('/manual/_markupress/assets/');
+  const generated = await prepared.application.generate!();
+  // Each Markdown file is its own page component; nothing is written beside the content.
+  expect(generated.files?.get(join(root, 'docs/01-index.md'))).toContain('href="/manual/v/current/guide/install/"');
+  expect(generated.files?.get(join(root, 'docs/01-guide/02-install.md'))).toContain('/manual/_markupress/assets/');
+  expect([...generated.publicFiles!.values()]).toEqual([join(root, 'docs/mark.svg')]);
   expect(prepared.documents.map(doc => doc.id).sort()).toEqual(['guide/install', 'index']);
-  expect(prepared.application.routes?.map(route => route.pattern)).toContain('/guide/install/');
+  expect(generated.routes?.map(route => route.pattern)).toContain('/guide/install/');
+  expect(generated.routes?.find(route => route.pattern === '/v/current/guide/install/')?.order).toEqual([null, null, '01', '02']);
+  await expect(stat(join(root, '.markupress'))).rejects.toThrow();
 });
 
 it('reports URL and logical identity collisions against both Markdown sources', async () => {
@@ -54,6 +56,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   expect(page).toContain('data-component="htmlkit-navigation"');
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
+  expect((await readdir(join(result.outDir, '_markupress/assets'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
 }, 30_000);
 
 it('reports native carrier build errors against the original Markdown file', async () => {

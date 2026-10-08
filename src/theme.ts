@@ -1,5 +1,10 @@
 import { escapeHTML, literal } from './content.js';
 
+/** HTMLKit inlines app/head.js before first paint, so a saved theme never shows the default first. */
+export const themeScript = `{ let saved = null; try { saved = localStorage.getItem('markupress:theme'); } catch { /* Storage can be disabled. */ }
+document.documentElement.dataset.theme = saved === 'dark' || (saved === null && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; }
+`;
+
 export function themeResource(title: string, base: string): string {
   const controller = 'markupress/controllers/shell.js';
   title = literal(escapeHTML(title));
