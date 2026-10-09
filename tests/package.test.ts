@@ -110,6 +110,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
       expect(await versions.getByRole('link', { name: 'v1', exact: true }).evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
+      // HTMLKit commits the URL before the page arrives. v1's counter has its own controller, which this
+      // document cannot also define, so HTMLKit loads v1 as a document; wait for it before clicking.
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.waitForLoadState();
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
