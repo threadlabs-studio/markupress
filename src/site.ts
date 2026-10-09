@@ -103,8 +103,10 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
-    return { headScript: themeScript, layout: { component: shell, server: { load } }, css: [...htmlkit.css ?? [], themeStyles],
-      pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/` })), { dir: home.directory }] };
+    // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs.
+    const layout = { component: shell, server: { load } };
+    return { headScript: themeScript, css: [themeStyles],
+      pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
   } };
 }
 
