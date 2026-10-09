@@ -16,11 +16,11 @@ node dist/cli.js build --root examples/site
 node dist/cli.js preview --root examples/site
 ```
 
-The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. The dev server recompiles Markdown edits, additions and deletions; component modules use HTMLKit's Vite pipeline.
+The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. Markupress is a thin layer over HTMLKit: it translates Markdown and manages versions, and HTMLKit routes, orders, renders, watches and builds the pages. The dev server reloads open pages after any edit, addition or deletion. `build` writes a static site, which is the only production output for now.
 
 ## Author a site
 
-Create `docs/01-index.md` and optionally `markupress.config.json`:
+Create `docs/01.index.md` and optionally `markupress.config.json`:
 
 ```json
 {
@@ -31,7 +31,16 @@ Create `docs/01-index.md` and optionally `markupress.config.json`:
 }
 ```
 
-Every version needs an `index.md` at its root; a numeric prefix such as `01-index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite`, `previewSite` and `prepareSite` APIs accept the same options plus `root`, `host` and `port`.
+Every version needs an `index.md` at its root; a numeric prefix such as `01.index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
+
+The same pieces work as HTMLKit plugins. `markupress(options)` adds versioned documentation with this theme. `markdown()` alone makes any HTMLKit site's `.md` files into pages, with no versions or theme:
+
+```ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+import { markdown } from 'markupress';
+
+export default defineConfig({ plugins: [markdown()] });
+```
 
 ```markdown
 ---
@@ -43,18 +52,44 @@ aliases: [/getting-started/]
 ---
 # Installation
 
-[Next steps](03-usage.md#usage)
+[Next steps](03.usage.md#usage)
 
 <link rel="component" href="../../components/counter.html">
 
 <demo-counter></demo-counter>
 ```
 
-`01-guide/02-install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02-` to `10-` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
+`01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02.` to `10.` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
 
 Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Frontmatter title and description become metadata inside the owning page component. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
 
-Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+
+A container wraps Markdown in a classed `<div>`. Its name starts with a letter and contains letters, digits, `_` and `-`; any other line stays text. To nest containers, give the outer one more colons:
+
+```markdown
+:::: details
+Outer content.
+
+::: warning
+Inner **Markdown** content.
+:::
+::::
+```
+
+This produces `<div class="details">` containing `<div class="warning">`. The theme does not style container names; a site styles the classes it uses.
+
+Fenced code is highlighted at build time with [Shiki](https://shiki.style), so pages load no highlighting JavaScript. Any language Shiki bundles, such as `html`, `css`, `less`, `js`, `ts`, `tsx`, `jsx`, `json`, `bash`, `vue`, `svelte`, `md` or `yaml`, is loaded the first time a fence uses it. Unknown languages stay plain text. A `title` in the fence's info string adds a caption:
+
+````markdown
+```ts title="app/pages/index.ts"
+export const count = 1;
+```
+````
+
+This renders `<figure class="code"><figcaption>app/pages/index.ts</figcaption><pre>…</pre></figure>`. A fence without a title is a plain `<pre>`.
+
+Highlighting uses the `github-light-default` and `github-dark-default` themes. Each token's color is `light-dark(light, dark)`, so it follows the page's `color-scheme`. The Markupress theme sets the color scheme from its dark-theme button or the reader's system preference through Looma's `[data-theme]` themes, so code switches with the rest of the page. On another HTMLKit site, set `color-scheme: light dark` to follow the system, or set `color-scheme` on `[data-theme]` as Looma does. Each token also carries `--shiki-light` and `--shiki-dark`, so a site can switch with any selector instead, for example `.dark .shiki span { color: var(--shiki-dark) !important; }`. Browsers without `light-dark()` show unhighlighted text. The site's stylesheet owns the code block's background; the Markupress theme uses Looma's sunken surface (`--ui-surface-sunken`). There, comments measure 3.98:1 in the light theme and 4.42:1 in the dark theme, and light-theme function names 4.42:1, below the 4.5:1 the other token colors reach.
 
 ## TypeScript controllers
 
@@ -63,7 +98,7 @@ Maintain controllers in strict ESM TypeScript, with `.js` references in HTML:
 ```html
 <template component="demo-counter" controller="./counter.js">
   <defs><state name="count" type="number" value="0"></state></defs>
-  <div><button>Increment</button><output $value="$count"></output></div>
+  <div><button>Increment</button><output>{$count}</output></div>
 </template>
 ```
 
@@ -112,7 +147,9 @@ Version IDs are URL slugs; they need not follow SemVer. A document's `id` identi
 
 ## Theme and migration inputs
 
-The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference. It uses the platform's existing runtime.
+The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
+
+Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header and columns. `theme/theme.css` is page-wide too, because HTMLKit's built-in navigation, breadcrumbs and pager have no styles of their own and no component's scoped style reaches them. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
 
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
 

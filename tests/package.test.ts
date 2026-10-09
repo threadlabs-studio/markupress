@@ -21,18 +21,18 @@ beforeAll(() => {
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
-  mkdirSync(join(workspace, 'docs/01-guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
+  mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   write('markupress.config.json', '{"title":"Example docs","base":"/manual/"}');
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
-  write('docs/01-index.md', '# Welcome\n\n[Installation](01-guide/02-install.md#install)\n\n![Mark](/mark.svg)');
-  write('docs/01-guide/02-install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="../../components/counter.html">\n\n<demo-counter></demo-counter>\n\n<template component="inline-example"><p>Inline component</p><style>@import "../../components/counter.css"; :host { border-color: teal; }</style></template>\n\n<inline-example></inline-example>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
-  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><div><button aria-label="Increment example">Increment</button><output $value="$count"></output></div><style>@import "./counter.css";</style></template>');
+  write('docs/01.index.md', '# Welcome\n\n[Installation](01.guide/02.install.md#install)\n\n![Mark](/mark.svg)');
+  write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="../../components/counter.html">\n\n<demo-counter></demo-counter>\n\n<template component="inline-example"><p>Inline component</p><style>@import "../../components/counter.css"; :host { border-color: teal; }</style></template>\n\n<inline-example></inline-example>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
+  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><div><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
   write('components/counter.css', 'button { border: 2px solid rgb(20, 30, 40); }');
   write('components/counter.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; import { increment } from "./value.js"; export default function(host: ComponentHost) { host.on("connect", () => { const button = host.root.querySelector("button")!; const click = () => { host.state.count = Number(host.state.count) + increment; }; button.addEventListener("click", click); return () => button.removeEventListener("click", click); }); }');
   write('components/value.ts', 'export const increment = 1;');
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
-  write('docs/01-guide/03-new.md', '# New document');
+  write('docs/01.guide/03.new.md', '# New document');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
@@ -41,8 +41,11 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
   expect(html).toContain('<title>Installation</title>'); expect(html).toContain('id="install-1"');
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
-  expect(html).toContain('&lt;template'); expect(html).not.toContain('data-component="fake-page"');
+  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
+  expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
+  // Whitespace inside <pre> survives rendering, so each highlighted line stays on its own line.
+  expect(html).toMatch(/<\/span><\/span>\n<span class="line">/);
   expect(html).not.toContain('controller="');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
@@ -64,33 +67,53 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
     for (const mode of ['preview', 'dev'] as const) {
       server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ root: workspace, base: '/manual/', port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      // Records the theme in the first frame that shows the theme button, and any transition the button runs while loading.
       await context.addInitScript(() => {
+        const load = { theme: undefined as string | undefined, transitions: [] as string[] };
+        Object.assign(window, { load });
         const record = () => {
-          const button = document.querySelector('[data-action="theme"]');
-          if (button && document.documentElement.dataset.theme === 'dark') (window as unknown as { firstDarkColor?: string }).firstDarkColor ??= getComputedStyle(button).color;
+          if (document.querySelector('[data-action="theme"]')) load.theme = document.documentElement.dataset.theme;
           else requestAnimationFrame(record);
         };
         requestAnimationFrame(record);
+        document.addEventListener('transitionrun', event => { if (event.target instanceof Element && event.target.closest('[data-action="theme"]')) load.transitions.push(event.propertyName); }, true);
       });
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
-      expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
+      // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
+      const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
+        shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
+        code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
+      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
+      // The theme's global stylesheet reaches HTMLKit's built-in navigation, breadcrumbs, and pager.
+      expect(await page.locator('[data-component="hk-nav"] ul').evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
+      expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
+      expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
+      expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
+      // Highlighted code follows the theme's color-scheme through light-dark().
+      const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
+      const light = await color();
       await page.getByRole('button', { name: 'Dark theme' }).click();
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(26, 26, 26)', code: 'rgb(46, 46, 46)' });
+      await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
-      // A saved theme applies after first paint; its first dark frame must not fade out of the default theme.
-      const settledDark = await page.getByRole('button', { name: 'Dark theme' }).evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); return getComputedStyle(element).color; });
-      expect(await page.evaluate(() => (window as unknown as { firstDarkColor?: string }).firstDarkColor)).toBe(settledDark);
+      // A saved theme is applied before first paint, so nothing fades out of the default theme.
+      expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [] });
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
       expect(await versions.getByRole('link', { name: 'v1', exact: true }).evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
+      // HTMLKit commits the URL before the page arrives. v1's counter has its own controller, which this
+      // document cannot also define, so HTMLKit loads v1 as a document; wait for it before clicking.
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.waitForLoadState();
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');

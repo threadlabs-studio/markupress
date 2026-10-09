@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/pr
 import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
-import { prepareSite, type DocumentationVersion, type MarkupressOptions } from './site.js';
+import { siteOptions, type DocumentationVersion, type MarkupressOptions } from './site.js';
 import { stylesheet } from './styles.js';
 
 export interface VersionLink {
@@ -50,17 +50,20 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
     }
     // Let HTMLKit/Vite identify the authored HTML, module, stylesheet and asset closure.
     // Mirroring project-relative paths keeps imports valid without rewriting source code.
-    const prepared = await prepareSite({ ...options, versions: [{ id: 'current', directory: relation }], defaultVersion: 'current' });
+    const site = siteOptions({ ...options, versions: [{ id: 'current', directory: relation }], defaultVersion: 'current' });
     const validation = join(destination, '.validation');
-    const built = await buildApplication({ ...prepared.application, outDir: validation });
-    const inputs = new Set([...built.browserInputs, ...prepared.sourceFiles]);
-    const application = await createApplication(prepared.application);
+    const built = await buildApplication({ ...site, outDir: validation });
+    const application = await createApplication(site);
+    // Files that Markdown references, which HTMLKit serves, belong to the snapshot too.
+    const inputs = new Set([...built.browserInputs, ...application.files.values()]);
     try {
       for (const pathname of await application.entries()) {
         for (const component of (await application.render(pathname)).components) {
           const file = component.definition.source.file;
           if (file) inputs.add(file.startsWith('file:') ? fileURLToPath(file) : file);
           for (const dependency of stylesheet(component.definition.css, fileURLToPath(file), false).files) inputs.add(dependency);
+          // HTMLKit delivers a component's imported stylesheets apart from its local CSS, nested imports included.
+          for (const sheet of component.definition.stylesheets ?? []) if (sheet.url.startsWith('file:')) inputs.add(fileURLToPath(sheet.url));
         }
       }
     } finally { await application.close(); }

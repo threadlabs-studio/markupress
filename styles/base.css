@@ -1,24 +1,4 @@
-/* Page-wide defaults; component styles remain owned by their native resource. */
+/* Page-wide defaults, delivered through HTMLKit's css option; components keep their own styles. */
 html { background: var(--ui-surface); }
 body { margin: 0; }
 *, *::before, *::after { box-sizing: border-box; }
-/* Documentation typography spans the projected page's own component region. */
-.markupress-prose a { color: var(--ui-accent); text-underline-offset: .2em; }
-.markupress-prose h1 { font-size: clamp(1.8rem, 5vw, 2.7rem); line-height: 1.2; }
-.markupress-prose h2, .markupress-prose h3 { margin-top: 2rem; scroll-margin-top: 2rem; }
-.markupress-prose h1 a, .markupress-prose h2 a, .markupress-prose h3 a { color: inherit; text-decoration: none; }
-.markupress-prose pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); border-radius: .5rem; }
-.markupress-prose code { font-size: .9em; }
-.markupress-prose img, .markupress-prose svg { max-width: 100%; }
-.markupress-prose table { border-collapse: collapse; display: block; max-width: 100%; overflow: auto; }
-.markupress-prose th, .markupress-prose td { border: 1px solid var(--ui-border, #8885); padding: .4rem .75rem; }
-.markupress-prose :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
-/* HTMLKit provides native navigation without presentation; this theme owns its appearance. */
-.site [data-component~="htmlkit-navigation"] ul { margin: 0; padding: 0; list-style: none; }
-.site [data-component~="htmlkit-navigation"] li { margin: .25rem 0; }
-.site [data-component~="htmlkit-navigation"] a { display: block; color: var(--ui-text); padding: .3rem .5rem; border-radius: .25rem; text-decoration: none; }
-.site [data-component~="htmlkit-navigation"] a:hover { background: var(--ui-surface-sunken); }
-.site [data-component~="htmlkit-navigation"] a[aria-current="page"] { color: var(--ui-accent); font-weight: 600; background: var(--ui-surface-sunken); }
-.site [data-component~="htmlkit-navigation"] [data-depth="2"] { padding-left: .75rem; }
-.site [data-component~="htmlkit-navigation"] [data-depth="3"] { padding-left: 1.5rem; }
-.site [data-component~="htmlkit-navigation"] :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }

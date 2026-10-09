@@ -4,6 +4,6 @@ minimumReleaseAgeExclude:
   - '@vitest/spy@5.0.0'
   - 'postcss@8.5.28'
   - 'vitest@5.0.0'
-  - '@nextwebwg/html-next@1.0.0-alpha.35'
-  - '@nextwebwg/htmlkit@1.0.0-alpha.35'
+  - '@nextwebwg/html-next@1.0.0-alpha.41'
+  - '@nextwebwg/htmlkit@1.0.0-alpha.41'
   - '@threadlabs/looma@0.26.0'
