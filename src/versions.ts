@@ -62,6 +62,8 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
           const file = component.definition.source.file;
           if (file) inputs.add(file.startsWith('file:') ? fileURLToPath(file) : file);
           for (const dependency of stylesheet(component.definition.css, fileURLToPath(file), false).files) inputs.add(dependency);
+          // HTMLKit delivers a component's imported stylesheets apart from its local CSS, nested imports included.
+          for (const sheet of component.definition.stylesheets ?? []) if (sheet.url.startsWith('file:')) inputs.add(fileURLToPath(sheet.url));
         }
       }
     } finally { await application.close(); }
