@@ -60,7 +60,8 @@
     "@threadlabs/looma": "0.26.0",
     "postcss": "8.5.29",
     "postcss-value-parser": "4.2.0",
-    "@nextwebwg/html-next": "1.0.0-alpha.43"
+    "@nextwebwg/html-next": "1.0.0-alpha.43",
+    "shiki": "4.5.0"
   },
   "bin": {
     "markupress": "./dist/cli.js"

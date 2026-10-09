@@ -41,8 +41,9 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
   expect(html).toContain('<title>Installation</title>'); expect(html).toContain('id="install-1"');
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
-  expect(html).toContain('&lt;template'); expect(html).not.toContain('data-component="fake-page"');
+  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
+  expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
   expect(html).not.toContain('controller="');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
@@ -86,8 +87,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
+      // Highlighted code follows the theme's color-scheme through light-dark().
+      const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
+      const light = await color();
       await page.getByRole('button', { name: 'Dark theme' }).click();
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');

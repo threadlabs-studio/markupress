@@ -16,13 +16,13 @@ export interface MarkdownPluginOptions {
  * through HTMLKit, so the plugin holds no routing of its own.
  */
 export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
-  return { name: 'markdown', pages: { extensions: ['.md'], compile(source, page) {
+  return { name: 'markdown', pages: { extensions: ['.md'], async compile(source, page) {
     const href = page.href(page.file);
     // The URL, not the machine's path, names the page, so builds are reproducible.
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     // compileMarkdown also passes through links it already resolved; return those unchanged.
     const resolved = new Set<string>();
-    const compiled = compileMarkdown(source, { file: page.file, pageName, resolveLink(target, kind) {
+    const compiled = await compileMarkdown(source, { file: page.file, pageName, resolveLink(target, kind) {
       if (resolved.has(target)) return target;
       const url = link(target, kind, page, options);
       resolved.add(url);

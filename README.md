@@ -63,7 +63,33 @@ aliases: [/getting-started/]
 
 Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Frontmatter title and description become metadata inside the owning page component. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
 
-Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+
+A container wraps Markdown in a classed `<div>`. Its name starts with a letter and contains letters, digits, `_` and `-`; any other line stays text. To nest containers, give the outer one more colons:
+
+```markdown
+:::: details
+Outer content.
+
+::: warning
+Inner **Markdown** content.
+:::
+::::
+```
+
+This produces `<div class="details">` containing `<div class="warning">`. The theme does not style container names; a site styles the classes it uses.
+
+Fenced code is highlighted at build time with [Shiki](https://shiki.style), so pages load no highlighting JavaScript. Any language Shiki bundles, such as `html`, `css`, `less`, `js`, `ts`, `tsx`, `jsx`, `json`, `bash`, `vue`, `svelte`, `md` or `yaml`, is loaded the first time a fence uses it. Unknown languages stay plain text. A `title` in the fence's info string adds a caption:
+
+````markdown
+```ts title="app/pages/index.ts"
+export const count = 1;
+```
+````
+
+This renders `<figure class="code"><figcaption>app/pages/index.ts</figcaption><pre>…</pre></figure>`. A fence without a title is a plain `<pre>`.
+
+Highlighting uses the `github-light-default` and `github-dark-default` themes. Each token's color is `light-dark(light, dark)`, so it follows the page's `color-scheme`. The Markupress theme sets the color scheme from its dark-theme button or the reader's system preference through Looma's `[data-theme]` themes, so code switches with the rest of the page. On another HTMLKit site, set `color-scheme: light dark` to follow the system, or set `color-scheme` on `[data-theme]` as Looma does. Each token also carries `--shiki-light` and `--shiki-dark`, so a site can switch with any selector instead, for example `.dark .shiki span { color: var(--shiki-dark) !important; }`. Browsers without `light-dark()` show unhighlighted text. The site's stylesheet owns the code block's background. Both themes keep common tokens at 4.5:1 contrast or better on Looma's page surface.
 
 ## TypeScript controllers
 

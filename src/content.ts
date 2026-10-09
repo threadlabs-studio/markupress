@@ -1,7 +1,8 @@
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Marked } from 'marked';
+import { Marked, type Token } from 'marked';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
+import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
 import { stylesheet } from './styles.js';
 
@@ -24,6 +25,26 @@ export function escapeHTML(value: string): string {
 }
 // Markdown text is literal author content. Raw HTML tokens retain component expressions.
 export function literal(value: string): string { return value.replace(/\\/g, '\\\\').replace(/{/g, '\\{'); }
+
+// Token colors are light-dark(light, dark), so they follow the page's color-scheme; --shiki-light and
+// --shiki-dark carry the same colors for sites that switch another way. These themes keep common
+// tokens at 4.5:1 or better on Looma's light and dark page surfaces.
+const themes = { light: 'github-light-default', dark: 'github-dark-default' } as const;
+let highlighter: Promise<Highlighter> | undefined;
+const shikiOutput: ShikiTransformer = {
+  // The site's stylesheet owns the code block's surface; Shiki's colors stay on the tokens.
+  pre(node) { delete node.properties.style; },
+  code(node) { this.addClassToHast(node, `language-${this.options.lang}`); },
+  // Code is literal author content: escape it like Markdown text so HTML Next never interpolates it.
+  span(node) { for (const child of node.children) if (child.type === 'text') child.value = literal(child.value); },
+};
+async function highlight(code: string, lang: BundledLanguage): Promise<string> {
+  // One highlighter serves every page; a grammar loads the first time a fence uses its language.
+  const shiki = await (highlighter ??= createHighlighter({ themes: Object.values(themes), langs: [] }));
+  await shiki.loadLanguage(lang);
+  return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [shikiOutput] });
+}
+
 function textContent(node: DefaultTreeAdapterMap['node']): string {
   if ('value' in node) return node.value;
   return 'childNodes' in node ? node.childNodes.map(textContent).join('') : '';
@@ -39,7 +60,7 @@ function frontmatter(source: string, file: string) {
   return { body: source.slice(match[0].length), fields: fields as Record<string, unknown> };
 }
 
-export function compileMarkdown(source: string, options: MarkdownOptions): CompiledMarkdown {
+export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
   for (const name of ['title', 'description', 'sidebarLabel', 'id']) {
     if (fields[name] !== undefined && (typeof fields[name] !== 'string' || fields[name] === '')) throw new Error(`${options.file}: ${name} must be a nonempty string.`);
@@ -49,15 +70,31 @@ export function compileMarkdown(source: string, options: MarkdownOptions): Compi
   if (!Array.isArray(aliases) || aliases.some(value => typeof value !== 'string')) throw new Error(`${options.file}: aliases must be a list of route paths.`);
   const headings = new Map<string, number>();
   let firstHeading: string | undefined;
-  const markdown = new Marked({ async: false, renderer: {
+  const highlighted = new Map<Token, string>();
+  const markdown = new Marked({ async: true, async walkTokens(token) {
+    if (token.type !== 'code') return;
+    const language = token.lang?.split(/\s/)[0];
+    // Languages Shiki does not bundle stay escaped plain text.
+    if (language && Object.hasOwn(bundledLanguages, language)) highlighted.set(token, await highlight(token.text, language as BundledLanguage));
+  }, renderer: {
     text(token) { return 'tokens' in token && token.tokens ? this.parser.parseInline(token.tokens) : literal(token.text); },
     codespan({ text }) { return `<code>${literal(escapeHTML(text))}</code>`; },
-    code({ text, lang }) { return `<pre><code${lang ? ` class="language-${escapeHTML(lang.split(/\s/)[0]!)}"` : ''}>${literal(escapeHTML(text))}</code></pre>\n`; },
+    code(token) {
+      const { text, lang = '' } = token;
+      const language = lang.split(/\s/)[0];
+      const title = /(?:^|\s)title="([^"]*)"/.exec(lang)?.[1];
+      const pre = highlighted.get(token) ?? `<pre><code${language ? ` class="language-${escapeHTML(language)}"` : ''}>${literal(escapeHTML(text))}</code></pre>`;
+      return (title ? `<figure class="code"><figcaption>${literal(escapeHTML(title))}</figcaption>${pre}</figure>` : pre) + '\n';
+    },
     heading({ tokens, depth }) {
+      // `## Title {#custom-id}` names the anchor; the marker ends the heading's last text token.
+      const last = tokens.at(-1);
+      const custom = last?.type === 'text' ? / +\{#([\w-]+)\}$/.exec(last.text) : null;
+      if (custom && last?.type === 'text') last.text = last.text.slice(0, custom.index);
       const html = this.parser.parseInline(tokens);
       const label = textContent(parseFragment(html)).replace(/\\([\\{])/g, '$1');
       firstHeading ??= label;
-      const stem = label.normalize('NFKD').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'heading';
+      const stem = custom?.[1] ?? (label.normalize('NFKD').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'heading');
       const count = headings.get(stem) ?? 0; headings.set(stem, count + 1);
       const id = count === 0 ? stem : `${stem}-${count}`;
       return `<h${depth} id="${escapeHTML(id)}"><a href="#${escapeHTML(id)}">${html}</a></h${depth}>\n`;
@@ -84,8 +121,22 @@ export function compileMarkdown(source: string, options: MarkdownOptions): Compi
       const raw = text.slice(0, end);
       return { type: 'native-component', raw };
     }, renderer(token) { return token.raw; },
+  }, { name: 'container', level: 'block',
+    // `::: name` … `:::` wraps Markdown in <div class="name">. A container closes at the first marker at
+    // least as long as its own, so an outer container uses more colons than those it contains.
+    start(text) { return /^ {0,3}:{3,}[ \t]*[A-Za-z]/m.exec(text)?.index; },
+    tokenizer(text) {
+      const open = /^ {0,3}(:{3,})[ \t]*([A-Za-z][\w-]*)[ \t]*(?:\n|$)/.exec(text);
+      const close = open && new RegExp(`^ {0,3}:{${open[1]!.length},}[ \\t]*(?:\\n|$)`, 'm').exec(text.slice(open[0].length));
+      if (!open || !close) return undefined;
+      // Like a blockquote, the content is a document of its own, so its paragraphs stay paragraphs inside a list.
+      const top = this.lexer.state.top; this.lexer.state.top = true;
+      const tokens = this.lexer.blockTokens(text.slice(open[0].length, open[0].length + close.index));
+      this.lexer.state.top = top;
+      return { type: 'container', raw: text.slice(0, open[0].length + close.index + close[0].length), name: open[2], tokens };
+    }, renderer(token) { return `<div class="${token.name as string}">\n${this.parser.parse(token.tokens ?? [])}</div>\n`; },
   }] });
-  const fragment = parseFragment(markdown.parse(body) as string);
+  const fragment = parseFragment(await markdown.parse(body));
   const declarations: string[] = [];
   const metadata: string[] = [];
   const original = pathToFileURL(resolve(options.file)).href;
