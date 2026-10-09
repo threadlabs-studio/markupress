@@ -11,7 +11,8 @@
       "import": "./dist/index.js"
     },
     "./controllers/shell.js": "./dist/controllers/shell.js",
-    "./styles/base.css": "./styles/base.css"
+    "./styles/base.css": "./styles/base.css",
+    "./styles/prose.css": "./styles/prose.css"
   },
   "files": [
     "dist",
@@ -37,9 +38,9 @@
   },
   "devDependencies": {
     "@types/node": "22.20.1",
-    "oxlint": "1.81.0",
+    "oxlint": "1.87.0",
     "typescript": "7.0.2",
-    "vitest": "5.0.0",
+    "vitest": "5.0.3",
     "playwright": "1.63.0",
     "@axe-core/playwright": "4.13.0"
   },

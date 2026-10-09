@@ -45,7 +45,12 @@ async function versions(options: MarkupressOptions, root: string): Promise<reado
 }
 
 const shell = fileURLToPath(new URL('../theme/shell.html', import.meta.url));
-const themeStyles = fileURLToPath(new URL('../theme/theme.css', import.meta.url));
+const own = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
+// HTMLKit's css option is page-wide: Looma's :root tokens and its light/dark switch, and document defaults.
+// A component's <style> is scoped to its own region, so these would never reach :root from the shell.
+// theme.css also styles HTMLKit's built-in components, which no component's scoped style can reach.
+const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(file => fileURLToPath(import.meta.resolve(`@threadlabs/looma/${file}`))),
+  own('styles/base.css'), own('theme/theme.css')];
 
 /**
  * Versioned documentation as an HTMLKit plugin. Markdown pages come from the markdown plugin, and
@@ -62,6 +67,8 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[] }>();
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
   const pages = markdown({
+    // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
+    styles: [own('styles/prose.css')],
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));
@@ -105,7 +112,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs.
     const layout = { component: shell, server: { load } };
-    return { headScript: themeScript, css: [themeStyles],
+    return { headScript: themeScript, css: pageStyles,
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
   } };
 }

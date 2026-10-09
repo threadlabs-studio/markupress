@@ -11,6 +11,8 @@ export interface MarkdownOptions {
   readonly pageName: string;
   /** Resolve authored document links and assets from their original source. */
   readonly resolveLink?: (href: string, kind: 'link' | 'asset') => string;
+  /** Stylesheet files the page component imports, so their rules style this page's own region. */
+  readonly styles?: readonly string[];
 }
 export interface CompiledMarkdown {
   readonly resource: string;
@@ -204,6 +206,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const head = `<title>${literal(escapeHTML(title))}</title>` + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description as string)}">`) +
     `<meta name="hk:label" content="${escapeHTML(label)}">` + (fields.sidebarHidden === true ? '<meta name="hk:navigation" content="hidden">' : '') +
     (aliases as string[]).map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('');
+  const styles = options.styles?.length ? `<style>${options.styles.map(file => `@import "${pathToFileURL(file).href}";`).join('')}</style>` : '';
   return { title, label, aliases, sidebarHidden: fields.sidebarHidden === true, ...(fields.id === undefined ? {} : { id: fields.id as string }),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}">${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article></template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}">${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article>${styles}</template>\n` };
 }

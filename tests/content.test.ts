@@ -135,3 +135,9 @@ it('gives a fence with only a title no language class', async () => {
   const compiled = await compileMarkdown('```title="notes.txt"\nplain\n```', { file: '/docs/index.md', pageName: 'page-index' });
   expect(compiled.resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption><pre><code>plain</code></pre></figure>');
 });
+
+it('imports given stylesheets into the page component itself', async () => {
+  const compiled = await compileMarkdown('# Styled', { file: '/docs/index.md', pageName: 'page-index', styles: ['/theme/prose.css'] });
+  expect(compiled.resource).toMatch(/<template component="page-index">.*<style>@import "file:\/\/\/theme\/prose\.css";<\/style><\/template>/s);
+  expect((await compileMarkdown('# Plain', { file: '/docs/index.md', pageName: 'page-index' })).resource).not.toContain('<style>');
+});

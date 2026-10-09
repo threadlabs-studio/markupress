@@ -79,7 +79,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
-      expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
+      // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
+      const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
+        shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
+        code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
+      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
       // The theme's global stylesheet reaches HTMLKit's built-in navigation, breadcrumbs, and pager.
       expect(await page.locator('[data-component="hk-nav"] ul').evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
@@ -92,6 +96,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const light = await color();
       await page.getByRole('button', { name: 'Dark theme' }).click();
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(26, 26, 26)', code: 'rgb(46, 46, 46)' });
       await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
