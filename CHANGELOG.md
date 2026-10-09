@@ -11,5 +11,5 @@ All notable changes to this project will be documented in this file.
 - A saved dark theme applies before first paint through the plugin's HTMLKit head script, so dark-theme readers no longer see one light frame on each page load.
 - `prepareSite` is replaced by `siteOptions`, which returns the HTMLKit options the CLI uses.
 - `## Title {#custom-id}` sets a heading's ID. `::: name` … `:::` wraps Markdown in `<div class="name">`, and an outer container uses more colons to nest. A fence such as `ts title="app/pages/index.ts"` renders its code in `<figure class="code">` with the title as the caption.
-- Fenced code is highlighted at build time with Shiki's `github-light-default` and `github-dark-default` themes. Token colors use CSS `light-dark()`, so they follow the theme's color scheme with no client JavaScript. Braces in code stay literal. The theme draws code blocks on the page surface with a border, because the highlighting colors keep 4.5:1 contrast there.
+- Fenced code is highlighted at build time with Shiki's `github-light-default` and `github-dark-default` themes. Token colors use CSS `light-dark()`, so they follow the theme's color scheme with no client JavaScript. Braces in code stay literal. The theme draws code blocks on Looma's sunken surface (`--ui-surface-sunken`).
 - `compileMarkdown` now returns a Promise.
