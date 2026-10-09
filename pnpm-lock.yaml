@@ -167,11 +167,11 @@ importers:
   .:
     dependencies:
       '@nextwebwg/html-next':
-        specifier: 1.0.0-alpha.35
-        version: 1.0.0-alpha.35
+        specifier: 1.0.0-alpha.41
+        version: 1.0.0-alpha.41
       '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.35
-        version: 1.0.0-alpha.35(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: 1.0.0-alpha.41
+        version: 1.0.0-alpha.41(@types/node@22.20.1)(yaml@2.9.1)
       '@threadlabs/looma':
         specifier: 0.26.0
         version: 0.26.0
@@ -307,8 +307,13 @@ packages:
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.35':
-    resolution: {integrity: sha512-qHf3QhEivOHCTOqCdbCoA0kQ7neuH4AwolpPPHaD241TK/J7APCVYS+EC1cIq+PGkp/0t9B1jRTVCMlWWUZmUg==}
+  '@nextwebwg/html-next@1.0.0-alpha.41':
+    resolution: {integrity: sha512-7NrTfR9uCOmXf3mX4gJHCJAuwWNSGdWS1URfUjWSDl+S63wRTCPzMftCx6vL+2P2ROzrpbtq2hKoatmQc4Z8PA==}
+    engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    hasBin: true
+
+  '@nextwebwg/htmlkit@1.0.0-alpha.41':
+    resolution: {integrity: sha512-K0xpIsTwvLJZErLZROEbqfdJr+5Ro56ZFv6oG+LogSWOfsJaX1h5DRU6LBQfumWCxqQ2y7Cf/pdsQ9+GQo13iA==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1268,9 +1273,24 @@ snapshots:
       - '@noble/hashes'
       - canvas
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.35(@types/node@22.20.1)(yaml@2.9.1)':
+  '@nextwebwg/html-next@1.0.0-alpha.41':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.35
+      '@dprint/formatter': 0.5.1
+      '@dprint/typescript': 0.96.1
+      '@formatjs/intl-durationformat': 0.11.1
+      dprint-plugin-malva: 0.16.0
+      dprint-plugin-markup: 0.27.5
+      jsdom: 30.0.1
+      parse5: 8.0.1
+      postcss: 8.5.28
+      typescript-compiler: '@typescript/typescript6@6.0.2'
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - canvas
+
+  '@nextwebwg/htmlkit@1.0.0-alpha.41(@types/node@22.20.1)(yaml@2.9.1)':
+    dependencies:
+      '@nextwebwg/html-next': 1.0.0-alpha.41
       parse5: 8.0.1
       vite: 8.3.2(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:
