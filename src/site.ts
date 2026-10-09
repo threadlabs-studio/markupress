@@ -45,6 +45,7 @@ async function versions(options: MarkupressOptions, root: string): Promise<reado
 }
 
 const shell = fileURLToPath(new URL('../theme/shell.html', import.meta.url));
+const themeStyles = fileURLToPath(new URL('../theme/theme.css', import.meta.url));
 
 /**
  * Versioned documentation as an HTMLKit plugin. Markdown pages come from the markdown plugin, and
@@ -77,16 +78,17 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       }
     },
   });
-  async function load({ navigation, url, base }: LoadContext) {
+  async function load({ navigation, breadcrumbs, pager, url, base }: LoadContext) {
     const path = '/' + url.pathname.slice(base.length);
     const selected = /^\/v\/([^/]+)\//.exec(path)?.[1] ?? defaultVersion;
     const requested = path.startsWith('/v/') ? path : `/v/${selected}${path}`;
     const catalog = current();
     const page = catalog.find(doc => doc.pathname === requested || doc.aliases.includes(requested));
     // The default version also serves the root; its entries are marked current under /v/<id>/.
-    return { props: { title: options.title ?? 'Documentation', home: base,
-      navigation: await navigation({ from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) }),
-      versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base) } };
+    const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
+    return { props: { title: options.title ?? 'Documentation', home: base, navigation: await navigation(within),
+      versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
+      crumbs: await breadcrumbs(within), ...await pager(within) } };
   }
   return { ...pages, name: 'markupress', async config(htmlkit) {
     root = resolve(htmlkit.root ?? root);
@@ -101,7 +103,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
-    return { headScript: themeScript, layout: { component: shell, server: { load } },
+    return { headScript: themeScript, layout: { component: shell, server: { load } }, css: [...htmlkit.css ?? [], themeStyles],
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/` })), { dir: home.directory }] };
   } };
 }

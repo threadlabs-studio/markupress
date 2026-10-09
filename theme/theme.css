@@ -1,0 +1,15 @@
+/* Global, so it reaches HTMLKit's built-in components inside the shell; the shell's own <style> is scoped and stops at them. */
+[data-component~="markupress-shell"] :is([data-component="hk-nav"], [data-component="hk-breadcrumbs"], [data-component="hk-pager"]) a {
+  color: var(--ui-accent); text-underline-offset: .2em;
+}
+[data-component~="markupress-shell"] :is([data-component="hk-nav"], [data-component="hk-breadcrumbs"]) a[aria-current="page"] { font-weight: 700; }
+[data-component~="markupress-shell"] [data-component="hk-nav"] ul { margin: 0; padding: 0; list-style: none; }
+[data-component~="markupress-shell"] [data-component="hk-nav"] li { margin: .4rem 0; }
+[data-component~="markupress-shell"] [data-component="hk-nav"] [data-depth="2"] { padding-inline-start: .75rem; }
+[data-component~="markupress-shell"] [data-component="hk-nav"] [data-depth="3"] { padding-inline-start: 1.5rem; }
+[data-component~="markupress-shell"] [data-component="hk-breadcrumbs"] ol { display: flex; flex-wrap: wrap; gap: .25rem .5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; font-size: .875rem; }
+[data-component~="markupress-shell"] [data-component="hk-breadcrumbs"] li + li::before { content: "/"; margin-inline-end: .5rem; color: var(--ui-text-muted, inherit); }
+[data-component~="markupress-shell"] [data-component="hk-pager"] { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--ui-border, #8885); }
+[data-component~="markupress-shell"] [data-component="hk-pager"] a { display: grid; }
+[data-component~="markupress-shell"] [data-component="hk-pager"] a[rel="next"] { margin-inline-start: auto; text-align: end; }
+[data-component~="markupress-shell"] [data-component="hk-pager"] small { color: var(--ui-text-muted, inherit); }
