@@ -75,3 +75,9 @@ it('retains indented component examples as literal Markdown code', () => {
   expect(compiled.resource).toContain('<pre><code>&lt;template');
   expect(compiled.resource).not.toContain('<template component="fake-indented">');
 });
+
+it('imports given stylesheets into the page component itself', () => {
+  const compiled = compileMarkdown('# Styled', { file: '/docs/index.md', pageName: 'page-index', styles: ['/theme/prose.css'] });
+  expect(compiled.resource).toMatch(/<template component="page-index">.*<style>@import "file:\/\/\/theme\/prose\.css";<\/style><\/template>/s);
+  expect(compileMarkdown('# Plain', { file: '/docs/index.md', pageName: 'page-index' }).resource).not.toContain('<style>');
+});

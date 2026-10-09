@@ -123,6 +123,8 @@ Version IDs are URL slugs; they need not follow SemVer. A document's `id` identi
 
 The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
+Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header and columns. `theme/theme.css` is page-wide too, because HTMLKit's built-in navigation, breadcrumbs and pager have no styles of their own and no component's scoped style reaches them. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
+
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
 
 ## Verification and contribution

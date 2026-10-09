@@ -8,5 +8,7 @@ All notable changes to this project will be documented in this file.
 - Each Markdown file is its own page component, so diagnostics and relative references name the original file. Front matter becomes HTMLKit page metadata: the sidebar label, `sidebarHidden`, and `aliases`.
 - Referenced images and files are served from `/_htmlkit/files/` instead of `/_markupress/assets/`.
 - Ordering prefixes are HTMLKit's number and dot: rename `01-guide/02-install.md` to `01.guide/02.install.md`. The theme's navigation is HTMLKit's built-in `<hk-nav>`, with `<hk-breadcrumbs>` above each page and `<hk-pager>` previous/next links below it, styled by a global theme stylesheet (`theme/theme.css`) that HTMLKit adds to every page.
+- Looma's tokens and light/dark themes and the document defaults are page-wide through HTMLKit's `css` option, so they reach `:root`; imported into the shell's scoped `<style>`, they never applied. Each Markdown page component imports the documentation typography (`styles/prose.css`, also exported), and `markdown({ styles })` adds stylesheet files to every Markdown page component.
+- `markupress snapshot` also mirrors the stylesheets a component imports, which HTMLKit now delivers apart from the component's own CSS.
 - A saved dark theme applies before first paint through the plugin's HTMLKit head script, so dark-theme readers no longer see one light frame on each page load.
 - `prepareSite` is replaced by `siteOptions`, which returns the HTMLKit options the CLI uses.

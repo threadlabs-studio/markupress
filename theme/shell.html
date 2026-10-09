@@ -19,10 +19,6 @@
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><hk-breadcrumbs from:items="$crumbs"></hk-breadcrumbs><slot name="page"></slot><hk-pager from:previous="$previous" from:next="$next"></hk-pager></main></div></div>
 <style>
-@import "@threadlabs/looma/tokens.css";
-@import "@threadlabs/looma/theme-light.css";
-@import "@threadlabs/looma/theme-dark.css";
-@import "../styles/base.css";
 :host { display: block; background: var(--ui-surface); color: var(--ui-text); font: 1rem/1.7 system-ui, sans-serif; min-height: 100vh; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--ui-border, #8885); padding: 1rem max(1rem, calc((100vw - 80rem) / 2)); }
 .brand { color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
