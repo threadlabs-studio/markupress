@@ -116,12 +116,12 @@ export function compileMarkdown(source: string, options: MarkdownOptions): Compi
     }
   };
   visit(fragment, false);
-  const title = fields.title as string | undefined ?? firstHeading ?? basename(options.file, '.md').replace(/^\d+-/, '');
+  const title = fields.title as string | undefined ?? firstHeading ?? basename(options.file, '.md').replace(/^\d+\./, '');
   const label = fields.sidebarLabel as string | undefined ?? title;
   // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, visibility, and alias routes.
   const head = `<title>${literal(escapeHTML(title))}</title>` + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description as string)}">`) +
-    `<meta name="htmlkit:label" content="${escapeHTML(label)}">` + (fields.sidebarHidden === true ? '<meta name="htmlkit:navigation" content="hidden">' : '') +
-    (aliases as string[]).map(alias => `<meta name="htmlkit:alias" content="${escapeHTML(alias)}">`).join('');
+    `<meta name="hk:label" content="${escapeHTML(label)}">` + (fields.sidebarHidden === true ? '<meta name="hk:navigation" content="hidden">' : '') +
+    (aliases as string[]).map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('');
   return { title, label, aliases, sidebarHidden: fields.sidebarHidden === true, ...(fields.id === undefined ? {} : { id: fields.id as string }),
-    resource: `<meta name="htmlkit:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}">${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article></template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}">${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article></template>\n` };
 }

@@ -21,7 +21,7 @@ Text {notAnExpression}.
 <demo-counter></demo-counter>
 
 ## Products
-`, { file: '/project/docs/01-products.md', pageName: 'page-products' });
+`, { file: '/project/docs/01.products.md', pageName: 'page-products' });
   expect(compiled.title).toBe('Products');
   expect(compiled.label).toBe('Catalog');
   expect(compiled.resource).toContain('<title>Products</title>');
@@ -42,7 +42,7 @@ it('preserves authored component expressions and emitted controller module spell
   expect(compiled.resource).toContain('controller="file:///project/docs/counter.js"');
   // Braces inside a component carrier stay expressions; only Markdown prose escapes them.
   expect(compiled.resource).toContain('<output>{$count}</output>');
-  expect(compiled.resource).toContain('<meta name="htmlkit:page" content="page-example">');
+  expect(compiled.resource).toContain('<meta name="hk:page" content="page-example">');
 });
 
 it('keeps native carrier CSS and text expressions opaque to Markdown', () => {

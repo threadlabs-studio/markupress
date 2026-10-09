@@ -97,11 +97,11 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       ids.add(edition.id);
       const content = resolve(root, edition.directory);
       if (!inside(root, content)) throw new Error(`Version ${edition.id}: directory must be inside the project.`);
-      if (!(await readdir(content)).some(name => /^(?:\d+-)?index\.md$/.test(name))) throw new Error(`Version ${edition.id}: a root index.md landing page is required.`);
+      if (!(await readdir(content)).some(name => /^(?:\d+\.)?index\.md$/.test(name))) throw new Error(`Version ${edition.id}: a root index.md landing page is required.`);
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
-    return { routeOrdering: true, headScript: themeScript, layout: { component: shell, server: { load } },
+    return { headScript: themeScript, layout: { component: shell, server: { load } },
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/` })), { dir: home.directory }] };
   } };
 }

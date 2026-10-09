@@ -12,8 +12,8 @@ async function write(root: string, file: string, text: string) { await mkdir(dir
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'markupress-content-')); roots.push(root);
   await write(root, 'package.json', '{"type":"module"}');
-  await write(root, 'docs/01-index.md', '# Welcome\n\n[Install](./01-guide/02-install.md)');
-  await write(root, 'docs/01-guide/02-install.md', '---\ntitle: Installation\n---\n# Install\n\n![Mark](../mark.svg)');
+  await write(root, 'docs/01.index.md', '# Welcome\n\n[Install](./01.guide/02.install.md)');
+  await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\n---\n# Install\n\n![Mark](../mark.svg)');
   await write(root, 'docs/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
   return root;
 }
@@ -33,8 +33,8 @@ it('routes Markdown pages through HTMLKit with version-local links and served as
 
 it('reports URL and logical identity collisions against both Markdown sources', async () => {
   const root = await fixture();
-  await write(root, 'docs/02-index.md', '# Other');
-  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/01-index\.md.*02-index\.md/s);
+  await write(root, 'docs/02.index.md', '# Other');
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/01\.index\.md.*02\.index\.md/s);
 });
 
 it('rejects missing local document links with the original source location', async () => {
@@ -47,12 +47,12 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const root = await fixture();
   // The disposable consumer resolves package resources from the installed dependency tree.
   await linkDependencies(root);
-  await write(root, 'docs/01-guide/03-hidden.md', '---\nsidebarHidden: true\n---\n# Hidden document');
+  await write(root, 'docs/01.guide/03.hidden.md', '---\nsidebarHidden: true\n---\n# Hidden document');
   const result = await buildSite({ root, base: '/manual/' });
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title>Installation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
-  expect(page).toContain('data-component="htmlkit-navigation"');
+  expect(page).toContain('data-component="hk-nav"');
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
   expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
@@ -66,7 +66,7 @@ it('reports native carrier build errors against the original Markdown file', asy
 
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/01-guide/02-install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
+  await write(root, 'docs/01.guide/02.install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
   const application = await createApplication(siteOptions({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] }));
   try {
     const html = (await application.render('/v/current/start/')).html;

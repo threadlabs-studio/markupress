@@ -1,4 +1,3 @@
-<link rel="component" href="@nextwebwg/htmlkit/components/navigation.html">
 <link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
 <template component="markupress-shell" controller="../dist/controllers/shell.js">
 <title>{$title}</title><defs>
@@ -13,7 +12,7 @@
 <ui-button variant="ghost" tone="neutral" data-action="menu" from:aria-expanded="$menu" aria-controls="documentation-navigation">Navigation</ui-button>
 <ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <div class="columns"><aside id="documentation-navigation" $if="$menu">
-<htmlkit-navigation from:items="$navigation" label="Documentation"></htmlkit-navigation>
+<hk-nav from:items="$navigation" label="Documentation"></hk-nav>
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><slot name="page"></slot></main></div></div>
 <style>
