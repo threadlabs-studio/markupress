@@ -111,3 +111,27 @@ it('leaves languages Shiki does not know as escaped plain text', async () => {
   const compiled = await compileMarkdown('```not-a-language\n<b>{x}</b>\n```', { file: '/docs/index.md', pageName: 'page-index' });
   expect(compiled.resource).toContain('<pre><code class="language-not-a-language">&lt;b&gt;\\{x}&lt;/b&gt;</code></pre>');
 });
+
+const headingIds = async (source: string) => [...(await compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index' })).resource.matchAll(/<h\d id="([^"]*)"/g)].map(match => match[1]);
+
+it('skips custom heading ids when suffixing a generated duplicate', async () => {
+  expect(await headingIds('## X {#a-1}\n\n## A\n\n## A')).toEqual(['a-1', 'a', 'a-2']);
+});
+
+it('keeps a custom heading id and suffixes the earlier generated id instead', async () => {
+  expect(await headingIds('## Foo\n\n## Bar {#foo}')).toEqual(['foo-1', 'foo']);
+});
+
+it('never repeats a suffixed heading id that another heading generates', async () => {
+  expect(await headingIds('## Dup\n\n## Dup\n\n## Dup 1')).toEqual(['dup', 'dup-1', 'dup-1-1']);
+});
+
+it('does not close a container on a marker line inside fenced code', async () => {
+  const compiled = await compileMarkdown('::: note\n```\n:::\n```\n\n~~~~\n:::\n~~~~\nAfter the fences.\n:::', { file: '/docs/index.md', pageName: 'page-index' });
+  expect(compiled.resource).toContain('<div class="note">\n<pre><code>:::</code></pre>\n<pre><code>:::</code></pre>\n<p>After the fences.</p>\n</div>');
+});
+
+it('gives a fence with only a title no language class', async () => {
+  const compiled = await compileMarkdown('```title="notes.txt"\nplain\n```', { file: '/docs/index.md', pageName: 'page-index' });
+  expect(compiled.resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption><pre><code>plain</code></pre></figure>');
+});
