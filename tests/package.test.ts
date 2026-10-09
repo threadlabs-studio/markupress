@@ -44,6 +44,8 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
   expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
+  // Whitespace inside <pre> survives rendering, so each highlighted line stays on its own line.
+  expect(html).toMatch(/<\/span><\/span>\n<span class="line">/);
   expect(html).not.toContain('controller="');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
