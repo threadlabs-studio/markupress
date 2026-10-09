@@ -59,7 +59,7 @@ aliases: [/getting-started/]
 <demo-counter></demo-counter>
 ```
 
-`01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02-` to `10-` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
+`01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02.` to `10.` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
 
 Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Frontmatter title and description become metadata inside the owning page component. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
 
