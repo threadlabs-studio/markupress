@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@nextwebwg/html-next':
-        specifier: 1.0.0-alpha.41
-        version: 1.0.0-alpha.41
+        specifier: 1.0.0-alpha.42
+        version: 1.0.0-alpha.42
       '@nextwebwg/htmlkit':
         specifier: 1.0.0-alpha.41
         version: 1.0.0-alpha.41(@types/node@22.20.1)(yaml@2.9.1)
@@ -312,6 +312,11 @@ packages:
 
   '@nextwebwg/html-next@1.0.0-alpha.41':
     resolution: {integrity: sha512-7NrTfR9uCOmXf3mX4gJHCJAuwWNSGdWS1URfUjWSDl+S63wRTCPzMftCx6vL+2P2ROzrpbtq2hKoatmQc4Z8PA==}
+    engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    hasBin: true
+
+  '@nextwebwg/html-next@1.0.0-alpha.42':
+    resolution: {integrity: sha512-NhOCyXcuWO4GiJRE0z68cZV2f50ZyQcf1xKlldpuqnJQdHbxg2SglNdIfVXIyOjYPelnuSMlz0frDHe8BH4vyA==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1408,6 +1413,21 @@ snapshots:
       - canvas
 
   '@nextwebwg/html-next@1.0.0-alpha.41':
+    dependencies:
+      '@dprint/formatter': 0.5.1
+      '@dprint/typescript': 0.96.1
+      '@formatjs/intl-durationformat': 0.11.1
+      dprint-plugin-malva: 0.16.0
+      dprint-plugin-markup: 0.27.5
+      jsdom: 30.0.1
+      parse5: 8.0.1
+      postcss: 8.5.28
+      typescript-compiler: '@typescript/typescript6@6.0.2'
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - canvas
+
+  '@nextwebwg/html-next@1.0.0-alpha.42':
     dependencies:
       '@dprint/formatter': 0.5.1
       '@dprint/typescript': 0.96.1
