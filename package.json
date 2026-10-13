@@ -54,7 +54,7 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "@nextwebwg/htmlkit": "1.0.0-alpha.41",
+    "@nextwebwg/htmlkit": "1.0.0-alpha.42",
     "marked": "18.1.0",
     "parse5": "8.0.1",
     "yaml": "2.9.1",

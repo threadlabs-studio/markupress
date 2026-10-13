@@ -170,8 +170,8 @@ importers:
         specifier: 1.0.0-alpha.41
         version: 1.0.0-alpha.41
       '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.41
-        version: 1.0.0-alpha.41(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: 1.0.0-alpha.42
+        version: 1.0.0-alpha.42(@types/node@22.20.1)(yaml@2.9.1)
       '@threadlabs/looma':
         specifier: 0.26.0
         version: 0.26.0
@@ -315,8 +315,13 @@ packages:
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.41':
-    resolution: {integrity: sha512-K0xpIsTwvLJZErLZROEbqfdJr+5Ro56ZFv6oG+LogSWOfsJaX1h5DRU6LBQfumWCxqQ2y7Cf/pdsQ9+GQo13iA==}
+  '@nextwebwg/html-next@1.0.0-alpha.42':
+    resolution: {integrity: sha512-NhOCyXcuWO4GiJRE0z68cZV2f50ZyQcf1xKlldpuqnJQdHbxg2SglNdIfVXIyOjYPelnuSMlz0frDHe8BH4vyA==}
+    engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    hasBin: true
+
+  '@nextwebwg/htmlkit@1.0.0-alpha.42':
+    resolution: {integrity: sha512-fpf0xfR0qOV4xeEcCJYyKGQeUfUOJn8BviYV5pALeVw6DjaTQtI0ihpA9VPzfIzU+jh6mBurQsF1D2p0Sx6sdA==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1422,9 +1427,24 @@ snapshots:
       - '@noble/hashes'
       - canvas
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.41(@types/node@22.20.1)(yaml@2.9.1)':
+  '@nextwebwg/html-next@1.0.0-alpha.42':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.41
+      '@dprint/formatter': 0.5.1
+      '@dprint/typescript': 0.96.1
+      '@formatjs/intl-durationformat': 0.11.1
+      dprint-plugin-malva: 0.16.0
+      dprint-plugin-markup: 0.27.5
+      jsdom: 30.0.1
+      parse5: 8.0.1
+      postcss: 8.5.28
+      typescript-compiler: '@typescript/typescript6@6.0.2'
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - canvas
+
+  '@nextwebwg/htmlkit@1.0.0-alpha.42(@types/node@22.20.1)(yaml@2.9.1)':
+    dependencies:
+      '@nextwebwg/html-next': 1.0.0-alpha.42
       parse5: 8.0.1
       vite: 8.3.2(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:
