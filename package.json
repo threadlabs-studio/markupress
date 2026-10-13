@@ -40,8 +40,8 @@
     "@types/node": "22.20.1",
     "oxlint": "1.87.0",
     "typescript": "7.0.2",
-    "vitest": "5.0.3",
-    "playwright": "1.63.0",
+    "vitest": "5.0.4",
+    "playwright": "1.64.0",
     "@axe-core/playwright": "4.13.0"
   },
   "publishConfig": { "access": "public" },
@@ -55,10 +55,10 @@
   },
   "dependencies": {
     "@nextwebwg/htmlkit": "1.0.0-alpha.41",
-    "marked": "18.1.0",
+    "marked": "18.1.1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
-    "@threadlabs/looma": "0.26.0",
+    "@threadlabs/looma": "0.26.10",
     "postcss": "8.5.29",
     "postcss-value-parser": "4.2.0",
     "@nextwebwg/html-next": "1.0.0-alpha.41",
