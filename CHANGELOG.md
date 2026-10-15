@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.1.0
 
 - Markupress is now a thin layer over HTMLKit 1.0.0-alpha.51, with HTML Next 1.0.0-alpha.51 and Looma 0.28.5. HTML Next and Looma are peer dependencies, so a site and its theme share one copy of each. HTMLKit delivers pages as compiled components, so a page ships its components' code rather than the HTML Next live runtime. The `markdown()` HTMLKit plugin translates `.md` files into pages, and `markupress()` adds versioning and the theme; HTMLKit routes, orders, watches, renders, and builds the pages. The CLI runs HTMLKit with both plugins. Markupress's own routing, ordering, link-to-URL logic, file watcher, and generated `.markupress/` application are gone.
 - Each Markdown file is its own page component, so diagnostics and relative references name the original file. Front matter becomes HTMLKit page metadata: the sidebar label, `sidebarHidden`, and `aliases`.
