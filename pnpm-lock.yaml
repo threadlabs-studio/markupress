@@ -166,15 +166,9 @@ importers:
 
   .:
     dependencies:
-      '@nextwebwg/html-next':
-        specifier: 1.0.0-alpha.50
-        version: 1.0.0-alpha.50
       '@nextwebwg/htmlkit':
         specifier: 1.0.0-alpha.50
         version: 1.0.0-alpha.50(@types/node@22.20.1)(yaml@2.9.1)
-      '@threadlabs/looma':
-        specifier: 0.28.0
-        version: 0.28.0
       marked:
         specifier: 18.1.1
         version: 18.1.1
@@ -197,6 +191,12 @@ importers:
       '@axe-core/playwright':
         specifier: 4.13.0
         version: 4.13.0(playwright-core@1.64.0)
+      '@nextwebwg/html-next':
+        specifier: 1.0.0-alpha.50
+        version: 1.0.0-alpha.50
+      '@threadlabs/looma':
+        specifier: 0.28.2
+        version: 0.28.2
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -586,8 +586,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.28.0':
-    resolution: {integrity: sha512-+1z9ilEKPTx2p58I8NtJ8dmAmxpQo8/FQAevHc/Pt50cYmSHnKpGRmVLU7BBN7+iBV4HZmaEXVpPKftdtk5rBg==}
+  '@threadlabs/looma@0.28.2':
+    resolution: {integrity: sha512-VxBOGpW5OYFS/1JMBFG8CUOeK+FWn7ItSLYcjLrvQk790DQfGw8i5CNT++O2rQXJNJeVL3Z0g/ju0iYRoOxnPw==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     peerDependencies:
       '@tiptap/core': '>=2 <3'
@@ -1638,7 +1638,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.28.0':
+  '@threadlabs/looma@0.28.2':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.35
       dompurify: 3.4.15

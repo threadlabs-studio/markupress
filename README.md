@@ -20,6 +20,12 @@ The example serves at `/manual/`. Open a version-specific link directly to verif
 
 ## Author a site
 
+`@nextwebwg/html-next` and `@threadlabs/looma` are peer dependencies, so a site shares one copy of each with its own components. npm installs them with Markupress. Pages link Looma's components by package name, so a pnpm site adds both as its own dependencies:
+
+```sh
+pnpm add markupress @nextwebwg/html-next @threadlabs/looma
+```
+
 Create `docs/01.index.md` and optionally `markupress.config.json`:
 
 ```json
@@ -139,7 +145,7 @@ The reference.
 
 Tabs in one group keep one selection across the page, matched by label, and remember it for the next visit: choosing "npm" in one code group switches every code group. `::: tabs name` or `::: code-group name` sets the group. Without JavaScript every panel shows. Any other container name stays text. To nest containers, give the outer one more colons (`::::` around `:::`). Titles and labels are literal text.
 
-A page links the Looma components its blocks use by package name, as the theme links `ui-button`, so `@threadlabs/looma` resolves from the site: npm installs it with Markupress, and a pnpm site adds it as a dependency. The Markupress theme spaces the blocks and styles the Markdown inside them.
+A page links the Looma components its blocks use by package name, as the theme links `ui-button`, so `@threadlabs/looma` resolves from the site. The Markupress theme spaces the blocks and styles the Markdown inside them.
 
 Fenced code is highlighted at build time with [Shiki](https://shiki.style), so pages load no highlighting JavaScript. Any language Shiki bundles, such as `html`, `css`, `less`, `js`, `ts`, `tsx`, `jsx`, `json`, `bash`, `vue`, `svelte`, `md` or `yaml`, is loaded the first time a fence uses it. Unknown languages stay plain text. A `title` in the fence's info string adds a caption:
 
@@ -196,7 +202,7 @@ export default function counter(host: ComponentHost): void {
 }
 ```
 
-HTMLKit resolves `counter.js` to `counter.ts` in development and bundles its JavaScript for production. Vite transpiles; it does not type-check. Install TypeScript and `@nextwebwg/html-next` as direct development dependencies when importing its controller types, and run your project's strict TypeScript check separately. Markupress maintains its controllers with TypeScript 7. Checked JSDoc is an authoring option for your own controllers.
+HTMLKit resolves `counter.js` to `counter.ts` in development and bundles its JavaScript for production. Vite transpiles; it does not type-check. Install TypeScript as a development dependency when importing HTML Next's controller types, and run your project's strict TypeScript check separately. Markupress maintains its controllers with TypeScript 7. Checked JSDoc is an authoring option for your own controllers.
 
 ## Versions
 
