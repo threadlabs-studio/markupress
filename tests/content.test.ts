@@ -130,8 +130,8 @@ it('renders tabs and code groups as grouped Looma tabs with labelled panels', as
   expect(resource).toContain('<ui-tabs group="tabs">\n<section aria-label="Examples">\n<p>See <strong>this</strong></p>\n</section>\n<section aria-label="API {x}">\n<blockquote>\n<p>== quoted</p>\n</blockquote>\n</section>\n</ui-tabs>');
   expect(resource).toContain('<ui-tabs group="package-manager">\n<section aria-label="pnpm">\n<p>A</p>\n</section>\n</ui-tabs>');
   // A fence title labels its code group panel instead of captioning the code; under an "== Label" it stays a caption.
-  expect(resource).toMatch(/<ui-tabs class="code-group" group="code-group">\n<section aria-label="pnpm">\n<pre class="shiki[^"]*"[^>]*><code class="language-sh">.*?<\/pre>\n<\/section>\n<section aria-label="npm">\n<pre/s);
-  expect(resource).toMatch(/<section aria-label="Shell">\n<figure class="code"><figcaption>install\.sh<\/figcaption><pre/);
+  expect(resource).toMatch(/<ui-tabs class="code-group" group="code-group">\n<section aria-label="pnpm">\n<figure class="code"><div class="code-actions"[^>]*>.*?<\/div><pre class="shiki[^"]*"[^>]*><code class="language-sh">.*?<\/figure>\n<\/section>\n<section aria-label="npm">\n<figure class="code"><div/s);
+  expect(resource).toMatch(/<section aria-label="Shell">\n<figure class="code"><figcaption>install\.sh<\/figcaption><div class="code-actions"/);
   expect(resource).not.toContain('<figcaption>pnpm');
   expect(resource).toContain(tabs);
   expect(resource).not.toContain(callout);
@@ -143,8 +143,8 @@ it('renders tabs and code groups as grouped Looma tabs with labelled panels', as
 
 it('highlights fenced code at build time, with an optional title and literal braces', async () => {
   const compiled = await compileMarkdown('```ts title="app/pages/index.ts"\nconst count = 1;\n```\n\n```html\n<output>{$count}</output>\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toMatch(/<figure class="code"><figcaption>app\/pages\/index\.ts<\/figcaption><pre class="shiki [^"]*"[^>]*><code class="language-ts">/);
-  expect(compiled.resource.match(/<figure/g)).toHaveLength(1);
+  expect(compiled.resource).toMatch(/<figure class="code"><figcaption>app\/pages\/index\.ts<\/figcaption><div class="code-actions"[^>]*>.*?<\/div><pre class="shiki [^"]*"[^>]*><code class="language-ts">/);
+  expect(compiled.resource.match(/<figcaption/g)).toHaveLength(1);
   // Both themes' colors are on each token; light-dark() picks one from the page's color-scheme.
   expect(compiled.resource).toMatch(/<span style="color:light-dark\(#[0-9A-Fa-f]+, #[0-9A-Fa-f]+\);--shiki-light:#[0-9A-Fa-f]+;--shiki-dark:#[0-9A-Fa-f]+">const<\/span>/);
   const html = /<pre[^>]*><code class="language-html">.*?<\/code><\/pre>/s.exec(compiled.resource)![0];
@@ -154,7 +154,7 @@ it('highlights fenced code at build time, with an optional title and literal bra
 
 it('leaves languages Shiki does not know as escaped plain text', async () => {
   const compiled = await compileMarkdown('```not-a-language\n<b>{x}</b>\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<pre><code class="language-not-a-language">&lt;b&gt;\\{x}&lt;/b&gt;</code></pre>');
+  expect(compiled.resource).toContain('<pre><code class="language-not-a-language">&lt;b&gt;\\{x}&lt;/b&gt;</code></pre></figure>');
 });
 
 const headingIds = async (source: string) => [...(await compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index' })).resource.matchAll(/<h\d id="([^"]*)"/g)].map(match => match[1]);
@@ -173,16 +173,45 @@ it('never repeats a suffixed heading id that another heading generates', async (
 
 it('does not close a container on a marker line inside fenced code', async () => {
   const compiled = await compileMarkdown('::: note\n```\n:::\n```\n\n~~~~\n:::\n~~~~\nAfter the fences.\n:::', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<ui-callout tone="note">\n<pre><code>:::</code></pre>\n<pre><code>:::</code></pre>\n<p>After the fences.</p>\n</ui-callout>');
+  expect(compiled.resource.replaceAll(/<div class="code-actions".*?<\/div>/g, '')).toContain('<ui-callout tone="note">\n<figure class="code"><pre><code>:::</code></pre></figure>\n<figure class="code"><pre><code>:::</code></pre></figure>\n<p>After the fences.</p>\n</ui-callout>');
 });
 
 it('gives a fence with only a title no language class', async () => {
   const compiled = await compileMarkdown('```title="notes.txt"\nplain\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption><pre><code>plain</code></pre></figure>');
+  expect(compiled.resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption><div class="code-actions" hidden="" aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button><button type="button" data-code-action="copy">Copy</button></div><pre><code>plain</code></pre></figure>');
 });
 
 it('imports given stylesheets into the page component itself', async () => {
   const compiled = await compileMarkdown('# Styled', { file: '/docs/index.md', pageName: 'page-index', styles: ['/theme/prose.css'] });
   expect(compiled.resource).toMatch(/<template component="page-index">.*<style>@import "file:\/\/\/theme\/prose\.css";<\/style><\/template>/s);
   expect((await compileMarkdown('# Plain', { file: '/docs/index.md', pageName: 'page-index' })).resource).not.toContain('<style>');
+});
+
+const lines = (resource: string) => [...resource.matchAll(/<span class="line( highlighted)?">(.*?)<\/span>(?=\n|<\/code>)/g)]
+  .map(match => `${match[1] ? '+' : ' '}${text(parseFragment(match[2]!))}`);
+
+it('highlights lines from fence meta and [!code highlight] comments at build time', async () => {
+  expect(lines(await page('```ts {1,3-4}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = {x};\nconst e = 5;\n```'))).toEqual([
+    '+const a = 1;', ' const b = 2;', '+const c = 3;', '+const d = \\{x};', ' const e = 5;']);
+  expect(lines(await page('```ts{2}\nconst a = 1;\nconst b = 2; // [!code highlight]\n// [!code highlight:2]\nconst c = 3;\nconst d = 4;\nconst e = 5;\n```'))).toEqual([
+    ' const a = 1;', '+const b = 2;', '+const c = 3;', '+const d = 4;', ' const e = 5;']);
+  expect(lines(await page('```sh\nnpm install # [!code highlight]\nnpm test\n```\n\n```html\n<p>One</p> <!-- [!code highlight] -->\n```'))).toEqual(['+npm install', ' npm test', '+<p>One</p>']);
+  // Plain text takes line features without a grammar; an unknown language stays escaped text.
+  expect(lines(await page('```text {2}\nfirst\nsecond\n```'))).toEqual([' first', '+second']);
+  expect(await page('```not-a-language {1}\nraw // [!code highlight]\n```')).toContain('<pre><code class="language-not-a-language">raw // [!code highlight]</code></pre>');
+});
+
+it('numbers lines from fence meta or the lineNumbers default', async () => {
+  const numbered = (source: string, lineNumbers?: boolean) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index', ...(lineNumbers === undefined ? {} : { lineNumbers }) })
+    .then(compiled => [...compiled.resource.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.split(' ').includes('line-numbers')));
+  const fences = '```ts\na\n```\n\n```ts :line-numbers\nb\n```\n\n```ts:no-line-numbers title="c.ts"\nc\n```';
+  expect(await numbered(fences)).toEqual([false, true, false]);
+  expect(await numbered(fences, true)).toEqual([true, true, false]);
+});
+
+it('gives each code block hidden copy and wrap buttons, and a page with code its code controller', async () => {
+  const resource = await page('# Code\n\n```js\nlet a = 1;\n```');
+  expect(resource).toContain('<template component="page-index" controller="markupress/controllers/code.js">');
+  expect(resource).toMatch(/<figure class="code"><div class="code-actions" hidden="" aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap<\/button><button type="button" data-code-action="copy">Copy<\/button><\/div><pre class="shiki/);
+  expect(await page('# Prose only\n\n`inline` code')).not.toContain('controller=');
 });

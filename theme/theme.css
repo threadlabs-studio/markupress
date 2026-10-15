@@ -24,5 +24,22 @@
 .markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):last-child { margin-block-end: 0; }
 .markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); border-radius: .5rem; }
 .markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) code { font-size: .9em; }
-.markupress-prose [data-component~="ui-tabs"] :is(pre, figure):only-child { margin-block: 0; }
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) figure.code { margin: 1rem 0; }
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) figure.code > pre { margin: 0; }
+.markupress-prose [data-component~="ui-tabs"] figure.code:only-child { margin: 0; }
 .markupress-prose .code-group section { padding-inline: 0; }
+/* Code blocks. Highlighted lines and line numbers are classes written at build time; a highlighted line tints the page
+   surface, which contrasts more with the code than the block's sunken surface does. The copy and wrap buttons stay
+   hidden until the page's code controller connects, and show while the block is hovered or holds focus. */
+.markupress-prose figure.code { position: relative; }
+.markupress-prose .code-actions { position: absolute; inset-block-start: .5rem; inset-inline-end: .5rem; display: flex; gap: .25rem; opacity: 0; transition: opacity var(--ui-motion-fast, .12s); }
+.markupress-prose figure.code > figcaption ~ .code-actions { inset-block-start: 0; }
+.markupress-prose .code-actions[hidden] { display: none; }
+.markupress-prose figure.code:is(:hover, :focus-within) .code-actions { opacity: 1; }
+@media (hover: none) { .markupress-prose .code-actions { opacity: 1; } }
+.markupress-prose .code-actions button { padding: .3rem .5rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-sm, .25rem); background: var(--ui-surface); color: var(--ui-text); font: .75rem/1 system-ui, sans-serif; cursor: pointer; }
+.markupress-prose .code-actions button[aria-pressed="true"] { border-color: var(--ui-accent); }
+.markupress-prose pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.markupress-prose pre .line.highlighted { display: inline-block; box-sizing: content-box; min-inline-size: 100%; margin-inline: -1rem; padding-inline: 1rem; background: color-mix(in srgb, var(--ui-accent) 10%, var(--ui-surface)); box-shadow: inset 2px 0 var(--ui-accent); }
+.markupress-prose pre.line-numbers code { counter-reset: line; }
+.markupress-prose pre.line-numbers .line::before { counter-increment: line; content: counter(line); display: inline-block; inline-size: 2ch; margin-inline-end: 1.5ch; text-align: end; color: var(--ui-text-muted, #888); user-select: none; }

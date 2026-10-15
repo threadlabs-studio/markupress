@@ -118,7 +118,25 @@ export const count = 1;
 ```
 ````
 
-This renders `<figure class="code"><figcaption>app/pages/index.ts</figcaption><pre>…</pre></figure>`. A fence without a title is a plain `<pre>`.
+Each code block renders as `<figure class="code">`, with the title as its `<figcaption>`.
+
+The fence's info string also highlights and numbers lines, at build time with no client JavaScript:
+
+````markdown
+```ts {1,3-4} :line-numbers
+const a = 1;
+const b = 2; // [!code highlight]
+const c = 3;
+const d = 4;
+```
+````
+
+- `{1,3-4}` highlights lines 1, 3 and 4. VitePress's spelling, with no space (```` ```ts{1} ````), also works.
+- A `// [!code highlight]` comment at the end of a line highlights that line, and the comment is removed. `#`, `--`, `/* */` and `<!-- -->` comments work too. `[!code highlight:3]` covers three lines, and a marker alone on its line applies to the lines after it.
+- `:line-numbers` numbers the lines. The `lineNumbers: true` option, in `markupress.config.json`, `markupress()` or `markdown()`, numbers every block, and `:no-line-numbers` opts a block out.
+- These features apply to languages Shiki highlights and to plain text (`text`, `txt`, `plain` or `plaintext`). A fence with an unknown language or no language stays escaped text.
+
+Every code block has Copy and Wrap buttons. Copy puts the code on the clipboard, without line numbers or highlight comments. Wrap toggles line wrapping. They are native buttons, reached with Tab, and a page with code loads a small controller (`markupress/controllers/code.js`) that handles them through one delegated listener. The buttons stay hidden until that controller runs, so without JavaScript a code block is only its code. The theme shows them while the block is hovered or holds focus, and always on touch screens.
 
 Highlighting uses the `github-light-default` and `github-dark-default` themes. Each token's color is `light-dark(light, dark)`, so it follows the page's `color-scheme`. The Markupress theme sets the color scheme from its dark-theme button or the reader's system preference through Looma's `[data-theme]` themes, so code switches with the rest of the page. On another HTMLKit site, set `color-scheme: light dark` to follow the system, or set `color-scheme` on `[data-theme]` as Looma does. Each token also carries `--shiki-light` and `--shiki-dark`, so a site can switch with any selector instead, for example `.dark .shiki span { color: var(--shiki-dark) !important; }`. Browsers without `light-dark()` show unhighlighted text. The site's stylesheet owns the code block's background; the Markupress theme uses Looma's sunken surface (`--ui-surface-sunken`). There, comments measure 3.98:1 in the light theme and 4.42:1 in the dark theme, and light-theme function names 4.42:1, below the 4.5:1 the other token colors reach.
 

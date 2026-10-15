@@ -13,6 +13,8 @@ export interface MarkdownOptions {
   readonly resolveLink?: (href: string, kind: 'link' | 'asset') => string;
   /** Stylesheet files the page component imports, so their rules style this page's own region. */
   readonly styles?: readonly string[];
+  /** Number the lines of highlighted code blocks unless a fence says `:no-line-numbers`. */
+  readonly lineNumbers?: boolean;
 }
 export interface CompiledMarkdown {
   readonly resource: string;
@@ -40,14 +42,51 @@ const shikiOutput: ShikiTransformer = {
   // Code is literal author content: escape it like Markdown text so HTML Next never interpolates it.
   span(node) { for (const child of node.children) if (child.type === 'text') child.value = literal(child.value); },
 };
-async function highlight(code: string, lang: BundledLanguage): Promise<string> {
+// Plain text needs no grammar, yet takes line highlighting and numbers like any highlighted language.
+const plain = new Set(['text', 'plaintext', 'txt', 'plain']);
+async function highlight(code: string, lang: string, lines: ShikiTransformer): Promise<string> {
   // One highlighter serves every page; a grammar loads the first time a fence uses its language.
   const shiki = await (highlighter ??= createHighlighter({ themes: Object.values(themes), langs: [] }));
-  await shiki.loadLanguage(lang);
-  return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [shikiOutput] });
+  if (!plain.has(lang)) await shiki.loadLanguage(lang as BundledLanguage);
+  return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [shikiOutput, lines] });
 }
+// Line highlighting and numbers are classes written at build time; the theme's stylesheet draws them.
+const lineClasses = (marked: ReadonlySet<number>, numbers: boolean): ShikiTransformer => ({
+  pre(node) { if (numbers) this.addClassToHast(node, 'line-numbers'); },
+  line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
+});
 // A fence's first info word names its language unless it is an attribute, as in ```title="notes.txt".
-const fenceLanguage = (info = '') => /^[^\s=]+(?=\s|$)/.exec(info)?.[0];
+// It ends at `{` or `:`, so VitePress's ```ts{1} and ```ts:line-numbers work too.
+const fenceLanguage = (info = '') => /^[^\s={:]+(?=[\s{:]|$)/.exec(info)?.[0];
+// Fence meta: `{1,3-5}` highlights lines, and `:line-numbers` or `:no-line-numbers` overrides the default.
+function fenceLines(info = '') {
+  const meta = info.replace(/(?:^|\s)title="[^"]*"/, '');
+  const marked = new Set<number>();
+  for (const range of /\{([\d\s,-]+)\}/.exec(meta)?.[1]!.split(',') ?? []) {
+    const [from = NaN, to = from] = range.split('-').map(part => Number.parseInt(part, 10));
+    for (let line = from; line <= to; line++) marked.add(line);
+  }
+  const numbers = /:(no-)?line-numbers(?![\w-])/.exec(meta);
+  return { marked, numbers: numbers ? numbers[1] === undefined : undefined };
+}
+// `// [!code highlight]` at the end of a line highlights it and is removed, and `[!code highlight:3]` covers three
+// lines. Alone on a line, the marker is removed with its line and applies to the lines after it.
+// ponytail: matched on source lines rather than on Shiki's comment tokens, so a string ending in the marker counts too.
+const notation = /[ \t]*(?:\/\/|#|--|<!--|\{?\/\*)[ \t]*\[!code highlight(?::(\d+))?\][ \t]*(?:-->|\*\/\}?)?[ \t]*$/;
+function highlightNotation(code: string, marked: Set<number>): string {
+  const lines: string[] = [];
+  for (const line of code.split('\n')) {
+    const match = notation.exec(line);
+    if (!match) { lines.push(line); continue; }
+    const rest = line.slice(0, match.index), own = rest.trim() !== '';
+    if (own) lines.push(rest);
+    for (let n = 0; n < Number(match[1] ?? 1); n++) marked.add(lines.length + (own ? 0 : 1) + n);
+  }
+  return lines.join('\n');
+}
+// Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
+const codeActions = '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button>' +
+  '<button type="button" data-code-action="copy">Copy</button></div>';
 const fenceTitle = (info = '') => /(?:^|\s)title="([^"]*)"/.exec(info)?.[1];
 
 // Looma's shared block vocabulary (its "Shared blocks" page): a container's name, matched without regard to
@@ -82,7 +121,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   // Heading IDs: `used` holds every ID emitted so far, `reserved` every custom ID in the document.
   const used = new Set<string>(), reserved = new Set<string>(), suffixes = new Map<string, number>();
   const customIds = new Map<Token, string>();
-  let firstHeading: string | undefined;
+  let firstHeading: string | undefined, hasCode = false;
   const highlighted = new Map<Token, string>();
   // Code group panels labelled by their fence title, and the Looma components the page's blocks use. The page
   // links each one by package specifier, as the theme's shell links ui-button, so the site resolves Looma.
@@ -114,7 +153,9 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     if (token.type !== 'code') return;
     const language = fenceLanguage(token.lang);
     // Languages Shiki does not bundle stay escaped plain text.
-    if (language && Object.hasOwn(bundledLanguages, language)) highlighted.set(token, await highlight(token.text, language as BundledLanguage));
+    if (!language || !(Object.hasOwn(bundledLanguages, language) || plain.has(language))) return;
+    const { marked, numbers = options.lineNumbers ?? false } = fenceLines(token.lang);
+    highlighted.set(token, await highlight(highlightNotation(token.text, marked), language, lineClasses(marked, numbers)));
   }, renderer: {
     text(token) { return 'tokens' in token && token.tokens ? this.parser.parseInline(token.tokens) : literal(token.text); },
     codespan({ text }) { return `<code>${literal(escapeHTML(text))}</code>`; },
@@ -124,7 +165,8 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
       // A code group's tab already shows a panel's fence title.
       const title = labelled.has(token) ? undefined : fenceTitle(lang);
       const pre = highlighted.get(token) ?? `<pre><code${language ? ` class="language-${escapeHTML(language)}"` : ''}>${literal(escapeHTML(text))}</code></pre>`;
-      return (title ? `<figure class="code"><figcaption>${literal(escapeHTML(title))}</figcaption>${pre}</figure>` : pre) + '\n';
+      hasCode = true;
+      return `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions}${pre}</figure>\n`;
     },
     heading(token) {
       const { tokens, depth } = token;
@@ -274,5 +316,5 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     (aliases as string[]).map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('');
   const styles = options.styles?.length ? `<style>${options.styles.map(file => `@import "${pathToFileURL(file).href}";`).join('')}</style>` : '';
   return { title, label, aliases, sidebarHidden: fields.sidebarHidden === true, ...(fields.id === undefined ? {} : { id: fields.id as string }),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}">${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article>${styles}</template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article>${styles}</template>\n` };
 }
