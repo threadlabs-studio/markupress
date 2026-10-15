@@ -33,6 +33,8 @@ beforeAll(() => {
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
+  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
+    '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
@@ -117,6 +119,46 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
+      // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
+      await page.goto(server.url + 'v/current/guide/new/');
+      await page.locator('[data-component="hk-pager"] a[rel="next"]').click();
+      await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
+      const callout = page.getByRole('note').filter({ hasText: 'Breaking {x}' });
+      expect(await callout.getAttribute('data-tone')).toBe('warning');
+      const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
+      expect(await surface('warning')).not.toBe(await surface('danger'));
+      expect(await surface('warning')).not.toBe('rgba(0, 0, 0, 0)');
+      const details = page.locator('details');
+      await page.locator('summary').focus(); await page.keyboard.press('Enter');
+      await expect.poll(() => details.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
+      const groups = page.locator('[data-component="ui-tabs"]');
+      const selected = (group: number, name: string) => groups.nth(group).getByRole('tab', { name, exact: true }).getAttribute('aria-selected');
+      await expect.poll(() => groups.nth(1).getByRole('tab').count()).toBe(2);
+      expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('pnpm markupress build');
+      // The theme's global block styles reach the Markdown projected into Looma's components.
+      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(46, 46, 46)');
+      await groups.first().getByRole('tab', { name: 'npm', exact: true }).click();
+      await expect.poll(() => selected(1, 'npm')).toBe('true');
+      expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('npx markupress build');
+      await groups.nth(1).getByRole('tab', { name: 'npm', exact: true }).focus(); await page.keyboard.press('ArrowLeft');
+      await expect.poll(() => selected(0, 'pnpm')).toBe('true');
+      await page.keyboard.press('ArrowRight');
+      await expect.poll(() => selected(0, 'npm')).toBe('true');
+      // The group's choice survives a reload.
+      await page.reload();
+      await expect.poll(() => selected(1, 'npm')).toBe('true');
+      expect(await groups.first().getByRole('tabpanel').textContent()).toContain('npm install markupress');
+      const blocksAudit = await new AxeBuilder({ page }).analyze(); expect(blocksAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-blocks.png`), fullPage: true });
+      if (mode === 'preview') {
+        // Without JavaScript the blocks still read: the callout is server-rendered, details is native, and every tab panel shows.
+        const still = await browser.newContext({ javaScriptEnabled: false }); const plain = await still.newPage();
+        await plain.goto(server.url + 'v/current/guide/blocks/');
+        expect(await plain.getByRole('note').filter({ hasText: 'Breaking {x}' }).isVisible()).toBe(true);
+        expect(await plain.getByText('npx markupress build').isVisible()).toBe(true);
+        expect(await plain.getByText('pnpm markupress build').isVisible()).toBe(true);
+        await still.close();
+      }
       await page.goto(server.url + 'v/current/guide/new/');
       expect(await versions.getByText(/unavailable in v1/).textContent()).toContain('documentation home');
       await versions.getByRole('link', { name: 'v1', exact: true }).click(); await expect.poll(() => page.url()).toBe(server!.url + 'v/v1/');
