@@ -12,6 +12,7 @@
     },
     "./controllers/shell.js": "./dist/controllers/shell.js",
     "./controllers/code.js": "./dist/controllers/code.js",
+    "./controllers/outline.js": "./dist/controllers/outline.js",
     "./styles/base.css": "./styles/base.css",
     "./styles/prose.css": "./styles/prose.css"
   },
@@ -43,7 +44,9 @@
     "typescript": "7.0.2",
     "vitest": "5.0.4",
     "playwright": "1.64.0",
-    "@axe-core/playwright": "4.13.0"
+    "@axe-core/playwright": "4.13.0",
+    "@nextwebwg/html-next": "1.0.0-alpha.50",
+    "@threadlabs/looma": "0.28.2"
   },
   "publishConfig": { "access": "public" },
   "repository": {
@@ -59,11 +62,13 @@
     "marked": "18.1.1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
-    "@threadlabs/looma": "0.28.0",
     "postcss": "8.5.30",
     "postcss-value-parser": "4.2.0",
-    "@nextwebwg/html-next": "1.0.0-alpha.50",
     "shiki": "4.5.0"
+  },
+  "peerDependencies": {
+    "@nextwebwg/html-next": "1.0.0-alpha.50",
+    "@threadlabs/looma": "^0.28.2"
   },
   "bin": {
     "markupress": "./dist/cli.js"

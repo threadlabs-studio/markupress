@@ -22,7 +22,8 @@ beforeAll(() => {
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
-  write('markupress.config.json', '{"title":"Example docs","base":"/manual/"}');
+  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', logo: '/mark.svg', nav: [{ label: 'Guide', href: '/guide/install/' },
+    { label: 'More', items: [{ label: 'Outline', href: '/guide/outline/' }] }], footer: { columns: [{ title: 'Docs', items: [{ label: 'Home', href: '/' }] }], copyright: 'Copyright Example.' } }));
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('docs/01.index.md', '# Welcome\n\n[Installation](01.guide/02.install.md#install)\n\n![Mark](/mark.svg)');
   write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="../../components/counter.html">\n\n<demo-counter></demo-counter>\n\n<template component="inline-example"><p>Inline component</p><style>@import "../../components/counter.css"; :host { border-color: teal; }</style></template>\n\n<inline-example></inline-example>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
@@ -33,6 +34,8 @@ beforeAll(() => {
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
+  write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
+  write('docs/404.md', '---\nsidebarHidden: true\n---\n# Nothing here\n\n[Home](01.index.md)');
   write('docs/01.guide/04.blocks.md', '# Blocks\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n');
   run(process.execPath, [cli, 'build']);
@@ -67,7 +70,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
   let server: ApplicationServer | undefined;
   try {
     for (const mode of ['preview', 'dev'] as const) {
-      server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ root: workspace, base: '/manual/', port: 0 });
+      server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...JSON.parse(readFileSync(join(workspace, 'markupress.config.json'), 'utf8')), root: workspace, port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
       // Records the theme in the first frame that shows the theme button, and any transition the button runs while loading.
@@ -89,8 +92,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
       expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
-      // The theme's global stylesheet reaches HTMLKit's built-in navigation, breadcrumbs, and pager.
-      expect(await page.locator('[data-component="hk-nav"] ul').evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
+      // The shell styles its sidebar, and the theme's global stylesheet reaches HTMLKit's built-in breadcrumbs and pager.
+      expect(await page.locator('nav.sidebar ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
       expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
       expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
@@ -142,8 +145,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
       expect(await surface('warning')).not.toBe(await surface('danger'));
       expect(await surface('warning')).not.toBe('rgba(0, 0, 0, 0)');
-      const details = page.locator('details');
-      await page.locator('summary').focus(); await page.keyboard.press('Enter');
+      const details = page.locator('main details');
+      await page.locator('main summary').focus(); await page.keyboard.press('Enter');
       await expect.poll(() => details.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
       const groups = page.locator('[data-component="ui-tabs"]');
       const selected = (group: number, name: string) => groups.nth(group).getByRole('tab', { name, exact: true }).getAttribute('aria-selected');
@@ -174,22 +177,51 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         // Without JavaScript a code block is only its code.
         expect(await plain.locator('.code-actions').first().isVisible()).toBe(false);
         expect(await plain.getByText('const first = 1;').isVisible()).toBe(true);
+        // Without JavaScript the outline still links its headings, and the narrow-screen drawer still opens.
+        await plain.goto(server.url + 'v/current/guide/outline/');
+        expect(await plain.getByRole('navigation', { name: 'On this page' }).getByRole('link', { name: 'Third' }).getAttribute('href')).toBe('#third');
+        await plain.setViewportSize({ width: 390, height: 844 });
+        await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
+        expect(await plain.getByRole('navigation', { name: 'Documentation', exact: true }).isVisible()).toBe(true);
         await still.close();
       }
       await page.goto(server.url + 'v/current/guide/new/');
       expect(await versions.getByText(/unavailable in v1/).textContent()).toContain('documentation home');
       await versions.getByRole('link', { name: 'v1', exact: true }).click(); await expect.poll(() => page.url()).toBe(server!.url + 'v/v1/');
-      expect(await page.locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
+      expect(await page.locator('main img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
       await page.getByRole('link', { name: 'Skip to content' }).focus(); await page.keyboard.press('Enter');
       expect(await page.locator('main').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       const audit = await new AxeBuilder({ page }).analyze(); expect(audit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      // The outline tracks the heading in view, and its links stay plain fragment links.
+      await page.goto(server.url + 'v/current/guide/outline/');
+      const outline = page.getByRole('navigation', { name: 'On this page' });
+      expect(await outline.getByRole('link').allTextContents()).toEqual(['First', 'Second', 'Third']);
+      await page.locator('#second').evaluate(element => element.scrollIntoView());
+      await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
+      expect(await outline.locator('[aria-current]').count()).toBe(1);
+      // A top navigation dropdown is native details; following a link in it closes it.
+      const more = page.locator('header details');
+      await page.locator('header summary').click();
+      await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
+      await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Outline' }).click();
+      await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(false);
+      // An unknown path renders the 404 page in the shell.
+      expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
+      expect(await page.locator('h1').textContent()).toBe('Nothing here');
+      expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
+      await page.goto(server.url + 'v/v1/');
+      // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
+      const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
+      await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
-      await expect.poll(() => page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(0);
-      await expect.poll(() => page.getByRole('button', { name: 'Navigation', exact: true }).getAttribute('aria-expanded')).toBe('false');
+      await expect.poll(() => sidebar.isVisible()).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
-      await expect.poll(() => page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
-      await expect.poll(() => page.getByRole('button', { name: 'Navigation', exact: true }).getAttribute('aria-expanded')).toBe('true');
+      await sidebar.getByRole('link', { name: 'Installation' }).click();
+      await expect.poll(() => page.url()).toBe(server!.url + 'v/v1/guide/install/');
+      await expect.poll(() => sidebar.isVisible()).toBe(false);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
       expect(errors).toEqual([]); await context.close(); await server.close(); server = undefined;

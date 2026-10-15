@@ -4,9 +4,10 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseComponentResource } from '@nextwebwg/html-next';
 import { buildApplication, devApplication, previewApplication, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
-  type LoadContext, type ServerOptions } from '@nextwebwg/htmlkit';
+  type LoadContext, type NavigationItem, type ServerOptions } from '@nextwebwg/htmlkit';
 import type { FrontMatter, OutlineItem } from './content.js';
 import { markdown } from './markdown.js';
+import { configuredSidebar, generatedSidebar, type Link, type NavItem, type SidebarItem } from './navigation.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
 
@@ -34,6 +35,20 @@ export interface MarkupressOptions {
    * loader data its `<prop>` declarations name: see "Layout data" in the README.
    */
   readonly layout?: string;
+  /** The logo before the title: one image, or one per theme. Paths starting with `/` are files in `public/`. */
+  readonly logo?: string | { readonly light: string; readonly dark?: string };
+  /** The site's icon, such as `/favicon.svg` from `public/`. */
+  readonly favicon?: string;
+  /** Top navigation: links, and dropdowns of links. A path starting with `/` is a page of the version being read. */
+  readonly nav?: readonly NavItem[];
+  /** Links at the end of the top navigation, each shown as its `icon` image (from `public/`) or its label. */
+  readonly social?: readonly (Link & { readonly icon?: string })[];
+  /** Text of the badge beside the title. Without it, a site with several versions shows the selected version's label. */
+  readonly versionBadge?: string;
+  /** Explicit sidebars by section path (`/`, `/editor/`). Every other section's sidebar is generated from its folder. */
+  readonly sidebar?: Readonly<Record<string, readonly SidebarItem[]>>;
+  /** Footer link columns and a copyright line. */
+  readonly footer?: { readonly columns?: readonly { readonly title: string; readonly items: readonly Link[] }[]; readonly copyright?: string };
 }
 export interface DocumentationPage {
   readonly id: string;
@@ -106,13 +121,49 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const page = catalog.find(doc => doc.pathname === requested || doc.aliases.includes(requested));
     // The default version also serves the root; its entries are marked current under /v/<id>/.
     const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
-    const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: await navigation(within),
+    const items = await navigation(within);
+    const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
+      ...chrome(items, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
       crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {} };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
     const accepted = await declaredProps(layoutFile);
     return { props: Object.fromEntries(Object.entries(data).filter(([name]) => accepted.has(name))), data: { markupress: data } };
+  }
+  /** The shell around the page: top navigation, logo, badge, the section's sidebar and the footer. */
+  function chrome(items: readonly NavigationItem[], pages: readonly DocumentationPage[], selected: string, current: string, base: string) {
+    const home = `${base}v/${selected}/`;
+    const href = (to: string) => /^(?:[A-Za-z][\w+.-]*:|\/\/|#)/.test(to) || !to.startsWith('/') ? to : home + to.slice(1);
+    const file = (path: string) => path.startsWith('/') ? base + path.slice(1) : path;
+    // A link is the page itself, or an ancestor section of it (aria-current="true").
+    const link = ({ label, href: to }: Link) => {
+      const target = href(to), path = target.split('#')[0]!;
+      return { label, href: target, current: target === current ? 'page' : path !== home && path.endsWith('/') && current.startsWith(path) ? 'true' : 'false' };
+    };
+    // The section is the longest configured sidebar path holding the page, else its top-level folder, else the root.
+    const path = '/' + current.slice(home.length);
+    const top = /^\/([^/]+)\//.exec(path)?.[1];
+    const section = Object.keys(options.sidebar ?? {}).filter(key => key !== '/' && path.startsWith(key)).sort((a, b) => b.length - a.length)[0]
+      ?? (top !== undefined && items.some(item => item.href.startsWith(`${home}${top}/`) && item.href !== `${home}${top}/`) ? `/${top}/` : '/');
+    const explicit = options.sidebar?.[section];
+    const sources = new Map(pages.map(doc => [base + doc.pathname.slice(1), doc.source]));
+    const from = home + section.slice(1);
+    const logo = typeof options.logo === 'string' ? { light: options.logo, dark: options.logo } : options.logo;
+    const versions = editions.length > 1 ? editions.find(edition => edition.id === selected) : undefined;
+    return {
+      sidebar: explicit ? configuredSidebar(explicit, items, href, current) : generatedSidebar(items.filter(item => item.href.startsWith(from)), from, sources),
+      nav: (options.nav ?? []).map(item => {
+        if (!('items' in item)) return { ...link(item), items: [] };
+        const links = item.items.map(link);
+        return { label: item.label, href: '', current: links.some(entry => entry.current !== 'false') ? 'true' : 'false', items: links };
+      }),
+      logo: logo === undefined ? null : { light: file(logo.light), dark: file(logo.dark ?? logo.light) },
+      favicon: options.favicon === undefined ? null : file(options.favicon),
+      social: (options.social ?? []).map(entry => ({ label: entry.label, href: href(entry.href), icon: entry.icon === undefined ? '' : file(entry.icon) })),
+      badge: options.versionBadge ?? (versions ? versions.label ?? versions.id : ''),
+      footer: { columns: (options.footer?.columns ?? []).map(column => ({ title: column.title, items: column.items.map(link) })), copyright: options.footer?.copyright ?? '' },
+    };
   }
   return { ...pages, name: 'markupress', async config(htmlkit) {
     root = resolve(htmlkit.root ?? root);
@@ -127,6 +178,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
+    for (const key of Object.keys(options.sidebar ?? {})) if (!/^\/(?:[^/]+\/)*$/.test(key)) throw new Error(`sidebar: ${key} must be a path such as / or /guide/.`);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs.
     if (options.layout !== undefined) layoutFile = resolve(root, options.layout);
     const layout = { component: layoutFile, server: { load } };
