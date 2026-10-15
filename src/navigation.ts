@@ -1,11 +1,11 @@
-import type { NavigationItem, NavigationNode } from '@nextwebwg/htmlkit';
+import { existsSync, readFileSync } from 'node:fs';
+import type { NavigationNode } from '@nextwebwg/htmlkit';
+import { Lexer, type Token } from 'marked';
 
 /** A top navigation or footer link. A path starting with `/` is a page of the selected version. */
 export interface Link { readonly label: string; readonly href: string }
-/** A top navigation entry: a link, or a dropdown of links. */
-export type NavItem = Link | { readonly label: string; readonly items: readonly Link[] };
-/** An explicit sidebar entry: a page by its path in the version (`/guide/install/`), a link, or a group. */
-export type SidebarItem = string | Link | { readonly label: string; readonly items: readonly SidebarItem[]; readonly collapsed?: boolean };
+/** A top navigation link after the sections, shown as its `icon` image (a path starting with `/` is in `public/`) or its label. */
+export type NavItem = Link & { readonly icon?: string };
 
 /** A sidebar entry as `<hk-nav>` renders it: a page or link with `href`, and a folder or group with `children`. */
 export interface SidebarNode {
@@ -27,21 +27,29 @@ export function generatedSidebar(tree: readonly NavigationNode[], collapsed: (hr
     children: generatedSidebar(node.children, collapsed) }));
 }
 
-/** A configured sidebar, resolved against the version's pages so entries get their labels and current page. */
-export function configuredSidebar(entries: readonly SidebarItem[], items: readonly NavigationItem[], href: (path: string) => string, current: string, depth = 0): SidebarNode[] {
-  return entries.map(entry => {
-    if (typeof entry === 'string') {
-      const page = items.find(item => item.href === href(entry));
-      if (page === undefined) throw new Error(`sidebar: no page at ${entry}.`);
-      return { label: page.label, href: page.href, current: page.current, open: false, depth, children: [] };
+/**
+ * A version's footer, from the `_footer.md` in its content directory (HTMLKit routes no `_` file): each heading
+ * starts a column, its list items are links, and a paragraph after them is the copyright line.
+ */
+export function footer(file: string): { columns: { title: string; items: Link[] }[]; copyright: string } {
+  const result = { columns: [] as { title: string; items: Link[] }[], copyright: '' };
+  if (!existsSync(file)) return result;
+  const fail = (message: string): never => { throw new Error(`${file}: ${message}`); };
+  const link = (tokens: readonly Token[] = []): Link | undefined => {
+    for (const token of tokens) {
+      if (token.type === 'link') return { label: token.text, href: token.href };
+      const inner = link('tokens' in token ? token.tokens : undefined);
+      if (inner) return inner;
     }
-    if ('items' in entry) {
-      const children = configuredSidebar(entry.items, items, href, current, depth + 1);
-      return { label: entry.label, current: 'false', open: entry.collapsed !== true || children.some(holdsCurrent), depth, children };
-    }
-    const target = href(entry.href);
-    return { label: entry.label, href: target, current: target === current ? 'page' : 'false', open: false, depth, children: [] };
-  });
+    return undefined;
+  };
+  for (const token of Lexer.lex(readFileSync(file, 'utf8'))) {
+    if (token.type === 'heading') result.columns.push({ title: token.text, items: [] });
+    else if (token.type === 'list') {
+      const column = result.columns.at(-1) ?? fail('a footer list follows a heading, which titles its column.');
+      for (const item of token.items) column.items.push(link(item.tokens) ?? fail(`the footer list item "${item.text}" is a link.`));
+    } else if (token.type === 'paragraph') result.copyright = token.text;
+    else if (token.type !== 'space') fail(`a footer holds headings, lists of links, and a copyright paragraph, not ${token.type}.`);
+  }
+  return result;
 }
-
-const holdsCurrent = (node: SidebarNode): boolean => node.current === 'page' || node.children.some(holdsCurrent);

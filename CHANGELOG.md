@@ -9,6 +9,14 @@ Breaking changes from 0.1.0:
 - A folder is a page: its index page's front matter labels, orders and collapses the folder. `_category.yml`, `_category_.yml` and `_category_.json` files are no longer read; move their fields into the folder's `index.md` (`label` becomes `title`, `position` becomes `order`, and `collapsed: true` becomes `navigation: collapsed`). A label for pages with no folder URL is an HTMLKit route group, a folder named in parentheses.
 - Front matter keys follow HTMLKit's page metadata. Rename `sidebarPosition` to `order` (HTMLKit `hk:order`), `sidebarHidden: true` to `navigation: hidden` (HTMLKit `hk:navigation`), and `toc` to `outline`. `sidebarLabel` is removed: `title` is the navigation, breadcrumb and pager label (HTMLKit `hk:label`). Each old key fails the build as an unknown field, naming the file and the valid fields.
 - `compileMarkdown` no longer returns `label` or `sidebarHidden`, and a layout's `page` data no longer has `label`; read `title` and `frontmatter.navigation`.
+- Configuration is conventions first. The options are `title`, `base`, `contentDir`, `outDir`, `versions`, `defaultVersion`, `lineNumbers`, `nav`, `logo` and `favicon`, plus `root`, `host` and `port` in the programmatic API. An unknown option fails with the list of options.
+  - `layout` is removed: a site's `app/layouts/default.html` replaces the shell and receives its loader data.
+  - `sidebar` is removed: folders, `order` and `navigation` front matter shape every sidebar.
+  - `footer` is removed: `_footer.md` in a version's content directory holds a heading per column, a list of links under each, and a copyright paragraph.
+  - `social` is removed: `nav` links take an optional `icon`. `nav` dropdowns are removed. The top navigation starts with each top-level folder that has an index page, labelled and ordered by it, and `nav` adds links after them.
+  - `versionBadge` is removed: a site with several versions shows the selected version's label.
+  - `logo` and `favicon` default to `public/logo.svg` (with `public/logo-dark.svg` for the dark theme) and `public/favicon.svg`.
+  - The `SidebarItem` type is removed, and `NavItem` is a link with an optional `icon`. A replacement layout's `nav` items have `icon`, and the `social` prop is removed.
 
 Added:
 

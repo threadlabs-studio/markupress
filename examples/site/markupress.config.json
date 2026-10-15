@@ -1,22 +1,8 @@
 {
   "title": "Markupress",
   "base": "/manual/",
-  "logo": "/logo.svg",
-  "favicon": "/logo.svg",
   "nav": [
-    { "label": "Guide", "href": "/guide/authoring/" },
-    { "label": "Reference", "href": "/reference/configuration/" },
-    { "label": "Links", "items": [
-      { "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" },
-      { "label": "Looma", "href": "https://github.com/threadlabs-studio/looma" }
-    ] }
-  ],
-  "social": [{ "label": "GitHub", "href": "https://github.com/threadlabs-studio/markupress" }],
-  "footer": {
-    "columns": [
-      { "title": "Docs", "items": [{ "label": "Author a page", "href": "/guide/authoring/" }, { "label": "Configuration", "href": "/reference/configuration/" }] },
-      { "title": "Project", "items": [{ "label": "GitHub", "href": "https://github.com/threadlabs-studio/markupress" }] }
-    ],
-    "copyright": "Copyright 2026 Threadlabs Studio contributors."
-  }
+    { "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" },
+    { "label": "GitHub", "href": "https://github.com/threadlabs-studio/markupress" }
+  ]
 }
