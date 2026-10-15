@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import type { HtmlKitPlugin, PageContext } from '@nextwebwg/htmlkit';
-import { compileMarkdown, type CompiledMarkdown } from './content.js';
+import { compileMarkdown, type CompiledMarkdown, type FrontMatter } from './content.js';
 
 export interface MarkdownPluginOptions {
   /** Directory that a page's root-relative images and files (/logo.svg) come from; without one they stay site URLs. */
@@ -12,6 +12,8 @@ export interface MarkdownPluginOptions {
   readonly styles?: readonly string[];
   /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
   readonly lineNumbers?: boolean;
+  /** Front matter for a page that its own fields override, such as a folder's label and position on its index page. */
+  readonly frontmatter?: (file: string) => FrontMatter | undefined;
 }
 
 /**
@@ -26,8 +28,9 @@ export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     // compileMarkdown also passes through links it already resolved; return those unchanged.
     const resolved = new Set<string>();
+    const frontmatter = options.frontmatter?.(page.file);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), resolveLink(target, kind) {
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), resolveLink(target, kind) {
       if (resolved.has(target)) return target;
       const url = link(target, kind, page, options);
       resolved.add(url);

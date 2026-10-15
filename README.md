@@ -39,6 +39,18 @@ Create `docs/01.index.md` and optionally `markupress.config.json`:
 
 Every version needs an `index.md` at its root; a numeric prefix such as `01.index.md` is allowed. `base` starts and ends with `/`. `layout` names a layout component that replaces the Markupress shell (see [Layouts](#layouts)). Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
+The `markupress` command and these APIs also load the site's `htmlkit.config.ts` (or `.js`) with HTMLKit's `loadConfig`, and add `markupress()` after its plugins, so HTMLKit plugins and options compose with Markupress:
+
+```ts
+// htmlkit.config.ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+import { sitemap } from './plugins/sitemap.js';
+
+export default defineConfig({ plugins: [sitemap()], redirects: { '/start/': '/guide/install/' } });
+```
+
+`base` and `outDir` from `markupress.config.json` or the command line win over the HTMLKit config's; without either, they are `/` and `site`. `markupress()` includes the `markdown()` plugin, so the HTMLKit config lists neither.
+
 The same pieces work as HTMLKit plugins. `markupress(options)` adds versioned documentation with this theme. `markdown()` alone makes any HTMLKit site's `.md` files into pages, with no versions or theme:
 
 ```ts
@@ -79,6 +91,7 @@ Front matter is a YAML mapping. Each field becomes HTMLKit page metadata or page
 | `description` | string | `<meta name="description">`. |
 | `sidebarLabel` | string | The navigation, breadcrumb and pager label (HTMLKit `hk:label`). |
 | `sidebarHidden` | boolean | `true` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). |
+| `sidebarPosition` | whole number | The page's place among its folder's pages, in place of its file's number prefix (HTMLKit `hk:order`). On a folder's index page it places the whole folder, and on the version home it is an error. |
 | `id` | string | The document identity across versions, independent of the file name and route. |
 | `aliases` | list of route paths | Further URLs serving the page, relative to its version (HTMLKit `hk:alias`). |
 | `layout` | string or `false` | An HTMLKit layout, `app/layouts/<name>.html`, in place of the site's layout for this page (HTMLKit `hk:layout`). `false` renders the page with no layout. |
@@ -98,7 +111,7 @@ head:
 ---
 ```
 
-Number prefixes order pages: `sidebarPosition` reports the file name to use instead, such as `02.install.md`.
+Number prefixes order pages, and `sidebarPosition` takes the place of a file's prefix: `sidebarPosition: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
 
 Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
@@ -278,21 +291,21 @@ An `href` starting with `/` is a page path in the version being read, so `/compo
 
 **Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. A `sidebar` entry replaces the generated sidebar of the section at its path. Its entries are page paths, which take the page's label, links (`{ "label", "href" }`), and groups (`{ "label", "items", "collapsed" }`). A path such as `/editor/` that names a page also makes that page a section. A page path that names no page fails the build.
 
-**Groups.** In a generated sidebar, each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript. A folder's index page is its group's first entry. A `_category.yml` in the folder sets the group's metadata; Docusaurus's `_category_.json` and `_category_.yml` work too:
+**Groups.** A generated sidebar is HTMLKit's navigation tree, rendered by `<hk-nav>`: each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript, nested as deep as the folders go. A folder with an index page is that page's entry, and its summary links to the page. A group starts open, unless its folder's metadata collapses it, and a group holding the current page always starts open. A `_category.yml` in the folder sets the group's metadata; Docusaurus's `_category_.json` and `_category_.yml` work too:
 
 ```yaml
-label: Forms        # default: the folder's index page label, then the folder name
-position: 3         # orders the group among its siblings like a 03. folder prefix
+label: Forms        # default: the index page's sidebarLabel, then its title, then the folder name
+position: 3         # orders the folder among its siblings like a 03. folder prefix
 collapsed: true     # starts closed, except on the pages inside it
 ```
 
-The sidebar shows two levels of groups; pages in deeper folders list in the second level, indented. `position` orders the sidebar; the previous/next links follow HTMLKit's file order.
+`label` and `position` become the folder's index page's `sidebarLabel` and `sidebarPosition` (HTMLKit `hk:label` and `hk:order`), which its own front matter overrides, so the label also names the index page in breadcrumbs and the pager. A folder with a `_category` file needs an index page, and the build fails without one. `position` is a whole number. Navigation, breadcrumbs and the previous/next links follow the same order.
 
 **Outline.** A page with headings in its `toc` range (h2 and h3 by default) shows them in an "On this page" outline beside the content on wide screens. The links are plain fragment links. A small controller (`markupress/controllers/outline.js`, also exported) marks the heading being read with `aria-current="location"`, using an IntersectionObserver; without JavaScript only that marking is missing.
 
 **Narrow screens.** Below 769px the sidebar is a drawer: a native popover, closed until the Navigation button opens it, and it opens without JavaScript. Escape or a tap outside closes it, and following a link in it closes it.
 
-**Not found.** A `404.md` in the default version's content directory is the site's not-found page (HTMLKit's not-found page, R7). It renders in the shell for every unmatched path, with status 404 in `dev` and `preview`, and `build` writes it to `404.html`. Give it `sidebarHidden: true`: the default version's folder also serves it at `/v/<id>/404/`, and the front matter keeps that page out of the sidebar.
+**Not found.** A `404.md` in the default version's content directory is the site's not-found page (HTMLKit's not-found page, R7). It renders in the shell for every unmatched path, including those under `/v/<id>/`, with status 404 in `dev` and `preview`, and `build` writes it to `404.html`. It is no page of its version, so it has no URL of its own and no sidebar entry.
 
 ### Layouts
 
@@ -316,7 +329,7 @@ The sidebar shows two levels of groups; pages in deeper folders list in the seco
 | `title` | The site title (`title` option, default "Documentation"). |
 | `home` | The site's base URL. |
 | `navigation` | HTMLKit navigation items for the selected version: `href`, `label`, `current` (`"page"` or `"false"`), `depth` and `pageName`. |
-| `sidebar` | The page's section sidebar: entries with `label`, `href`, `current`, `open`, `depth` and `items`. A group has an empty `href` and its entries in `items`. |
+| `sidebar` | The page's section sidebar, in `<hk-nav>`'s tree shape: entries with `label`, `current`, `open`, `depth` and `children`, and an `href` on a page or link. A folder with an index page has both `href` and `children`; a configured group has no `href`. Pass it to `<hk-nav from:items="$sidebar">`. |
 | `nav`, `social`, `footer` | The resolved `nav`, `social` and `footer` options: links have `label`, `href` and `current`, a dropdown has `items`, and a social link has its `icon` URL. |
 | `logo`, `favicon`, `badge` | The logo's `light` and `dark` URLs, the icon URL (both `null` when unset), and the badge text. |
 | `crumbs` | Navigation items from the version home down to this page. |
@@ -331,7 +344,9 @@ A folder's `_layout.html` inside a version's content wraps that folder's pages i
 export function load({ parent }) { return { props: { section: parent.markupress.page.title } }; }
 ```
 
-HTMLKit plugins compose with Markupress through an `htmlkit.config.ts` that lists `markupress()` among its plugins, built with `htmlkit build`.
+A layout receives exactly the props its component declares, which HTMLKit gives the loader as `propNames`. Declare navigation items with an open object type, which ends in `...`, so items keep passing as HTMLKit adds fields such as a route group's `group`.
+
+HTMLKit plugins compose with Markupress through the site's `htmlkit.config.ts`, which the `markupress` command loads (see [Author a site](#author-a-site)).
 
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
 

@@ -52,7 +52,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title>Installation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
-  expect(page).toContain('<nav class="sidebar" aria-label="Documentation">');
+  expect(page).toMatch(/<nav aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
   expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
@@ -154,16 +154,19 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   await write(root, 'docs/02.components/01.forms/button.md', '# Button');
   await write(root, 'docs/02.components/02.layout/stack.md', '# Stack');
   await write(root, 'docs/02.components/02.layout/_category.yml', 'label: Layout\nposition: 0\ncollapsed: true\n');
-  await write(root, 'docs/editor.md', '# Editor\n\n## Tables');
-  const sidebar = (html: string) => /<nav class="sidebar"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  await write(root, 'docs/02.components/02.layout/index.md', '# Layout components');
+  await write(root, 'docs/editor.md', '---\nsidebarPosition: 1\n---\n# Editor\n\n## Tables');
+  const sidebar = (html: string) => /<nav aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   let application = await createApplication(siteOptions({ root }));
   try {
-    expect(sidebar((await application.render('/')).html)).toBe('Welcome guide Installation components Layout Stack forms Button Editor');
+    // sidebarPosition 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
+    expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
     const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '');
     expect(sidebar(button)).toBe('Layout Stack forms Button');
     // A collapsed group stays closed unless it holds the current page.
-    expect(button).toMatch(/<details[^>]*><summary[^>]*>Layout<\/summary>/);
-    expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>forms<\/summary>/);
+    // A folder with an index page is that page's node, so its summary links to the page.
+    expect(button).toMatch(/<details(?![^>]* open)[^>]*><summary[^>]*><a href="\/v\/current\/components\/layout\/"[^>]*>Layout<\/a><\/summary>/);
+    expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>(?:<[^>]*>)*forms</);
     expect(button).toContain('href="/v/current/components/forms/button/" aria-current="page"');
   } finally { await application.close(); }
   application = await createApplication(siteOptions({ root, sidebar: {
@@ -206,7 +209,7 @@ it('renders the configured top navigation, logo, favicon, badge, social links, f
 
 it('renders the default version\'s 404.md in the shell for unmatched paths and builds it as 404.html', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/404.md', '---\ntitle: Page not found\nsidebarHidden: true\n---\n# Page not found\n\n[Home](01.index.md)');
+  await write(root, 'docs/404.md', '---\ntitle: Page not found\n---\n# Page not found\n\n[Home](01.index.md)');
   const application = await createApplication(siteOptions({ root }));
   try {
     const missing = await application.render('/nowhere/');
@@ -214,9 +217,47 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
     expect(missing.html).toContain('data-component="markupress-shell"');
     expect(missing.html).toContain('<title>Page not found</title>');
     expect(missing.html).toContain('href="/v/current/guide/install/"');
+    // The not-found page is no page of its version, so it stays out of navigation and /v/current/404/ is missing too.
+    expect(application.routes.map(route => route.pattern)).not.toContain('/v/current/404/');
+    expect((await application.render('/v/current/404/')).status).toBe(404);
+    expect((await application.render('/')).html).not.toContain('Page not found');
   } finally { await application.close(); }
   const result = await buildSite({ root });
   const page = await readFile(join(result.outDir, '404.html'), 'utf8');
   expect(page).toContain('data-component="markupress-shell"');
   expect(page).toContain('Page not found');
+}, 30_000);
+
+it('fails the build for a _category in a folder without an index page', async () => {
+  const root = await fixture();
+  await write(root, 'docs/02.loose/a.md', '# A');
+  await write(root, 'docs/02.loose/_category_.json', '{ "label": "Loose" }');
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/02\.loose\/_category_\.json: .*add an index\.md/);
+});
+
+it('composes the site\'s htmlkit.config plugins and options with Markupress', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'htmlkit.config.js', "export default { base: '/kit/', plugins: [{ name: 'extra', buildEnd: context => context.writeFile('extra.txt', context.base) }] };");
+  const result = await buildSite({ root });
+  expect(await readFile(join(result.outDir, 'extra.txt'), 'utf8')).toBe('/kit/');
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/kit/v/current/guide/install/"');
+  // A Markupress base wins over HTMLKit's, and markupress() is the command's to add.
+  expect((await buildSite({ root, base: '/docs/' })).routes).toContain('/docs/guide/install/');
+  await write(root, 'htmlkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
+  await expect(buildSite({ root })).rejects.toThrow('remove markupress() from its plugins');
+}, 60_000);
+
+it('renders route groups, whose navigation items carry a group, in the shell', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/03.(Getting started)/01.intro.md', '# Intro');
+  await write(root, 'docs/03.(Getting started)/02.setup.md', '# Setup');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const rendered = await application.render('/intro/');
+    expect(rendered.status).toBe(200);
+    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '');
+    // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
+    expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
+    expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
+  } finally { await application.close(); }
 }, 30_000);

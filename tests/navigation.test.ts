@@ -1,9 +1,9 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { NavigationItem } from '@nextwebwg/htmlkit';
+import type { NavigationItem, NavigationNode } from '@nextwebwg/htmlkit';
 import { afterEach, expect, it } from 'vitest';
-import { category, configuredSidebar, generatedSidebar, type SidebarNode } from '../src/navigation.js';
+import { category, categoryFrontMatter, configuredSidebar, generatedSidebar, type SidebarNode } from '../src/navigation.js';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
@@ -13,49 +13,53 @@ async function project(files: Record<string, string>) {
   return root;
 }
 const item = (path: string, label: string, current = 'false'): NavigationItem => ({ href: `/d/v/current/${path}`, label, current: current as 'page' | 'false', depth: path.split('/').filter(Boolean).length, pageName: `page-${label}` });
-/** Labels as a nested outline: a group is [label, open, children]. */
-const shape = (nodes: readonly SidebarNode[]): unknown[] => nodes.map(node => node.href ? node.label : [node.label, node.open, shape(node.items)]);
+const node = (label: string, children: NavigationNode[] = [], fields: Partial<NavigationNode> = {}): NavigationNode =>
+  ({ label, current: 'false', open: children.some(child => child.open), depth: 0, order: null, children, ...fields });
+/** Labels as a nested outline: a folder or group is [label, open, children]. */
+const shape = (nodes: readonly SidebarNode[]): unknown[] => nodes.map(entry => entry.children.length > 0 ? [entry.label, entry.open, shape(entry.children)] : entry.label);
 
-it('groups pages by folder, labels groups from _category, index pages or folder names, and orders them by position', async () => {
-  const root = await project({
-    'docs/02.components/index.md': '', 'docs/02.components/01.forms/button.md': '', 'docs/02.components/02.layout/stack.md': '',
-    'docs/02.components/02.layout/_category_.json': '{ "label": "Layout", "position": 0 }',
-    'docs/01.guide/01.start.md': '', 'docs/01.guide/02.more/a.md': '', 'docs/01.guide/02.more/_category.yml': 'label: More\ncollapsed: true\n',
-  });
-  const items = [item('', 'Home'), item('guide/start/', 'Start'), item('guide/more/a/', 'A'), item('components/', 'Components'),
-    item('components/forms/button/', 'Button', 'page'), item('components/layout/stack/', 'Stack')];
-  const sources = new Map([['', 'docs/index.md'], ['guide/start/', 'docs/01.guide/01.start.md'], ['guide/more/a/', 'docs/01.guide/02.more/a.md'],
-    ['components/', 'docs/02.components/index.md'], ['components/forms/button/', 'docs/02.components/01.forms/button.md'],
-    ['components/layout/stack/', 'docs/02.components/02.layout/stack.md']].map(([path, file]) => [`/d/v/current/${path}`, join(root, file!)]));
-  expect(shape(generatedSidebar(items, '/d/v/current/', sources))).toEqual([
-    'Home',
-    ['guide', true, ['Start', ['More', false, ['A']]]],
-    // The folder's index page labels its group and comes first; position 0 moves Layout before forms (01.).
-    ['Components', true, ['Components', ['Layout', true, ['Stack']], ['forms', true, ['Button']]]],
-  ]);
-  // A section's sidebar is its folder's pages, and a collapsed group holding the current page stays open.
-  expect(shape(generatedSidebar(items.slice(1, 3).map(entry => entry.label === 'A' ? { ...entry, current: 'page' as const } : entry), '/d/v/current/guide/', sources)))
-    .toEqual(['Start', ['More', true, ['A']]]);
-});
-
-it('lists pages deeper than two group levels flat in the second, indented by depth', () => {
-  const items = [item('a/b/c/d/', 'D'), item('a/b/c/e/f/', 'F')];
-  const [group] = generatedSidebar(items, '/d/v/current/', new Map());
-  expect(group!.items[0]!.items.map(node => [node.label, node.depth])).toEqual([['D', 1], ['F', 2]]);
+it('keeps folders open unless their index page collapses them, and always opens one holding the current page', () => {
+  const tree = [node('Home', [], { href: '/home/' }),
+    node('Forms', [node('Button', [], { href: '/forms/button/' })], { href: '/forms/' }),
+    node('Layout', [node('Stack', [], { href: '/layout/stack/' })], { href: '/layout/' }),
+    node('More', [node('Deep', [node('Page', [], { href: '/more/deep/page/', current: 'page', open: true })])], { href: '/more/' })];
+  const collapsed = (href: string) => href === '/layout/' || href === '/more/';
+  // Folders nest as deep as the tree does: <hk-nav> renders each level.
+  expect(shape(generatedSidebar(tree, collapsed))).toEqual(['Home', ['Forms', true, ['Button']], ['Layout', false, ['Stack']], ['More', true, [['Deep', true, ['Page']]]]]);
+  // A folder without an index page has no href, and stays open.
+  expect(generatedSidebar([node('loose', [node('A', [], { href: '/loose/a/' })])], () => true)[0]!.open).toBe(true);
 });
 
 it('resolves a configured sidebar against the version pages, with links and collapsible groups', () => {
   const items = [item('', 'Home'), item('architecture/', 'Architecture', 'page'), item('tokens/', 'Tokens')];
   const href = (path: string) => path.startsWith('/') ? `/d/v/current/${path.slice(1)}` : path;
   const sidebar = configuredSidebar(['/', { label: 'Foundations', collapsed: true, items: ['/architecture/', '/tokens/'] },
-    { label: 'Proposal', href: 'https://nextwebwg.org/' }], items, href, '/d/v/current/architecture/');
-  expect(shape(sidebar)).toEqual(['Home', ['Foundations', true, ['Architecture', 'Tokens']], 'Proposal']);
-  expect(sidebar[1]!.items[0]).toMatchObject({ href: '/d/v/current/architecture/', current: 'page' });
-  expect(sidebar[2]).toMatchObject({ href: 'https://nextwebwg.org/', current: 'false' });
+    { label: 'Closed', collapsed: true, items: ['/tokens/'] }, { label: 'Proposal', href: 'https://nextwebwg.org/' }], items, href, '/d/v/current/architecture/');
+  expect(shape(sidebar)).toEqual(['Home', ['Foundations', true, ['Architecture', 'Tokens']], ['Closed', false, ['Tokens']], 'Proposal']);
+  expect(sidebar[1]!.children[0]).toMatchObject({ href: '/d/v/current/architecture/', current: 'page', depth: 1 });
+  expect(sidebar[1]).not.toHaveProperty('href');
+  expect(sidebar[3]).toMatchObject({ href: 'https://nextwebwg.org/', current: 'false' });
   expect(() => configuredSidebar(['/missing/'], items, href, '')).toThrow('sidebar: no page at /missing/.');
 });
 
+it('gives a folder\'s _category label and position to its index page, and needs that index page', async () => {
+  const root = await project({
+    'docs/index.md': '', 'docs/_category.yml': 'label: Root\n',
+    'docs/01.forms/index.md': '', 'docs/01.forms/button.md': '', 'docs/01.forms/_category_.json': '{ "label": "Forms", "position": 3, "collapsible": false }',
+    'docs/02.loose/a.md': '', 'docs/02.loose/_category_.yml': 'label: Loose\n',
+    'docs/03.nested/04.inner/b.md': '', 'docs/03.nested/_category.yml': 'collapsed: true\n',
+  });
+  const top = join(root, 'docs');
+  expect(categoryFrontMatter(join(top, '01.forms/index.md'), top)).toEqual({ sidebarLabel: 'Forms', sidebarPosition: 3 });
+  // Other pages, and the version home, take none.
+  expect(categoryFrontMatter(join(top, '01.forms/button.md'), top)).toBeUndefined();
+  expect(categoryFrontMatter(join(top, 'index.md'), top)).toBeUndefined();
+  expect(() => categoryFrontMatter(join(top, '02.loose/a.md'), top)).toThrow(/02\.loose\/_category_\.yml: .*add an index\.md to .*02\.loose\./);
+  expect(() => categoryFrontMatter(join(top, '03.nested/04.inner/b.md'), top)).toThrow(/03\.nested\/_category\.yml/);
+});
+
 it('reports mistyped _category fields against the file', async () => {
-  const root = await project({ 'docs/_category.yml': 'position: first\n' });
+  const root = await project({ 'docs/_category.yml': 'position: first\n', 'docs/a/_category.yml': 'position: 2.5\n' });
   expect(() => category(join(root, 'docs'))).toThrow(/_category\.yml: position must be a number/);
+  expect(() => category(join(root, 'docs/a'))).toThrow(/_category\.yml: position must be a whole number/);
 });
