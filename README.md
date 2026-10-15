@@ -64,7 +64,6 @@ export default defineConfig({ plugins: [markdown()] });
 ---
 title: Installation
 description: Install the project and run your first example.
-sidebarLabel: Install
 id: install
 aliases: [/getting-started/]
 ---
@@ -87,22 +86,21 @@ Front matter is a YAML mapping. Each field becomes HTMLKit page metadata or page
 
 | Field | Type | Effect |
 | --- | --- | --- |
-| `title` | string | The document `<title>`, the default navigation label, and `page.title`. Defaults to the first heading, then the file name. |
-| `description` | string | `<meta name="description">`. |
-| `sidebarLabel` | string | The navigation, breadcrumb and pager label (HTMLKit `hk:label`). |
-| `sidebarHidden` | boolean | `true` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). |
-| `sidebarPosition` | whole number | The page's place among its folder's pages, in place of its file's number prefix (HTMLKit `hk:order`). On a folder's index page it places the whole folder, and on the version home it is an error. |
+| `title` | string | The document `<title>`, the navigation, breadcrumb and pager label (HTMLKit `hk:label`), and `page.title`. Defaults to the first heading, then the file name. On a folder's index page it labels the folder. |
+| `description` | string | `<meta name="description">`, and the page's line in its folder's generated index. |
+| `order` | whole number | The page's place among its folder's pages, in place of its file's number prefix (HTMLKit `hk:order`). On a folder's index page it places the whole folder, and on the version home it is an error. |
+| `navigation` | `hidden` or `collapsed` | `hidden` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). On a folder's index page, `collapsed` starts the folder's sidebar group closed. |
 | `id` | string | The document identity across versions, independent of the file name and route. |
 | `aliases` | list of route paths | Further URLs serving the page, relative to its version (HTMLKit `hk:alias`). |
 | `layout` | string or `false` | An HTMLKit layout, `app/layouts/<name>.html`, in place of the site's layout for this page (HTMLKit `hk:layout`). `false` renders the page with no layout. |
-| `toc` | `false` or `[min, max]` | The heading levels in the page's outline, `[2, 3]` by default. `false` gives an empty outline. |
+| `outline` | `false` or `[min, max]` | The heading levels in the page's "On this page" outline, `[2, 3]` by default. `false` gives an empty outline. |
 | `head` | mapping | `meta` (name to content), `og` (Open Graph property without `og:`, to content) and `canonical` (a URL), rendered into the document head. |
 | `editLink` | URL or `false` | The page's "Edit this page" URL, as `page.editLink` for the layout. `false` asks the layout to show none. |
 
 ```yaml
 ---
 title: Installation
-toc: [2, 4]
+outline: [2, 4]
 editLink: https://github.com/org/repo/edit/main/docs/01.guide/02.install.md
 head:
   meta: { keywords: "install, setup" }
@@ -111,9 +109,9 @@ head:
 ---
 ```
 
-Number prefixes order pages, and `sidebarPosition` takes the place of a file's prefix: `sidebarPosition: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
+Number prefixes order pages, and `order` takes the place of a file's prefix: `order: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
 
-Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
 Containers and GitHub alerts render [Looma's shared blocks](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/shared-blocks.md), so a block looks the same in Markupress, Looma's components and LoomaEditor. The container name is matched without regard to case, and the rest of the opening line is its title:
 
@@ -181,7 +179,7 @@ const d = 4;
 ```
 ````
 
-- `{1,3-4}` highlights lines 1, 3 and 4. VitePress's spelling, with no space (```` ```ts{1} ````), also works.
+- `{1,3-4}` highlights lines 1, 3 and 4, with or without a space after the language (```` ```ts{1} ````).
 - A `// [!code highlight]` comment at the end of a line highlights that line, and the comment is removed. `#`, `--`, `/* */` and `<!-- -->` comments work too. `[!code highlight:3]` covers three lines, and a marker alone on its line applies to the lines after it.
 - `:line-numbers` numbers the lines. The `lineNumbers: true` option, in `markupress.config.json`, `markupress()` or `markdown()`, numbers every block, and `:no-line-numbers` opts a block out.
 - These features apply to languages Shiki highlights and to plain text (`text`, `txt`, `plain` or `plaintext`). A fence with an unknown language or no language stays escaped text.
@@ -289,19 +287,24 @@ Styles follow the component boundaries. Looma's tokens, its light and dark theme
 
 An `href` starting with `/` is a page path in the version being read, so `/components/` opens that version's components. Other links stay as written.
 
-**Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. A `sidebar` entry replaces the generated sidebar of the section at its path. Its entries are page paths, which take the page's label, links (`{ "label", "href" }`), and groups (`{ "label", "items", "collapsed" }`). A path such as `/editor/` that names a page also makes that page a section. A page path that names no page fails the build.
+**Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. A `sidebar` entry replaces the generated sidebar of the section at its path. Its entries are page paths, which take the page's label, links (`{ "label", "href" }`), and groups (`{ "label", "items", "collapsed" }`, where `"collapsed": true` starts the group closed). A path such as `/editor/` that names a page also makes that page a section. A page path that names no page fails the build.
 
-**Groups.** A generated sidebar is HTMLKit's navigation tree, rendered by `<hk-nav>`: each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript, nested as deep as the folders go. A folder with an index page is that page's entry, and its summary links to the page. A group starts open, unless its folder's metadata collapses it, and a group holding the current page always starts open. A `_category.yml` in the folder sets the group's metadata; Docusaurus's `_category_.json` and `_category_.yml` work too:
+**Folders.** A folder is a page: its index page (`index.md`, or `01.index.md` with a number prefix) is the folder's entry, at the folder's URL, and its front matter is the folder's metadata. A generated sidebar is HTMLKit's navigation tree, rendered by `<hk-nav>`: each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript, nested as deep as the folders go, and its summary links to the index page.
 
-```yaml
-label: Forms        # default: the index page's sidebarLabel, then its title, then the folder name
-position: 3         # orders the folder among its siblings like a 03. folder prefix
-collapsed: true     # starts closed, except on the pages inside it
+```markdown
+---
+title: Forms              # labels the folder in the sidebar, breadcrumbs and pager
+description: Form controls.
+order: 3                  # places the folder among its siblings like a 03. folder prefix
+navigation: collapsed     # starts the group closed, except on the pages inside it
+---
 ```
 
-`label` and `position` become the folder's index page's `sidebarLabel` and `sidebarPosition` (HTMLKit `hk:label` and `hk:order`), which its own front matter overrides, so the label also names the index page in breadcrumbs and the pager. A folder with a `_category` file needs an index page, and the build fails without one. `position` is a whole number. Navigation, breadcrumbs and the previous/next links follow the same order.
+A group starts open unless its index page says `navigation: collapsed`, and a group holding the current page always starts open. A folder without an index page is labelled by its name. To group pages under a label with no folder URL of its own, use an HTMLKit route group: a folder named in parentheses, such as `03.(Getting started)/`, labels and orders its pages and adds no URL segment. Navigation, breadcrumbs and the previous/next links follow the same order.
 
-**Outline.** A page with headings in its `toc` range (h2 and h3 by default) shows them in an "On this page" outline beside the content on wide screens. The links are plain fragment links. A small controller (`markupress/controllers/outline.js`, also exported) marks the heading being read with `aria-current="location"`, using an IntersectionObserver; without JavaScript only that marking is missing.
+**Generated index.** An index page with front matter and an empty body lists its folder: below its `title` as the heading, each page and folder directly inside it links to that page with its `description`, in navigation order. A route group's pages appear in its place, and hidden pages stay out. The list comes from HTMLKit's navigation tree, so it follows every page added, renamed or reordered.
+
+**Outline.** A page with headings in its `outline` range (h2 and h3 by default) shows them in an "On this page" outline beside the content on wide screens. The links are plain fragment links. A small controller (`markupress/controllers/outline.js`, also exported) marks the heading being read with `aria-current="location"`, using an IntersectionObserver; without JavaScript only that marking is missing.
 
 **Narrow screens.** Below 769px the sidebar is a drawer: a native popover, closed until the Navigation button opens it, and it opens without JavaScript. Escape or a tap outside closes it, and following a link in it closes it.
 
@@ -335,8 +338,9 @@ collapsed: true     # starts closed, except on the pages inside it
 | `crumbs` | Navigation items from the version home down to this page. |
 | `previous`, `next` | The neighbouring navigation items, absent at either end. |
 | `versions` | Version links: `href`, `label`, `current` and `note`, which explains a fallback to that version's home. |
-| `outline` | The page's headings in its `toc` range: `id`, `href` (`#id`), `label` and `depth`. |
-| `page` | The page's front matter, plus its resolved `title`, `label` and document `id`. |
+| `outline` | The page's headings in its `outline` range: `id`, `href` (`#id`), `label` and `depth`. |
+| `contents` | A generated index's entries, `label`, `href` and `description`, and an empty list on every other page. |
+| `page` | The page's front matter, plus its resolved `title` and document `id`. |
 
 A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
 

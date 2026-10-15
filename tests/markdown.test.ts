@@ -13,7 +13,7 @@ it('adds Markdown pages to any HTMLKit site without Markupress versions or theme
   try {
     await write(root, 'package.json', '{"type":"module"}');
     await write(root, 'app/pages/index.md', '# Welcome\n\n[Guide](guide.md)');
-    await write(root, 'app/pages/guide.md', '---\nsidebarLabel: The guide\n---\n# Guide\n\nPlain {braces} stay text.\n\n```html\n<output>{$count}</output>\n```');
+    await write(root, 'app/pages/guide.md', '---\ntitle: The guide\n---\n# Guide\n\nPlain {braces} stay text.\n\n```html\n<output>{$count}</output>\n```');
     // A page with code links Markupress's code controller, which the site resolves like its own install.
     await linkDependencies(root);
     await write(root, 'app/pages/about.html', '<template component="page-about"><p>HTML pages still route.</p></template>');
@@ -22,7 +22,7 @@ it('adds Markdown pages to any HTMLKit site without Markupress versions or theme
       expect(application.routes.map(route => route.pattern).sort()).toEqual(['/', '/about/', '/guide/']);
       expect((await application.render('/')).html).toContain('href="/guide/"');
       const guide = (await application.render('/guide/')).html;
-      expect(guide).toContain('<title>Guide</title>');
+      expect(guide).toContain('<title>The guide</title>');
       expect(guide).toContain('Plain {braces} stay text.');
       // Highlighted code renders its braces as text rather than binding {$count}.
       expect(guide.replace(/<[^>]*>/g, '')).toContain('&lt;output&gt;{$count}&lt;/output&gt;');

@@ -10,7 +10,6 @@ it('compiles owned metadata, stable anchors, literal fences, and native resource
   const compiled = await compileMarkdown(`---
 title: Products
 description: Manage products.
-sidebarLabel: Catalog
 ---
 # Products
 
@@ -28,7 +27,8 @@ Text {notAnExpression}.
 ## Products
 `, { file: '/project/docs/01.products.md', pageName: 'page-products' });
   expect(compiled.title).toBe('Products');
-  expect(compiled.label).toBe('Catalog');
+  // The title is the navigation label too.
+  expect(compiled.resource).toContain('<meta name="hk:label" content="Products">');
   expect(compiled.resource).toContain('<title>Products</title>');
   expect(compiled.resource).toContain('<meta name="description" content="Manage products.">');
   expect(compiled.resource.indexOf('<title>')).toBeGreaterThan(compiled.resource.indexOf('<template component="page-products">'));
@@ -72,7 +72,7 @@ it('maps front matter onto HTMLKit page metadata and head, and keeps the rest as
   const compiled = await compileMarkdown(`---
 title: Guide
 layout: wide
-toc: [2, 4]
+outline: [2, 4]
 editLink: https://example.com/edit/guide.md
 head:
   meta: { keywords: "docs, html" }
@@ -96,7 +96,7 @@ head:
   expect(compiled.outline).toEqual([{ id: 'install', href: '#install', label: 'Install', depth: 2 },
     { id: 'options', href: '#options', label: 'Options', depth: 3 }, { id: 'flags', href: '#flags', label: 'Flags', depth: 4 }]);
   expect(compiled.frontmatter.editLink).toBe('https://example.com/edit/guide.md');
-  const plain = await compileMarkdown('---\nlayout: false\ntoc: false\neditLink: false\n---\n# Plain\n\n## Section', { file: '/docs/plain.md', pageName: 'page-plain' });
+  const plain = await compileMarkdown('---\nlayout: false\noutline: false\neditLink: false\n---\n# Plain\n\n## Section', { file: '/docs/plain.md', pageName: 'page-plain' });
   expect(plain.resource).toContain('<meta name="hk:layout" content="none">');
   expect(plain.outline).toEqual([]);
   expect((await compileMarkdown('# Default\n\n## Two\n\n### Three\n\n#### Four', { file: '/docs/default.md', pageName: 'page-default' })).outline.map(item => item.depth)).toEqual([2, 3]);
@@ -104,24 +104,39 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebar_label: Start')).rejects.toThrow(/01\.page\.md: unknown front matter field sidebar_label\. Fields are title, .*sidebarLabel/);
-  await expect(page('sidebarHidden: yes please')).rejects.toThrow('/docs/01.page.md: front matter sidebarHidden must be a boolean.');
-  await expect(page('toc: [3, 2]')).rejects.toThrow('front matter toc must be false or a heading range such as [2, 3].');
-  await expect(page('toc: true')).rejects.toThrow('front matter toc must be');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, id, aliases, layout, outline, head, editLink.');
+  for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
+  await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, or collapsed on a folder\'s index page.');
+  await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
+  await expect(page('outline: [3, 2]')).rejects.toThrow('front matter outline must be false or a heading range such as [2, 3].');
+  await expect(page('outline: true')).rejects.toThrow('front matter outline must be');
   await expect(page('head: { script: x }')).rejects.toThrow('front matter head must be a mapping of meta, og and canonical.');
   await expect(page('head: { og: { image: [a, b] } }')).rejects.toThrow('front matter head must be');
   await expect(page('editLink: true')).rejects.toThrow('front matter editLink must be a URL or false.');
   await expect(page('layout: ""')).rejects.toThrow('front matter layout must be an HTMLKit layout name or false.');
   await expect(page('aliases: /start/')).rejects.toThrow('front matter aliases must be a list of route paths.');
-  await expect(page('sidebarPosition: 1.5')).rejects.toThrow('/docs/01.page.md: front matter sidebarPosition must be a whole number.');
+  await expect(page('order: 1.5')).rejects.toThrow('/docs/01.page.md: front matter order must be a whole number.');
 });
 
-it('orders a page with sidebarPosition, and takes default front matter that its own fields override', async () => {
-  const ordered = await compileMarkdown('---\nsidebarPosition: 3\n---\n# Page', { file: '/docs/page.md', pageName: 'page-ordered' });
-  expect(ordered.resource).toContain('<meta name="hk:order" content="3">');
-  const index = await compileMarkdown('---\nsidebarPosition: 1\n---\n# Forms', { file: '/docs/forms/index.md', pageName: 'page-forms', frontmatter: { sidebarLabel: 'Form controls', sidebarPosition: 4 } });
+it('orders a page with order, hides it with navigation, and takes default front matter that its own fields override', async () => {
+  const ordered = await compileMarkdown('---\norder: 3\nnavigation: hidden\n---\n# Page', { file: '/docs/page.md', pageName: 'page-ordered' });
+  expect(ordered.resource).toContain('<meta name="hk:navigation" content="hidden"><meta name="hk:order" content="3">');
+  const index = await compileMarkdown('---\norder: 1\n---\n# Forms', { file: '/docs/forms/index.md', pageName: 'page-forms', frontmatter: { title: 'Form controls', order: 4 } });
   expect(index.resource).toContain('<meta name="hk:label" content="Form controls"><meta name="hk:order" content="1">');
-  expect(index.frontmatter).toEqual({ sidebarLabel: 'Form controls', sidebarPosition: 1 });
+  expect(index.frontmatter).toEqual({ title: 'Form controls', order: 1 });
+  // A folder's index page can start the folder collapsed; collapsed emits no HTMLKit metadata of its own.
+  const folded = await compileMarkdown('---\nnavigation: collapsed\n---\n# Forms', { file: '/docs/forms/02.index.md', pageName: 'page-folded' });
+  expect(folded.frontmatter.navigation).toBe('collapsed');
+  expect(folded.resource).not.toContain('hk:navigation');
+});
+
+it('generates an index page with front matter and an empty body, titled by its front matter', async () => {
+  const generated = await compileMarkdown('---\ntitle: Forms\ndescription: Form controls.\n---\n\n', { file: '/docs/forms/index.md', pageName: 'page-forms' });
+  expect(generated.generated).toBe(true);
+  expect(generated.resource).toContain('<article class="markupress-prose"><h1>Forms</h1></article>');
+  // A page with a body, or an empty page that is not an index page, is authored as written.
+  expect((await compileMarkdown('---\ntitle: Forms\n---\n# Forms', { file: '/docs/forms/index.md', pageName: 'page-a' })).generated).toBe(false);
+  expect((await compileMarkdown('---\ntitle: Empty\n---\n', { file: '/docs/forms/empty.md', pageName: 'page-b' })).generated).toBe(false);
 });
 
 it('derives titles and anchors from visible heading text rather than Markdown link syntax', async () => {

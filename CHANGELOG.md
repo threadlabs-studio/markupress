@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Breaking changes from 0.1.0:
+
+- A folder is a page: its index page's front matter labels, orders and collapses the folder. `_category.yml`, `_category_.yml` and `_category_.json` files are no longer read; move their fields into the folder's `index.md` (`label` becomes `title`, `position` becomes `order`, and `collapsed: true` becomes `navigation: collapsed`). A label for pages with no folder URL is an HTMLKit route group, a folder named in parentheses.
+- Front matter keys follow HTMLKit's page metadata. Rename `sidebarPosition` to `order` (HTMLKit `hk:order`), `sidebarHidden: true` to `navigation: hidden` (HTMLKit `hk:navigation`), and `toc` to `outline`. `sidebarLabel` is removed: `title` is the navigation, breadcrumb and pager label (HTMLKit `hk:label`). Each old key fails the build as an unknown field, naming the file and the valid fields.
+- `compileMarkdown` no longer returns `label` or `sidebarHidden`, and a layout's `page` data no longer has `label`; read `title` and `frontmatter.navigation`.
+
+Added:
+
+- An index page with front matter and an empty body is a generated index: below its title it lists the pages and folders directly in its folder, each linked with its `description`, from HTMLKit's navigation tree. A replacement layout receives the list as the `contents` prop, and `compileMarkdown` reports it as `generated`.
+
 ## 0.1.0
 
 - Markupress is now a thin layer over HTMLKit 1.0.0-alpha.51, with HTML Next 1.0.0-alpha.51 and Looma 0.28.5. HTML Next and Looma are peer dependencies, so a site and its theme share one copy of each. HTMLKit delivers pages as compiled components, so a page ships its components' code rather than the HTML Next live runtime. The `markdown()` HTMLKit plugin translates `.md` files into pages, and `markupress()` adds versioning and the theme; HTMLKit routes, orders, watches, renders, and builds the pages. The CLI runs HTMLKit with both plugins. Markupress's own routing, ordering, link-to-URL logic, file watcher, and generated `.markupress/` application are gone.

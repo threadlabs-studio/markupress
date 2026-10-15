@@ -1,8 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
 import type { NavigationItem, NavigationNode } from '@nextwebwg/htmlkit';
-import { parse } from 'yaml';
-import type { FrontMatter } from './content.js';
 
 /** A top navigation or footer link. A path starting with `/` is a page of the selected version. */
 export interface Link { readonly label: string; readonly href: string }
@@ -21,49 +17,10 @@ export interface SidebarNode {
   readonly children: readonly SidebarNode[];
 }
 
-const index = /^(?:\d+\.)?index\.md$/;
-/** Whether a Markdown file is its folder's index page. */
-export const isIndex = (file: string) => index.test(basename(file));
-// Markupress's own name, and Docusaurus's, so a migrated folder keeps its metadata.
-const categoryFiles = ['_category.yml', '_category_.yml', '_category_.json'];
-
-interface Category { readonly label?: string; readonly position?: number; readonly collapsed?: boolean }
-/** A folder's group metadata. YAML also reads Docusaurus's JSON. */
-export function category(directory: string): Category {
-  const file = categoryFiles.map(name => join(directory, name)).find(existsSync);
-  if (file === undefined) return {};
-  const value: unknown = parse(readFileSync(file, 'utf8'));
-  const fields = (value ?? {}) as Record<string, unknown>;
-  if (typeof fields !== 'object' || Array.isArray(fields)) throw new Error(`${file}: must be a mapping.`);
-  for (const [name, type] of [['label', 'string'], ['position', 'number'], ['collapsed', 'boolean']] as const) {
-    if (fields[name] !== undefined && typeof fields[name] !== type) throw new Error(`${file}: ${name} must be a ${type}.`);
-  }
-  // HTMLKit's hk:order is a whole number, as a file's number prefix is.
-  if (fields.position !== undefined && !(Number.isSafeInteger(fields.position) && (fields.position as number) >= 0)) throw new Error(`${file}: position must be a whole number.`);
-  return fields as Category;
-}
-
 /**
- * The front matter a folder's `_category` gives its index page: the label and position that HTMLKit's navigation
- * tree reads from the index page as the folder's own. `top` is the version's content directory, whose index page
- * is the version home and has no folder to order.
- */
-export function categoryFrontMatter(file: string, top: string): FrontMatter | undefined {
-  // HTMLKit labels and orders a folder only through its index page, so a _category without one could not apply.
-  for (let directory = dirname(file); directory.length > top.length; directory = dirname(directory)) {
-    const metadata = categoryFiles.map(name => join(directory, name)).find(existsSync);
-    if (metadata !== undefined && !readdirSync(directory).some(name => index.test(name))) {
-      throw new Error(`${metadata}: a folder's label, position and collapsed state apply through its index page; add an index.md to ${directory}.`);
-    }
-  }
-  if (!isIndex(file) || dirname(file) === top) return undefined;
-  const { label, position } = category(dirname(file));
-  return { ...(label === undefined ? {} : { sidebarLabel: label }), ...(position === undefined ? {} : { sidebarPosition: position }) };
-}
-
-/**
- * HTMLKit's navigation tree with Markupress's group policy: a folder stays open unless its `_category` collapses
- * it, and one holding the current page is always open. `collapsed` tells whether a folder's index page URL starts closed.
+ * HTMLKit's navigation tree with Markupress's group policy: a folder stays open unless its index page's front
+ * matter says `navigation: collapsed`, and one holding the current page is always open. `collapsed` tells whether
+ * a folder's index page URL starts closed.
  */
 export function generatedSidebar(tree: readonly NavigationNode[], collapsed: (href: string) => boolean): SidebarNode[] {
   return tree.map(node => ({ ...node, open: node.open || (node.children.length > 0 && !(node.href !== undefined && collapsed(node.href))),

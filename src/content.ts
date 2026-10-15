@@ -15,23 +15,27 @@ export interface MarkdownOptions {
   readonly styles?: readonly string[];
   /** Number the lines of highlighted code blocks unless a fence says `:no-line-numbers`. */
   readonly lineNumbers?: boolean;
-  /** Front matter the page's own fields override, such as its folder's `_category` label and position on an index page. */
+  /** Front matter the page's own fields override, such as a site-wide default. */
   readonly frontmatter?: FrontMatter;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
   readonly title?: string;
+  /** `<meta name="description">`, and the page's line in its folder's generated index. */
   readonly description?: string;
-  readonly sidebarLabel?: string;
-  readonly sidebarHidden?: boolean;
   /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (HTMLKit `hk:order`). */
-  readonly sidebarPosition?: number;
+  readonly order?: number;
+  /**
+   * `hidden` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). On a folder's index
+   * page, `collapsed` starts the folder's sidebar group closed.
+   */
+  readonly navigation?: 'hidden' | 'collapsed';
   readonly id?: string;
   readonly aliases?: readonly string[];
   /** An HTMLKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
   readonly layout?: string | false;
   /** The heading levels the page's outline lists, such as [2, 3], or false for no outline. */
-  readonly toc?: false | readonly [number, number];
+  readonly outline?: false | readonly [number, number];
   readonly head?: {
     /** `<meta name content>` by name. */
     readonly meta?: Readonly<Record<string, string | number>>;
@@ -53,14 +57,17 @@ export interface OutlineItem {
 export interface CompiledMarkdown {
   readonly resource: string;
   readonly title: string;
-  readonly label: string;
   readonly id?: string;
   readonly aliases: readonly string[];
-  readonly sidebarHidden: boolean;
   readonly frontmatter: FrontMatter;
-  /** The headings in the page's `toc` range, [2, 3] by default, in document order. */
+  /** The headings in the page's `outline` range, [2, 3] by default, in document order. */
   readonly outline: readonly OutlineItem[];
+  /** An index page with an empty body: its layout lists the folder's pages below its title. */
+  readonly generated: boolean;
 }
+const index = /^(?:\d+\.)?index\.md$/;
+/** Whether a Markdown file is its folder's index page, which HTMLKit reads as the folder's own entry. */
+export const isIndex = (file: string) => index.test(basename(file));
 export function escapeHTML(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -93,7 +100,7 @@ const lineClasses = (marked: ReadonlySet<number>, numbers: boolean): ShikiTransf
   line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
 });
 // A fence's first info word names its language unless it is an attribute, as in ```title="notes.txt".
-// It ends at `{` or `:`, so VitePress's ```ts{1} and ```ts:line-numbers work too.
+// It ends at `{` or `:`, so ```ts{1} and ```ts:line-numbers name the language ts.
 const fenceLanguage = (info = '') => /^[^\s={:]+(?=[\s{:]|$)/.exec(info)?.[0];
 // Fence meta: `{1,3-5}` highlights lines, and `:line-numbers` or `:no-line-numbers` overrides the default.
 function fenceLines(info = '') {
@@ -152,12 +159,13 @@ const strings = (value: unknown) => value !== null && typeof value === 'object' 
   Object.values(value).every(item => typeof item === 'string' || typeof item === 'number');
 const level = (value: unknown) => Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 6;
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
-  title: [text, 'a nonempty string'], description: [text, 'a nonempty string'], sidebarLabel: [text, 'a nonempty string'], id: [text, 'a nonempty string'],
-  sidebarHidden: [value => typeof value === 'boolean', 'a boolean'],
-  sidebarPosition: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
+  title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
+  order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
+  navigation: [value => value === 'hidden' || value === 'collapsed', 'hidden, or collapsed on a folder\'s index page'],
+  id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   layout: [value => value === false || text(value), 'an HTMLKit layout name or false'],
-  toc: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
+  outline: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
@@ -168,6 +176,8 @@ function validFrontMatter(fields: Record<string, unknown>, file: string): FrontM
     if (type === undefined) throw new Error(`${file}: unknown front matter field ${name}. Fields are ${Object.keys(fieldTypes).join(', ')}.`);
     if (!type[0](value)) throw new Error(`${file}: front matter ${name} must be ${type[1]}.`);
   }
+  // HTMLKit reads a folder from its index page, so only an index page can start its folder collapsed.
+  if (fields.navigation === 'collapsed' && !isIndex(file)) throw new Error(`${file}: front matter navigation collapsed applies to a folder's index page.`);
   return fields as FrontMatter;
 }
 
@@ -368,21 +378,22 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   visit(fragment, false);
   for (const name of components) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   const title = fields.title ?? firstHeading ?? basename(options.file, '.md').replace(/^\d+\./, '');
-  const label = fields.sidebarLabel ?? title;
+  // A folder's index page with front matter only generates the folder's listing, which the layout's loader supplies.
+  const generated = isIndex(options.file) && body.trim() === '';
   // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, order, visibility, alias routes, the
   // layout choice, and the document head, which merges meta and canonical links by identity.
   const { meta = {}, og = {}, canonical } = fields.head ?? {};
   const head = `<title>${literal(escapeHTML(title))}</title>` + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
-    `<meta name="hk:label" content="${escapeHTML(label)}">` + (fields.sidebarHidden === true ? '<meta name="hk:navigation" content="hidden">' : '') +
-    (fields.sidebarPosition === undefined ? '' : `<meta name="hk:order" content="${fields.sidebarPosition}">`) +
+    `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
+    (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
     aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
     (fields.layout === undefined ? '' : `<meta name="hk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`);
-  const [from, to] = fields.toc === false ? [0, -1] : fields.toc ?? [2, 3];
+  const [from, to] = fields.outline === false ? [0, -1] : fields.outline ?? [2, 3];
   const styles = options.styles?.length ? `<style>${options.styles.map(file => `@import "${pathToFileURL(file).href}";`).join('')}</style>` : '';
-  return { title, label, aliases, sidebarHidden: fields.sidebarHidden === true, ...(fields.id === undefined ? {} : { id: fields.id }),
+  return { title, aliases, generated, ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${serialize(fragment)}</article>${styles}</template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${serialize(fragment)}</article>${styles}</template>\n` };
 }

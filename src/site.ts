@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
-  type LoadContext, type NavigationItem, type ServerOptions } from '@nextwebwg/htmlkit';
-import type { FrontMatter, OutlineItem } from './content.js';
+  type LoadContext, type NavigationItem, type NavigationNode, type ServerOptions } from '@nextwebwg/htmlkit';
+import { isIndex, type FrontMatter, type OutlineItem } from './content.js';
 import { markdown } from './markdown.js';
-import { category, categoryFrontMatter, configuredSidebar, generatedSidebar, isIndex, type Link, type NavItem, type SidebarItem } from './navigation.js';
+import { configuredSidebar, generatedSidebar, type Link, type NavItem, type SidebarItem } from './navigation.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
 
@@ -87,15 +87,14 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   const editionOf = (file: string) => editions.find(edition => inside(resolve(root, edition.directory), file));
   // Compiled documents by version and source file. HTMLKit recompiles every page when it rediscovers, so a
   // deleted file's stale entry is filtered by existence rather than cleared.
-  const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string; readonly label: string };
-    readonly outline: readonly OutlineItem[] }>();
+  const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
+    readonly outline: readonly OutlineItem[]; readonly generated: boolean }>();
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
   const pages = markdown({
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
-    frontmatter(file) { const edition = editionOf(file); return edition && categoryFrontMatter(file, resolve(root, edition.directory)); },
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));
       if (owners.length === 0 || page.href === undefined) return;
@@ -107,8 +106,8 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
         const twin = current().find(doc => doc.source !== page.file && doc.version === edition.id && doc.id === id);
         if (twin) throw new Error(`Documentation identity collision: ${twin.source} and ${page.file} (${id}).`);
         documents.set(`${edition.id}\0${page.file}`, { id, version: edition.id, source: page.file, pathname: `/v/${edition.id}/${path}`,
-          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline,
-          page: { ...page.frontmatter, id, title: page.title, label: page.label } });
+          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline, generated: page.generated,
+          page: { ...page.frontmatter, id, title: page.title } });
       }
     },
   });
@@ -125,13 +124,14 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
-      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {} };
+      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {},
+      contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
     return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data } };
   }
   /** The shell around the page: top navigation, logo, badge, the section's sidebar and the footer. */
-  async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly DocumentationPage[], selected: string, current: string, base: string) {
+  async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], selected: string, current: string, base: string) {
     const home = `${base}v/${selected}/`;
     const href = (to: string) => /^(?:[A-Za-z][\w+.-]*:|\/\/|#)/.test(to) || !to.startsWith('/') ? to : home + to.slice(1);
     const file = (path: string) => path.startsWith('/') ? base + path.slice(1) : path;
@@ -146,9 +146,9 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const section = Object.keys(options.sidebar ?? {}).filter(key => key !== '/' && path.startsWith(key)).sort((a, b) => b.length - a.length)[0]
       ?? (top !== undefined && items.some(item => item.href.startsWith(`${home}${top}/`) && item.href !== `${home}${top}/`) ? `/${top}/` : '/');
     const explicit = options.sidebar?.[section];
-    // A _category's collapsed state is read on each render, so editing it applies in development.
-    const sources = new Map(pages.map(doc => [base + doc.pathname.slice(1), doc.source]));
-    const collapsed = (page: string) => { const source = sources.get(page); return source !== undefined && isIndex(source) && category(dirname(source)).collapsed === true; };
+    // Pages recompile after each edit, so a folder's collapsed state follows its index page in development.
+    const folded = new Set(pages.filter(doc => doc.page.navigation === 'collapsed').map(doc => base + doc.pathname.slice(1)));
+    const collapsed = (page: string) => folded.has(page);
     const logo = typeof options.logo === 'string' ? { light: options.logo, dark: options.logo } : options.logo;
     const versions = editions.length > 1 ? editions.find(edition => edition.id === selected) : undefined;
     return {
@@ -175,7 +175,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       ids.add(edition.id);
       const content = resolve(root, edition.directory);
       if (!inside(root, content)) throw new Error(`Version ${edition.id}: directory must be inside the project.`);
-      if (!(await readdir(content)).some(name => /^(?:\d+\.)?index\.md$/.test(name))) throw new Error(`Version ${edition.id}: a root index.md landing page is required.`);
+      if (!(await readdir(content)).some(isIndex)) throw new Error(`Version ${edition.id}: a root index.md landing page is required.`);
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
@@ -186,6 +186,17 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     return { headScript: themeScript, css: pageStyles,
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
   } };
+}
+
+/**
+ * A generated index's entries: the pages and folders directly in its folder, from HTMLKit's navigation tree below
+ * the index page, each with its page's description. A folder without an index page (a route group) adds its pages.
+ */
+function contents(tree: readonly NavigationNode[], catalog: readonly (DocumentationPage & { readonly page: FrontMatter })[], base: string, self: string) {
+  const descriptions = new Map(catalog.map(doc => [base + doc.pathname.slice(1), doc.page.description ?? '']));
+  const entries = (nodes: readonly NavigationNode[]): { label: string; href: string; description: string }[] => nodes.flatMap(node =>
+    node.href === undefined ? entries(node.children) : node.href === self ? [] : [{ label: node.label, href: node.href, description: descriptions.get(node.href) ?? '' }]);
+  return entries(tree);
 }
 
 /**

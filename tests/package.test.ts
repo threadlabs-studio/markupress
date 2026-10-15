@@ -35,6 +35,9 @@ beforeAll(() => {
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
   write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
+  mkdirSync(join(workspace, 'docs/02.reference'));
+  write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
+  write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
   write('docs/01.guide/04.blocks.md', '# Blocks\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n');
@@ -53,6 +56,9 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   expect(html).toMatch(/<\/span><\/span>\n<span class="line">/);
   expect(html).not.toContain('controller="');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
+  // An index page with an empty body lists its folder's pages with their descriptions.
+  expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
+    .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
 });
 
@@ -205,6 +211,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
       await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Outline' }).click();
       await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(false);
+      // A generated folder index is a page of links, which navigate like any other.
+      await page.goto(server.url + 'v/current/reference/');
+      expect(await page.locator('main h1').textContent()).toBe('Reference');
+      expect(await page.locator('ul.contents p').textContent()).toBe('Configure the site.');
+      const indexAudit = await new AxeBuilder({ page }).analyze(); expect(indexAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      await page.locator('ul.contents').getByRole('link', { name: 'Options' }).click();
+      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Options');
       // An unknown path renders the 404 page in the shell.
       expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
       expect(await page.locator('h1').textContent()).toBe('Nothing here');
