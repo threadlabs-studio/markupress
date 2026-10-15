@@ -167,11 +167,11 @@ importers:
   .:
     dependencies:
       '@nextwebwg/html-next':
-        specifier: 1.0.0-alpha.47
-        version: 1.0.0-alpha.47
+        specifier: 1.0.0-alpha.50
+        version: 1.0.0-alpha.50
       '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.47
-        version: 1.0.0-alpha.47(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: 1.0.0-alpha.50
+        version: 1.0.0-alpha.50(@types/node@22.20.1)(yaml@2.9.1)
       '@threadlabs/looma':
         specifier: 0.28.0
         version: 0.28.0
@@ -321,13 +321,13 @@ packages:
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
-  '@nextwebwg/html-next@1.0.0-alpha.47':
-    resolution: {integrity: sha512-1W+aFOanL9mZmoyjQjSgJtoaXQpGeT8FVHEfuR7L23pd5bHfOg3z8V9IUqc95C6BGX4uXSHYSDIw1RhxdLb+wQ==}
+  '@nextwebwg/html-next@1.0.0-alpha.50':
+    resolution: {integrity: sha512-kkkL7u0lyOhSKfHYW/5i4JSjuMEccvWBjLl4VUdJ3lolhVpBrMygGb4wNilWxr+I0iTD5JC/5WEuA37kvR3Z4g==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.47':
-    resolution: {integrity: sha512-K0raE8iodJTWGOIUpTMugP2YJgxVh7YQZCidpHYRj+Qb0PTUC19mVN2DW0yKNPCcTwpZY+viILRqevqrFWsHew==}
+  '@nextwebwg/htmlkit@1.0.0-alpha.50':
+    resolution: {integrity: sha512-OLfM0ZC8kBAQ27uu0Ya+xPd1vtoxfk4M89J+q82VEy/2OWMFCRQOgpA1F1p4O1qLqqb/9BhBI3nk3kUmQe1sug==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1456,7 +1456,7 @@ snapshots:
       - '@noble/hashes'
       - canvas
 
-  '@nextwebwg/html-next@1.0.0-alpha.47':
+  '@nextwebwg/html-next@1.0.0-alpha.50':
     dependencies:
       '@dprint/formatter': 0.6.0
       '@dprint/typescript': 0.96.1
@@ -1471,9 +1471,9 @@ snapshots:
       - '@noble/hashes'
       - canvas
 
-  '@nextwebwg/htmlkit@1.0.0-alpha.47(@types/node@22.20.1)(yaml@2.9.1)':
+  '@nextwebwg/htmlkit@1.0.0-alpha.50(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.47
+      '@nextwebwg/html-next': 1.0.0-alpha.50
       parse5: 8.0.1
       vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:

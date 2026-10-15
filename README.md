@@ -31,7 +31,7 @@ Create `docs/01.index.md` and optionally `markupress.config.json`:
 }
 ```
 
-Every version needs an `index.md` at its root; a numeric prefix such as `01.index.md` is allowed. `base` starts and ends with `/`. Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
+Every version needs an `index.md` at its root; a numeric prefix such as `01.index.md` is allowed. `base` starts and ends with `/`. `layout` names a layout component that replaces the Markupress shell (see [Layouts](#layouts)). Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
 The same pieces work as HTMLKit plugins. `markupress(options)` adds versioned documentation with this theme. `markdown()` alone makes any HTMLKit site's `.md` files into pages, with no versions or theme:
 
@@ -61,7 +61,38 @@ aliases: [/getting-started/]
 
 `01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02.` to `10.` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
 
-Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Frontmatter title and description become metadata inside the owning page component. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
+Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
+
+### Front matter
+
+Front matter is a YAML mapping. Each field becomes HTMLKit page metadata or page data, and an unknown or mistyped field fails the build with the Markdown file's path, the field and the expected type.
+
+| Field | Type | Effect |
+| --- | --- | --- |
+| `title` | string | The document `<title>`, the default navigation label, and `page.title`. Defaults to the first heading, then the file name. |
+| `description` | string | `<meta name="description">`. |
+| `sidebarLabel` | string | The navigation, breadcrumb and pager label (HTMLKit `hk:label`). |
+| `sidebarHidden` | boolean | `true` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). |
+| `id` | string | The document identity across versions, independent of the file name and route. |
+| `aliases` | list of route paths | Further URLs serving the page, relative to its version (HTMLKit `hk:alias`). |
+| `layout` | string or `false` | An HTMLKit layout, `app/layouts/<name>.html`, in place of the site's layout for this page (HTMLKit `hk:layout`). `false` renders the page with no layout. |
+| `toc` | `false` or `[min, max]` | The heading levels in the page's outline, `[2, 3]` by default. `false` gives an empty outline. |
+| `head` | mapping | `meta` (name to content), `og` (Open Graph property without `og:`, to content) and `canonical` (a URL), rendered into the document head. |
+| `editLink` | URL or `false` | The page's "Edit this page" URL, as `page.editLink` for the layout. `false` asks the layout to show none. |
+
+```yaml
+---
+title: Installation
+toc: [2, 4]
+editLink: https://github.com/org/repo/edit/main/docs/01.guide/02.install.md
+head:
+  meta: { keywords: "install, setup" }
+  og: { image: https://example.com/social.png, type: article }
+  canonical: https://example.com/guide/install/
+---
+```
+
+Number prefixes order pages: `sidebarPosition` reports the file name to use instead, such as `02.install.md`.
 
 Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
@@ -199,6 +230,42 @@ Version IDs are URL slugs; they need not follow SemVer. A document's `id` identi
 The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
 Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header and columns. `theme/theme.css` is page-wide too, because HTMLKit's built-in navigation, breadcrumbs and pager have no styles of their own and no component's scoped style reaches them. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
+
+### Layouts
+
+`"layout": "theme/layout.html"` in `markupress.config.json`, or `markupress({ layout })`, replaces the Markupress shell with a site's own HTML Next layout for every documentation page. The layout renders `<slot name="page">` where the page goes, and receives Markupress's loader data as props. It receives each prop it declares with `<prop>`, so it declares only the data it uses:
+
+```html
+<template component="site-layout"><defs>
+<prop name="navigation" type="list(object({ href: string, label: string, current: string, ... }))" required>Links</prop>
+<prop name="outline" type="list(object({ href: string, label: string, depth: number, ... }))" required>On this page</prop>
+<prop name="page" type="object({ title: string, editLink?: string, ... })" required>Page metadata</prop></defs>
+<div class="site">
+  <nav><a $each="item of $navigation" from:href="$item.href" from:aria-current="$item.current">{$item.label}</a></nav>
+  <main><slot name="page"></slot></main>
+  <aside><a $each="heading of $outline" from:href="$heading.href">{$heading.label}</a></aside>
+</div>
+</template>
+```
+
+| Prop | Value |
+| --- | --- |
+| `title` | The site title (`title` option, default "Documentation"). |
+| `home` | The site's base URL. |
+| `navigation` | HTMLKit navigation items for the selected version: `href`, `label`, `current` (`"page"` or `"false"`), `depth` and `pageName`. |
+| `crumbs` | Navigation items from the version home down to this page. |
+| `previous`, `next` | The neighbouring navigation items, absent at either end. |
+| `versions` | Version links: `href`, `label`, `current` and `note`, which explains a fallback to that version's home. |
+| `outline` | The page's headings in its `toc` range: `id`, `href` (`#id`), `label` and `depth`. |
+| `page` | The page's front matter, plus its resolved `title`, `label` and document `id`. |
+
+A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
+
+```ts
+export function load({ parent }) { return { props: { section: parent.markupress.page.title } }; }
+```
+
+HTMLKit plugins compose with Markupress through an `htmlkit.config.ts` that lists `markupress()` among its plugins, built with `htmlkit build`.
 
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
 

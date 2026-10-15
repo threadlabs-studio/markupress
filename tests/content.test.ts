@@ -68,6 +68,54 @@ it('reports duplicate frontmatter keys against the Markdown source', async () =>
   await expect(compileMarkdown('---\ntitle: One\ntitle: Two\n---\n# Page', { file: '/docs/page.md', pageName: 'page-example' })).rejects.toThrow(/page\.md.*unique/i);
 });
 
+it('maps front matter onto HTMLKit page metadata and head, and keeps the rest as page data', async () => {
+  const compiled = await compileMarkdown(`---
+title: Guide
+layout: wide
+toc: [2, 4]
+editLink: https://example.com/edit/guide.md
+head:
+  meta: { keywords: "docs, html" }
+  og: { image: https://example.com/social.png, image:width: 1200 }
+  canonical: https://example.com/guide/
+---
+# Guide
+
+## Install
+
+### Options
+
+#### Flags
+
+##### Deep
+`, { file: '/docs/guide.md', pageName: 'page-guide' });
+  expect(compiled.resource).toContain('<meta name="hk:layout" content="wide">');
+  expect(compiled.resource).toContain('<meta name="keywords" content="docs, html">');
+  expect(compiled.resource).toContain('<meta property="og:image" content="https://example.com/social.png"><meta property="og:image:width" content="1200">');
+  expect(compiled.resource).toContain('<link rel="canonical" href="https://example.com/guide/">');
+  expect(compiled.outline).toEqual([{ id: 'install', href: '#install', label: 'Install', depth: 2 },
+    { id: 'options', href: '#options', label: 'Options', depth: 3 }, { id: 'flags', href: '#flags', label: 'Flags', depth: 4 }]);
+  expect(compiled.frontmatter.editLink).toBe('https://example.com/edit/guide.md');
+  const plain = await compileMarkdown('---\nlayout: false\ntoc: false\neditLink: false\n---\n# Plain\n\n## Section', { file: '/docs/plain.md', pageName: 'page-plain' });
+  expect(plain.resource).toContain('<meta name="hk:layout" content="none">');
+  expect(plain.outline).toEqual([]);
+  expect((await compileMarkdown('# Default\n\n## Two\n\n### Three\n\n#### Four', { file: '/docs/default.md', pageName: 'page-default' })).outline.map(item => item.depth)).toEqual([2, 3]);
+});
+
+it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
+  const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
+  await expect(page('sidebar_label: Start')).rejects.toThrow(/01\.page\.md: unknown front matter field sidebar_label\. Fields are title, .*sidebarLabel/);
+  await expect(page('sidebarHidden: yes please')).rejects.toThrow('/docs/01.page.md: front matter sidebarHidden must be a boolean.');
+  await expect(page('toc: [3, 2]')).rejects.toThrow('front matter toc must be false or a heading range such as [2, 3].');
+  await expect(page('toc: true')).rejects.toThrow('front matter toc must be');
+  await expect(page('head: { script: x }')).rejects.toThrow('front matter head must be a mapping of meta, og and canonical.');
+  await expect(page('head: { og: { image: [a, b] } }')).rejects.toThrow('front matter head must be');
+  await expect(page('editLink: true')).rejects.toThrow('front matter editLink must be a URL or false.');
+  await expect(page('layout: ""')).rejects.toThrow('front matter layout must be an HTMLKit layout name or false.');
+  await expect(page('aliases: /start/')).rejects.toThrow('front matter aliases must be a list of route paths.');
+  await expect(page('sidebarPosition: 2')).rejects.toThrow('/docs/01.page.md: sidebarPosition needs HTMLKit page order metadata; order the file with a number prefix such as 02.page.md.');
+});
+
 it('derives titles and anchors from visible heading text rather than Markdown link syntax', async () => {
   const compiled = await compileMarkdown('# Install [**package**](./install.md) &amp; `run()`', { file: '/docs/index.md', pageName: 'page-index' });
   expect(compiled.title).toBe('Install package & run()');

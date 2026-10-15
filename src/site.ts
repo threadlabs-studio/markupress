@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseComponentResource } from '@nextwebwg/html-next';
 import { buildApplication, devApplication, previewApplication, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type ServerOptions } from '@nextwebwg/htmlkit';
+import type { FrontMatter, OutlineItem } from './content.js';
 import { markdown } from './markdown.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
@@ -27,6 +29,11 @@ export interface MarkupressOptions {
   readonly port?: number;
   /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
   readonly lineNumbers?: boolean;
+  /**
+   * An HTML Next layout component, relative to the root, that replaces the Markupress shell. It receives the
+   * loader data its `<prop>` declarations name: see "Layout data" in the README.
+   */
+  readonly layout?: string;
 }
 export interface DocumentationPage {
   readonly id: string;
@@ -66,7 +73,8 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   const editionOf = (file: string) => editions.find(edition => inside(resolve(root, edition.directory), file));
   // Compiled documents by version and source file. HTMLKit recompiles every page when it rediscovers, so a
   // deleted file's stale entry is filtered by existence rather than cleared.
-  const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[] }>();
+  const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string; readonly label: string };
+    readonly outline: readonly OutlineItem[] }>();
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
   const pages = markdown({
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
@@ -84,10 +92,12 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
         const twin = current().find(doc => doc.source !== page.file && doc.version === edition.id && doc.id === id);
         if (twin) throw new Error(`Documentation identity collision: ${twin.source} and ${page.file} (${id}).`);
         documents.set(`${edition.id}\0${page.file}`, { id, version: edition.id, source: page.file, pathname: `/v/${edition.id}/${path}`,
-          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`) });
+          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline,
+          page: { ...page.frontmatter, id, title: page.title, label: page.label } });
       }
     },
   });
+  let layoutFile = shell;
   async function load({ navigation, breadcrumbs, pager, url, base }: LoadContext) {
     const path = '/' + url.pathname.slice(base.length);
     const selected = /^\/v\/([^/]+)\//.exec(path)?.[1] ?? defaultVersion;
@@ -96,9 +106,13 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const page = catalog.find(doc => doc.pathname === requested || doc.aliases.includes(requested));
     // The default version also serves the root; its entries are marked current under /v/<id>/.
     const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
-    return { props: { title: options.title ?? 'Documentation', home: base, navigation: await navigation(within),
+    const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: await navigation(within),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
-      crumbs: await breadcrumbs(within), ...await pager(within) } };
+      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {} };
+    // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
+    // nested folder layouts' loaders read all of it from parent.markupress.
+    const accepted = await declaredProps(layoutFile);
+    return { props: Object.fromEntries(Object.entries(data).filter(([name]) => accepted.has(name))), data: { markupress: data } };
   }
   return { ...pages, name: 'markupress', async config(htmlkit) {
     root = resolve(htmlkit.root ?? root);
@@ -114,10 +128,23 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs.
-    const layout = { component: shell, server: { load } };
+    if (options.layout !== undefined) layoutFile = resolve(root, options.layout);
+    const layout = { component: layoutFile, server: { load } };
     return { headScript: themeScript, css: pageStyles,
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
   } };
+}
+
+// Read on each render, so a layout's new prop takes effect in development; parsed again only when it changes.
+// ponytail: the union of every component in the file, so a helper component's prop name also passes.
+let parsedLayout: { source: string; props: ReadonlySet<string> } | undefined;
+async function declaredProps(file: string): Promise<ReadonlySet<string>> {
+  const source = await readFile(file, 'utf8');
+  if (parsedLayout?.source !== source) {
+    const { definitions } = parseComponentResource(source, pathToFileURL(file).href);
+    parsedLayout = { source, props: new Set(definitions.flatMap(definition => Object.keys(definition.contract.props))) };
+  }
+  return parsedLayout.props;
 }
 
 /** HTMLKit options for a Markupress site, as the CLI runs it. */
