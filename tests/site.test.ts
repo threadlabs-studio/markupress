@@ -97,3 +97,54 @@ it('passes the lineNumbers default through to Markdown pages', async () => {
     expect([...(await application.render('/code/')).html.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.includes('line-numbers'))).toEqual([true, false]);
   } finally { await application.close(); }
 }, 30_000);
+
+it('renders front matter head metadata, a named HTMLKit layout, and no layout', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/seo.md', '---\ndescription: Search engines.\nhead:\n  og: { title: SEO }\n  canonical: https://example.com/seo/\n---\n# SEO');
+  await write(root, 'docs/bare.md', '---\nlayout: false\n---\n# Bare');
+  await write(root, 'docs/wide.md', '---\nlayout: wide\n---\n# Wide');
+  await write(root, 'app/layouts/wide.html', '<template component="wide-layout"><div class="wide"><slot name="page"></slot></div></template>');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const seo = await application.render('/seo/');
+    const head = /<head>.*<\/head>/s.exec(seo.html)![0];
+    for (const element of ['<meta name="description" content="Search engines.">', '<meta property="og:title" content="SEO">', '<link rel="canonical" href="https://example.com/seo/">']) expect(head).toContain(element);
+    const bare = (await application.render('/bare/')).html;
+    expect(bare).toContain('Bare');
+    expect(bare).not.toContain('data-component="markupress-shell"');
+    const wide = (await application.render('/wide/')).html;
+    expect(wide).toContain('class="wide"');
+    expect(wide).not.toContain('data-component="markupress-shell"');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('replaces the shell with a site layout that receives the loader data it declares', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\neditLink: https://example.com/edit/install.md\n---\n# Install\n\n## Requirements\n\n### Node');
+  await write(root, 'theme/layout.html', `<template component="site-layout"><defs>
+<prop name="navigation" type="list(object({ href: string, label: string, current: string, ... }))" required>Links</prop>
+<prop name="crumbs" type="list(object({ href: string, label: string, ... }))" required>Trail</prop>
+<prop name="previous" type="object({ href: string, label: string, ... })" nullable>Before</prop>
+<prop name="outline" type="list(object({ href: string, label: string, depth: number, ... }))" required>Headings</prop>
+<prop name="page" type="object({ title: string, editLink?: string, ... })" required>Front matter</prop></defs>
+<div class="layout"><header class="site">{$page.title}</header><nav><a $each="item of $navigation" from:href="$item.href">{$item.label}</a></nav>
+<ol class="crumbs"><li $each="crumb of $crumbs">{$crumb.label}</li></ol>
+<ul class="outline"><li $each="heading of $outline" from:data-depth="$heading.depth"><a from:href="$heading.href">{$heading.label}</a></li></ul>
+<a class="edit" from:href="$page.editLink">Edit</a><a class="previous" $if="$previous" from:href="$previous.href">{$previous.label}</a>
+<main><slot name="page"></slot></main></div></template>`);
+  // A folder layout nests inside the site layout, and its loader reads all of Markupress's data.
+  await write(root, 'docs/01.guide/_layout.html', '<template component="guide-layout"><defs><prop name="section" type="string" required>Section</prop></defs><section class="guide" from:data-pages="$section"><slot name="page"></slot></section></template>');
+  await write(root, 'docs/01.guide/_layout.server.js', 'export function load({ parent }) { return { props: { section: String(parent.markupress.navigation.length) } }; }');
+  const application = await createApplication(siteOptions({ root, layout: 'theme/layout.html' }));
+  try {
+    const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
+    expect(html).not.toContain('data-component="markupress-shell"');
+    expect(html).toContain('<header class="site">Installation</header>');
+    expect(html).toContain('href="/v/current/guide/install/"');
+    expect(html).toMatch(/<ol class="crumbs">.*Welcome.*Installation.*<\/ol>/s);
+    expect(html).toMatch(/<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/);
+    expect(html).toContain('<a class="edit" href="https://example.com/edit/install.md">Edit</a>');
+    expect(html).toMatch(/<a class="previous" href="\/v\/current\/">Welcome<\/a>/);
+    expect(html).toMatch(/<section class="guide"[^>]* data-pages="2"[^>]*>.*Install/s);
+  } finally { await application.close(); }
+}, 30_000);

@@ -55,14 +55,14 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "@nextwebwg/htmlkit": "1.0.0-alpha.47",
+    "@nextwebwg/htmlkit": "1.0.0-alpha.50",
     "marked": "18.1.1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
     "@threadlabs/looma": "0.28.0",
     "postcss": "8.5.30",
     "postcss-value-parser": "4.2.0",
-    "@nextwebwg/html-next": "1.0.0-alpha.47",
+    "@nextwebwg/html-next": "1.0.0-alpha.50",
     "shiki": "4.5.0"
   },
   "bin": {
