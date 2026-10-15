@@ -1,6 +1,6 @@
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Marked, type Token } from 'marked';
+import { Marked, type Token, type Tokenizer, type Tokens } from 'marked';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
@@ -48,6 +48,13 @@ async function highlight(code: string, lang: BundledLanguage): Promise<string> {
 }
 // A fence's first info word names its language unless it is an attribute, as in ```title="notes.txt".
 const fenceLanguage = (info = '') => /^[^\s=]+(?=\s|$)/.exec(info)?.[0];
+const fenceTitle = (info = '') => /(?:^|\s)title="([^"]*)"/.exec(info)?.[1];
+
+// Looma's shared block vocabulary (its "Shared blocks" page): a container's name, matched without regard to
+// case, is a callout tone, details or tabs. `caution` and GitHub's [!CAUTION] mean danger.
+const tones: Readonly<Record<string, string>> = { note: 'note', tip: 'tip', info: 'info', important: 'important', warning: 'warning', danger: 'danger', caution: 'danger' };
+const blocks = new Set([...Object.keys(tones), 'details', 'tabs', 'code-group']);
+type BlockState = { top: boolean; tabs?: boolean | undefined };
 
 function textContent(node: DefaultTreeAdapterMap['node']): string {
   if ('value' in node) return node.value;
@@ -77,6 +84,24 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const customIds = new Map<Token, string>();
   let firstHeading: string | undefined;
   const highlighted = new Map<Token, string>();
+  // Code group panels labelled by their fence title, and the Looma components the page's blocks use. The page
+  // links each one by package specifier, as the theme's shell links ui-button, so the site resolves Looma.
+  const labelled = new WeakSet<Token>(), components = new Set<string>();
+  const fail = (message: string): never => { throw new Error(`${options.file}: ${message}`); };
+  // Tabs content is "== Label" panels; a code group may instead make each fence a panel labelled by its title.
+  const panels = (tokens: Token[], code: boolean): Tokens.Generic[] => {
+    const result: Tokens.Generic[] = [];
+    const marked = tokens.some(token => token.type === 'tab-label');
+    for (const token of tokens) {
+      if (token.type === 'tab-label') result.push({ type: 'tab-panel', raw: '', label: token.label, tokens: [] });
+      else if (marked && result.length > 0) result.at(-1)!.tokens!.push(token);
+      else if (!marked && code && token.type === 'code') {
+        labelled.add(token);
+        result.push({ type: 'tab-panel', raw: '', label: fenceTitle(token.lang) ?? fenceLanguage(token.lang) ?? 'Code', tokens: [token] });
+      } else if (token.type !== 'space') fail(code ? 'a code group holds fences, or "== Label" panels.' : 'tabs content starts with an "== Label" line.');
+    }
+    return result;
+  };
   const markdown = new Marked({ async: true, async walkTokens(token) {
     if (token.type === 'heading') {
       // `## Title {#custom-id}` names the anchor; the marker ends the heading's last text token. Every token is
@@ -96,7 +121,8 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     code(token) {
       const { text, lang = '' } = token;
       const language = fenceLanguage(lang);
-      const title = /(?:^|\s)title="([^"]*)"/.exec(lang)?.[1];
+      // A code group's tab already shows a panel's fence title.
+      const title = labelled.has(token) ? undefined : fenceTitle(lang);
       const pre = highlighted.get(token) ?? `<pre><code${language ? ` class="language-${escapeHTML(language)}"` : ''}>${literal(escapeHTML(text))}</code></pre>`;
       return (title ? `<figure class="code"><figcaption>${literal(escapeHTML(title))}</figcaption>${pre}</figure>` : pre) + '\n';
     },
@@ -142,12 +168,13 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
       return { type: 'native-component', raw };
     }, renderer(token) { return token.raw; },
   }, { name: 'container', level: 'block',
-    // `::: name` … `:::` wraps Markdown in <div class="name">. A container closes at the first marker at
-    // least as long as its own, so an outer container uses more colons than those it contains.
-    start(text) { return /^ {0,3}:{3,}[ \t]*[A-Za-z]/m.exec(text)?.index; },
+    // `::: name Title` … `:::` is a shared block; any other name stays text. A container closes at the first
+    // marker at least as long as its own, so an outer container uses more colons than those it contains.
+    start(text) { return /^ {0,3}:{3,}[ \t]*(?:note|tip|info|important|warning|danger|caution|details|tabs|code-group)(?![\w-])/im.exec(text)?.index; },
     tokenizer(text) {
-      const open = /^ {0,3}(:{3,})[ \t]*([A-Za-z][\w-]*)[ \t]*(?:\n|$)/.exec(text);
-      if (!open) return undefined;
+      const open = /^ {0,3}(:{3,})[ \t]*([A-Za-z][\w-]*)(?:[ \t]+([^\n]*?))?[ \t]*(?:\n|$)/.exec(text);
+      const name = open?.[2]!.toLowerCase();
+      if (!open || !name || !blocks.has(name)) return undefined;
       const close = new RegExp(`^ {0,3}:{${open[1]!.length},}[ \\t]*$`);
       // A marker line inside fenced code is code, so the scan skips fences while looking for the close.
       let fence: RegExp | undefined;
@@ -156,10 +183,13 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
         if (fence) { if (fence.test(line)) fence = undefined; }
         else if (close.test(line)) {
           // Like a blockquote, the content is a document of its own, so its paragraphs stay paragraphs inside a list.
-          const top = this.lexer.state.top; this.lexer.state.top = true;
+          // `== Label` lines start panels only directly inside tabs.
+          const grouped = name === 'tabs' || name === 'code-group';
+          const state = this.lexer.state as unknown as BlockState, { top, tabs } = state;
+          state.top = true; state.tabs = grouped;
           const tokens = this.lexer.blockTokens(text.slice(open[0].length, offset));
-          this.lexer.state.top = top;
-          return { type: 'container', raw: text.slice(0, offset + line.length + 1), name: open[2], tokens };
+          state.top = top; state.tabs = tabs;
+          return { type: 'container', raw: text.slice(0, offset + line.length + 1), name, title: open[3] ?? '', tokens: grouped ? panels(tokens, name === 'code-group') : tokens };
         } else {
           const opener = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
           if (opener) fence = new RegExp(`^ {0,3}${opener[0]}{${opener.length},}[ \\t]*$`);
@@ -167,7 +197,42 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
         offset += line.length + 1;
       }
       return undefined;
-    }, renderer(token) { return `<div class="${token.name as string}">\n${this.parser.parse(token.tokens ?? [])}</div>\n`; },
+    }, renderer(token) {
+      const { name, title } = token as unknown as { name: string; title: string };
+      const content = (tokens: Token[] = token.tokens ?? []) => this.parser.parse(tokens);
+      const tone = tones[name];
+      if (tone) { components.add('ui-callout'); return `<ui-callout tone="${tone}"${title ? ` heading="${escapeHTML(title)}"` : ''}>\n${content()}</ui-callout>\n`; }
+      // Native <details> opens without JavaScript and find-in-page can reveal it; the contract allows it in place of ui-disclosure.
+      if (name === 'details') {
+        const [, summary, open] = /^(.*?)[ \t]*(\{open\})?$/.exec(title)!;
+        return `<details${open ? ' open' : ''}><summary>${literal(escapeHTML(summary || 'Details'))}</summary>\n${content()}</details>\n`;
+      }
+      // Tabs of one group keep one selection across the page and remember it; the group defaults to the block name.
+      components.add('ui-tabs');
+      return `<ui-tabs${name === 'code-group' ? ' class="code-group"' : ''} group="${escapeHTML(title || name)}">\n${(token.tokens as Tokens.Generic[]).map(panel => `<section aria-label="${escapeHTML(panel.label as string)}">\n${content(panel.tokens)}</section>\n`).join('')}</ui-tabs>\n`;
+    },
+  }, { name: 'alert', level: 'block',
+    // A GitHub alert, `> [!TIP]` alone on a quote's first line, is a callout without a title.
+    start(text) { return /^ {0,3}>[ \t]?\[!/m.exec(text)?.index; },
+    tokenizer(text) {
+      const kind = /^ {0,3}>[ \t]?\[!(note|tip|important|warning|caution)\][ \t]*(?:\n|$)/i.exec(text)?.[1];
+      const quote = kind === undefined ? undefined : (this.lexer as unknown as { tokenizer: Tokenizer }).tokenizer.blockquote(text);
+      if (!kind || !quote) return undefined;
+      const state = this.lexer.state as unknown as BlockState, { top, tabs } = state;
+      state.top = true; state.tabs = false;
+      const tokens = this.lexer.blockTokens(quote.text.replace(/^[^\n]*\n?/, ''));
+      state.top = top; state.tabs = tabs;
+      return { type: 'container', raw: quote.raw, name: kind.toLowerCase(), title: '', tokens };
+    },
+  }, { name: 'tab-label', level: 'block',
+    start(text) { return (this.lexer.state as unknown as BlockState).tabs ? /^ {0,3}==[ \t]/m.exec(text)?.index : undefined; },
+    tokenizer(text) {
+      if (!(this.lexer.state as unknown as BlockState).tabs) return undefined;
+      const label = /^ {0,3}==[ \t]+(\S[^\n]*?)[ \t]*(?:\n|$)/.exec(text);
+      return label ? { type: 'tab-label', raw: label[0], label: label[1] } : undefined;
+    },
+    // Panels consume the labels directly inside tabs; one nested deeper, as in a quote, stays text.
+    renderer(token) { return `<p>${literal(escapeHTML(token.raw.trim()))}</p>\n`; },
   }] });
   const fragment = parseFragment(await markdown.parse(body));
   const declarations: string[] = [];
@@ -200,6 +265,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     }
   };
   visit(fragment, false);
+  for (const name of components) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   const title = fields.title as string | undefined ?? firstHeading ?? basename(options.file, '.md').replace(/^\d+\./, '');
   const label = fields.sidebarLabel as string | undefined ?? title;
   // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, visibility, and alias routes.

@@ -90,10 +90,55 @@ it('takes a heading id from a trailing {#id} marker and still suffixes duplicate
   expect(compiled.resource).toContain('<h2 id="escaped-kept"><a href="#escaped-kept">Escaped \\{#kept}</a></h2>');
 });
 
-it('wraps ::: containers in classed elements, nesting with longer markers', async () => {
-  const compiled = await compileMarkdown(':::: details\nOuter **text**\n\n::: warning\nInner {literal}\n:::\n::::\n\n::: 1bad\nStays text\n:::', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<div class="details">\n<p>Outer <strong>text</strong></p>\n<div class="warning">\n<p>Inner \\{literal}</p>\n</div>\n</div>');
-  expect(compiled.resource).toContain('<p>::: 1bad\nStays text\n:::</p>');
+const page = (source: string) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index' }).then(compiled => compiled.resource);
+const callout = '<link rel="component" href="@threadlabs/looma/components/ui-callout/ui-callout.html">';
+const tabs = '<link rel="component" href="@threadlabs/looma/components/ui-tabs/ui-tabs.html">';
+
+it('renders callout containers as Looma callouts with every shared tone and a literal heading', async () => {
+  const resource = await page('::: note\nA\n:::\n\n::: TIP Use **this**\nB\n:::\n\n::: info\n:::\n\n::: important\n:::\n\n::: warning Breaking {x} "y"\nC {z}\n:::\n\n::: danger\n:::\n\n::: Caution\n:::');
+  expect(resource).toContain('<ui-callout tone="note">\n<p>A</p>\n</ui-callout>');
+  expect(resource).toContain('<ui-callout tone="tip" heading="Use **this**">\n<p>B</p>\n</ui-callout>');
+  expect(resource).toContain('<ui-callout tone="warning" heading="Breaking {x} &quot;y&quot;">\n<p>C \\{z}</p>\n</ui-callout>');
+  expect([...resource.matchAll(/<ui-callout tone="([^"]+)"/g)].map(match => match[1])).toEqual(['note', 'tip', 'info', 'important', 'warning', 'danger', 'danger']);
+  // The page links the callout component once, and only the components its blocks use.
+  expect(resource.split(callout)).toHaveLength(2);
+  expect(resource.indexOf(callout)).toBeLessThan(resource.indexOf('<template component="page-index">'));
+  expect(resource).not.toContain(tabs);
+  expect(await page('# Plain')).not.toContain('<link rel="component"');
+});
+
+it('renders GitHub alerts as untitled callouts, with CAUTION as danger', async () => {
+  const resource = await page('> [!NOTE]\n> Alerts **work**\n\n> [!caution]\n> Careful\n\n> [!WARNING]  \n> One\n> Two\n\n> [!NOTE] on one line\n\n> [!OTHER]\n> Quote');
+  expect(resource).toContain('<ui-callout tone="note">\n<p>Alerts <strong>work</strong></p>\n</ui-callout>');
+  expect(resource).toContain('<ui-callout tone="danger">\n<p>Careful</p>\n</ui-callout>');
+  expect(resource).toContain('<ui-callout tone="warning">\n<p>One\nTwo</p>\n</ui-callout>');
+  expect(resource).toContain('<blockquote>\n<p>[!NOTE] on one line</p>\n</blockquote>');
+  expect(resource).toContain('<blockquote>\n<p>[!OTHER]\nQuote</p>\n</blockquote>');
+  expect(resource).toContain(callout);
+});
+
+it('renders details containers as native details, open on request, nesting with longer markers', async () => {
+  const resource = await page(':::: details\nOuter **text**\n\n::: tip\nInner {literal}\n:::\n::::\n\n::: details Show <b>{more}</b> {open}\nShown\n:::\n\n::: unknown\nStays text\n:::\n\n::: 1bad\nStays text\n:::');
+  expect(resource).toContain('<details><summary>Details</summary>\n<p>Outer <strong>text</strong></p>\n<ui-callout tone="tip">\n<p>Inner \\{literal}</p>\n</ui-callout>\n</details>');
+  expect(resource).toContain('<details open=""><summary>Show &lt;b&gt;\\{more}&lt;/b&gt;</summary>\n<p>Shown</p>\n</details>');
+  expect(resource).toContain('<p>::: unknown\nStays text\n:::</p>');
+  expect(resource).toContain('<p>::: 1bad\nStays text\n:::</p>');
+});
+
+it('renders tabs and code groups as grouped Looma tabs with labelled panels', async () => {
+  const resource = await page('::: tabs\n== Examples\nSee **this**\n\n== API {x}\n> == quoted\n:::\n\n::: tabs package-manager\n== pnpm\nA\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm add x\n```\n\n```sh title="npm"\nnpm install x\n```\n:::\n\n::: code-group\n== Shell\n```sh title="install.sh"\nnpm install x\n```\n:::');
+  expect(resource).toContain('<ui-tabs group="tabs">\n<section aria-label="Examples">\n<p>See <strong>this</strong></p>\n</section>\n<section aria-label="API {x}">\n<blockquote>\n<p>== quoted</p>\n</blockquote>\n</section>\n</ui-tabs>');
+  expect(resource).toContain('<ui-tabs group="package-manager">\n<section aria-label="pnpm">\n<p>A</p>\n</section>\n</ui-tabs>');
+  // A fence title labels its code group panel instead of captioning the code; under an "== Label" it stays a caption.
+  expect(resource).toMatch(/<ui-tabs class="code-group" group="code-group">\n<section aria-label="pnpm">\n<pre class="shiki[^"]*"[^>]*><code class="language-sh">.*?<\/pre>\n<\/section>\n<section aria-label="npm">\n<pre/s);
+  expect(resource).toMatch(/<section aria-label="Shell">\n<figure class="code"><figcaption>install\.sh<\/figcaption><pre/);
+  expect(resource).not.toContain('<figcaption>pnpm');
+  expect(resource).toContain(tabs);
+  expect(resource).not.toContain(callout);
+  await expect(page('::: tabs\nIntro\n== One\n:::')).rejects.toThrow(/index\.md: tabs content starts with an "== Label" line/);
+  await expect(page('::: code-group\nIntro\n\n```sh\nx\n```\n:::')).rejects.toThrow(/index\.md: a code group holds fences/);
+  // Outside tabs, "== text" is a paragraph.
+  expect(await page('== Not a tab')).toContain('<p>== Not a tab</p>');
 });
 
 it('highlights fenced code at build time, with an optional title and literal braces', async () => {
@@ -128,7 +173,7 @@ it('never repeats a suffixed heading id that another heading generates', async (
 
 it('does not close a container on a marker line inside fenced code', async () => {
   const compiled = await compileMarkdown('::: note\n```\n:::\n```\n\n~~~~\n:::\n~~~~\nAfter the fences.\n:::', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<div class="note">\n<pre><code>:::</code></pre>\n<pre><code>:::</code></pre>\n<p>After the fences.</p>\n</div>');
+  expect(compiled.resource).toContain('<ui-callout tone="note">\n<pre><code>:::</code></pre>\n<pre><code>:::</code></pre>\n<p>After the fences.</p>\n</ui-callout>');
 });
 
 it('gives a fence with only a title no language class', async () => {

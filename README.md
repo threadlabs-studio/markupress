@@ -65,19 +65,50 @@ Markdown text and fenced examples are literal, including braces and component sy
 
 Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `sidebarHidden: true` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
-A container wraps Markdown in a classed `<div>`. Its name starts with a letter and contains letters, digits, `_` and `-`; any other line stays text. To nest containers, give the outer one more colons:
+Containers and GitHub alerts render [Looma's shared blocks](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/shared-blocks.md), so a block looks the same in Markupress, Looma's components and LoomaEditor. The container name is matched without regard to case, and the rest of the opening line is its title:
 
-```markdown
-:::: details
-Outer content.
-
-::: warning
-Inner **Markdown** content.
+````markdown
+::: warning Before you upgrade
+Back up your data first.
 :::
-::::
+
+> [!TIP]
+> Alerts take the tones NOTE, TIP, IMPORTANT, WARNING and CAUTION.
+
+::: details Show the output {open}
+Starts expanded.
+:::
+
+::: code-group
+```sh title="pnpm"
+pnpm add markupress
 ```
 
-This produces `<div class="details">` containing `<div class="warning">`. The theme does not style container names; a site styles the classes it uses.
+```sh title="npm"
+npm install markupress
+```
+:::
+
+::: tabs
+== Examples
+Usage examples.
+
+== API
+The reference.
+:::
+````
+
+| Markdown | Renders |
+| --- | --- |
+| `::: note`, `tip`, `info`, `important`, `warning`, `danger` or `caution`, with an optional title | `<ui-callout tone="…" heading="Title">`. `caution` is `danger`, and `note` is the muted aside. |
+| `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` alone on a quote's first line | An untitled `<ui-callout>`: NOTE is `note` and CAUTION is `danger`. |
+| `::: details Title`, with `{open}` to start expanded | Native `<details><summary>Title</summary>`, which opens without JavaScript. The title defaults to "Details". |
+| `::: tabs` with `== Label` panels | `<ui-tabs group="tabs">`, one `<section aria-label="Label">` per panel. |
+| `::: code-group` with a fence per panel | `<ui-tabs group="code-group">`, each panel labelled by its fence's `title`. `== Label` panels also work. |
+
+Tabs in one group keep one selection across the page, matched by label, and remember it for the next visit: choosing "npm" in one code group switches every code group. `::: tabs name` or `::: code-group name` sets the group. Without JavaScript every panel shows. Any other container name stays text. To nest containers, give the outer one more colons (`::::` around `:::`). Titles and labels are literal text.
+
+A page links the Looma components its blocks use by package name, as the theme links `ui-button`, so `@threadlabs/looma` resolves from the site: npm installs it with Markupress, and a pnpm site adds it as a dependency. The Markupress theme spaces the blocks and styles the Markdown inside them.
 
 Fenced code is highlighted at build time with [Shiki](https://shiki.style), so pages load no highlighting JavaScript. Any language Shiki bundles, such as `html`, `css`, `less`, `js`, `ts`, `tsx`, `jsx`, `json`, `bash`, `vue`, `svelte`, `md` or `yaml`, is loaded the first time a fence uses it. Unknown languages stay plain text. A `title` in the fence's info string adds a caption:
 

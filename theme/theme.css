@@ -13,3 +13,16 @@
 [data-component~="markupress-shell"] [data-component="hk-pager"] a { display: grid; }
 [data-component~="markupress-shell"] [data-component="hk-pager"] a[rel="next"] { margin-inline-start: auto; text-align: end; }
 [data-component~="markupress-shell"] [data-component="hk-pager"] small { color: var(--ui-text-muted, inherit); }
+/* Shared blocks. Markdown inside a callout or tabs is projected into a Looma component, where the page's scoped
+   prose styles never reach (HTML Next styling: a page's rules stop at every nested component), so these global
+   rules space the blocks and repeat the prose code styles inside them. Details is native and needs no script. */
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"], details) { margin-block: 1rem; }
+.markupress-prose details { padding: .5rem 1rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
+.markupress-prose summary { cursor: pointer; font-weight: 600; }
+.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details) { margin-block: .5rem; }
+.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):first-child { margin-block-start: 0; }
+.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):last-child { margin-block-end: 0; }
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); border-radius: .5rem; }
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) code { font-size: .9em; }
+.markupress-prose [data-component~="ui-tabs"] :is(pre, figure):only-child { margin-block: 0; }
+.markupress-prose .code-group section { padding-inline: 0; }

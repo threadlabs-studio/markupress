@@ -74,3 +74,17 @@ it('switches an aliased URL using the document identity and marks its canonical 
     expect(html).toContain('href="/v/current/guide/install/" aria-current="page"');
   } finally { await application.close(); }
 });
+
+it('renders shared blocks with the Looma components the page links', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/blocks.md', '# Blocks\n\n::: warning Breaking {x}\nBack up {first}.\n:::\n\n> [!TIP]\n> Alerts too.\n\n::: details More\nHidden\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm add x\n```\n\n```sh title="npm"\nnpm install x\n```\n:::');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="">Back up \{first\}\.<\/p>/s);
+    expect(html).toMatch(/data-component="ui-callout"[^>]* data-tone="tip"[^>]*>.*?<p data-slotted="">Alerts too\.<\/p>/s);
+    expect(html).toContain('<details><summary>More</summary>');
+    // Without JavaScript every panel shows; Tabs adds its tab list and hides the others when it connects.
+    expect(html).toMatch(/data-component="ui-tabs"[^>]* data-group="code-group".*<section aria-label="pnpm" data-slotted="">.*<section aria-label="npm" data-slotted="">/s);
+  } finally { await application.close(); }
+}, 30_000);

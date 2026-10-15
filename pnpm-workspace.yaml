@@ -6,4 +6,4 @@ minimumReleaseAgeExclude:
   - 'vitest@5.0.0'
   - '@nextwebwg/html-next@1.0.0-alpha.47'
   - '@nextwebwg/htmlkit@1.0.0-alpha.47'
-  - '@threadlabs/looma@0.27.4'
+  - '@threadlabs/looma@0.28.0'
