@@ -25,6 +25,8 @@ export interface MarkupressOptions {
   readonly defaultVersion?: string;
   readonly host?: string;
   readonly port?: number;
+  /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
+  readonly lineNumbers?: boolean;
 }
 export interface DocumentationPage {
   readonly id: string;
@@ -69,6 +71,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   const pages = markdown({
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
+    ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { createApplication } from '@nextwebwg/htmlkit';
 import { expect, it } from 'vitest';
 import { markdown } from '../src/markdown.js';
+import { linkDependencies } from './fixture.js';
 
 async function write(root: string, file: string, text: string) { await mkdir(dirname(join(root, file)), { recursive: true }); await writeFile(join(root, file), text); }
 
@@ -13,6 +14,8 @@ it('adds Markdown pages to any HTMLKit site without Markupress versions or theme
     await write(root, 'package.json', '{"type":"module"}');
     await write(root, 'app/pages/index.md', '# Welcome\n\n[Guide](guide.md)');
     await write(root, 'app/pages/guide.md', '---\nsidebarLabel: The guide\n---\n# Guide\n\nPlain {braces} stay text.\n\n```html\n<output>{$count}</output>\n```');
+    // A page with code links Markupress's code controller, which the site resolves like its own install.
+    await linkDependencies(root);
     await write(root, 'app/pages/about.html', '<template component="page-about"><p>HTML pages still route.</p></template>');
     const application = await createApplication({ root, plugins: [markdown()] });
     try {

@@ -88,3 +88,12 @@ it('renders shared blocks with the Looma components the page links', async () =>
     expect(html).toMatch(/data-component="ui-tabs"[^>]* data-group="code-group".*<section aria-label="pnpm" data-slotted="">.*<section aria-label="npm" data-slotted="">/s);
   } finally { await application.close(); }
 }, 30_000);
+
+it('passes the lineNumbers default through to Markdown pages', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/code.md', '# Code\n\n```ts\nconst a = 1;\n```\n\n```ts :no-line-numbers\nconst b = 2;\n```');
+  const application = await createApplication(siteOptions({ root, lineNumbers: true }));
+  try {
+    expect([...(await application.render('/code/')).html.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.includes('line-numbers'))).toEqual([true, false]);
+  } finally { await application.close(); }
+}, 30_000);

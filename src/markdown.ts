@@ -10,6 +10,8 @@ export interface MarkdownPluginOptions {
   readonly onPage?: (page: CompiledMarkdown & { readonly file: string; readonly href: string | undefined }) => void;
   /** Stylesheet files every Markdown page component imports, such as a theme's prose styles. */
   readonly styles?: readonly string[];
+  /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
+  readonly lineNumbers?: boolean;
 }
 
 /**
@@ -24,7 +26,8 @@ export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     // compileMarkdown also passes through links it already resolved; return those unchanged.
     const resolved = new Set<string>();
-    const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}), resolveLink(target, kind) {
+    const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), resolveLink(target, kind) {
       if (resolved.has(target)) return target;
       const url = link(target, kind, page, options);
       resolved.add(url);

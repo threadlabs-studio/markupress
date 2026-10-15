@@ -33,7 +33,7 @@ beforeAll(() => {
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
-  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
+  write('docs/01.guide/04.blocks.md', '# Blocks\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
@@ -69,6 +69,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
     for (const mode of ['preview', 'dev'] as const) {
       server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ root: workspace, base: '/manual/', port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
       // Records the theme in the first frame that shows the theme button, and any transition the button runs while loading.
       await context.addInitScript(() => {
         const load = { theme: undefined as string | undefined, transitions: [] as string[] };
@@ -123,6 +124,19 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/guide/new/');
       await page.locator('[data-component="hk-pager"] a[rel="next"]').click();
       await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
+      // Code blocks: build-time highlighted lines and numbers, and keyboard-operable copy and wrap buttons.
+      const example = page.locator('figure.code').filter({ hasText: 'example.ts' });
+      expect(await example.locator('.line.highlighted').allTextContents()).toEqual(['const first = 1;', 'const second = {braces};']);
+      expect(await example.locator('.line.highlighted').first().evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(await example.locator('.line').first().evaluate(element => getComputedStyle(element, '::before').content)).toBe('counter(line)');
+      await example.getByRole('button', { name: 'Copy' }).focus(); await page.keyboard.press('Enter');
+      await expect.poll(() => example.getByRole('button', { name: 'Copied' }).count()).toBe(1);
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('const first = 1;\nconst second = {braces};\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";');
+      const scrolls = () => example.locator('pre').evaluate(element => element.scrollWidth > element.clientWidth);
+      expect(await scrolls()).toBe(true);
+      await example.getByRole('button', { name: 'Wrap' }).focus(); await page.keyboard.press(' ');
+      await expect.poll(() => example.getByRole('button', { name: 'Wrap' }).getAttribute('aria-pressed')).toBe('true');
+      expect(await scrolls()).toBe(false);
       const callout = page.getByRole('note').filter({ hasText: 'Breaking {x}' });
       expect(await callout.getAttribute('data-tone')).toBe('warning');
       const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
@@ -157,6 +171,9 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         expect(await plain.getByRole('note').filter({ hasText: 'Breaking {x}' }).isVisible()).toBe(true);
         expect(await plain.getByText('npx markupress build').isVisible()).toBe(true);
         expect(await plain.getByText('pnpm markupress build').isVisible()).toBe(true);
+        // Without JavaScript a code block is only its code.
+        expect(await plain.locator('.code-actions').first().isVisible()).toBe(false);
+        expect(await plain.getByText('const first = 1;').isVisible()).toBe(true);
         await still.close();
       }
       await page.goto(server.url + 'v/current/guide/new/');
