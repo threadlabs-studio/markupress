@@ -1,0 +1,11 @@
+<template component="markupress-outline" controller="../dist/controllers/outline.js">
+<defs><prop name="items" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings, in order</prop></defs>
+<nav aria-labelledby="markupress-outline-title"><strong id="markupress-outline-title">On this page</strong><ul><li $each="item of $items" from:data-depth="$item.depth"><a from:href="$item.href">{$item.label}</a></li></ul></nav>
+<style>
+nav { font-size: .875rem; } strong { display: block; margin-bottom: .5rem; }
+ul { margin: 0; padding: 0; list-style: none; border-inline-start: 1px solid var(--ui-border, #8885); }
+li { margin: 0; } li[data-depth="3"] a { padding-inline-start: 1.75rem; }
+a { display: block; padding: .2rem 0 .2rem 1rem; margin-inline-start: -1px; border-inline-start: 2px solid transparent; color: var(--ui-text-muted, inherit); text-decoration: none; }
+a:hover { color: var(--ui-text); } a[aria-current="location"] { border-color: var(--ui-accent); color: var(--ui-accent); }
+:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+</style></template>

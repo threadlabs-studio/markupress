@@ -233,9 +233,66 @@ Version IDs are URL slugs; they need not follow SemVer. A document's `id` identi
 
 ## Theme and migration inputs
 
-The default theme imports Looma's button resources and CSS exports selectively, with HTMLKit's generic navigation component. It includes a skip link, native version links, a responsive navigation toggle and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
+The default theme imports Looma's button and badge resources and CSS exports selectively. Its shell has a skip link, a top navigation bar, a grouped sidebar per section, native version links, an "on this page" outline, a footer and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
-Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header and columns. `theme/theme.css` is page-wide too, because HTMLKit's built-in navigation, breadcrumbs and pager have no styles of their own and no component's scoped style reaches them. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
+Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header, sidebar, columns and footer. `theme/theme.css` is page-wide too, because HTMLKit's built-in breadcrumbs and pager have no styles of their own and no component's scoped style reaches them; it also picks the logo for the theme in use. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
+
+### Navigation, logo and footer
+
+`markupress.config.json` (or `markupress()`) configures the shell around the pages:
+
+```json
+{
+  "title": "Looma",
+  "logo": { "light": "/img/mark.svg", "dark": "/img/mark-dark.svg" },
+  "favicon": "/favicon.svg",
+  "versionBadge": "v0.28",
+  "nav": [
+    { "label": "Get started", "href": "/" },
+    { "label": "Components", "href": "/components/" },
+    { "label": "Resources", "items": [{ "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" }] }
+  ],
+  "social": [{ "label": "GitHub", "href": "https://github.com/threadlabs-studio/looma", "icon": "/img/github.svg" }],
+  "sidebar": {
+    "/": ["/", { "label": "Foundations", "items": ["/architecture/", "/tokens/"] }],
+    "/editor/": ["/editor/", { "label": "Tables", "href": "/editor/#tables" }]
+  },
+  "footer": {
+    "columns": [{ "title": "Docs", "items": [{ "label": "Tokens", "href": "/tokens/" }] }],
+    "copyright": "Copyright 2026 Threadlabs Studio contributors."
+  }
+}
+```
+
+| Option | Does |
+| --- | --- |
+| `logo` | An image before the title: one path, or `{ "light", "dark" }`, one per theme. Paths starting with `/` are files in `public/`. |
+| `favicon` | The site icon, a `<link rel="icon">` on every page. |
+| `versionBadge` | The badge text beside the title. Without it, a site with several versions shows the selected version's label. |
+| `nav` | Top navigation links, and dropdowns (`{ "label", "items" }`), which are native `<details>`. A link to the page being read, or to a section holding it, is marked current. |
+| `social` | Links at the end of the top bar, each shown as its `icon` image, labelled by `label`, or as its label. |
+| `sidebar` | Explicit sidebars by section path. |
+| `footer` | Link columns (`{ "title", "items" }`) and a `copyright` line. |
+
+An `href` starting with `/` is a page path in the version being read, so `/components/` opens that version's components. Other links stay as written.
+
+**Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. A `sidebar` entry replaces the generated sidebar of the section at its path. Its entries are page paths, which take the page's label, links (`{ "label", "href" }`), and groups (`{ "label", "items", "collapsed" }`). A path such as `/editor/` that names a page also makes that page a section. A page path that names no page fails the build.
+
+**Groups.** In a generated sidebar, each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript. A folder's index page is its group's first entry. A `_category.yml` in the folder sets the group's metadata; Docusaurus's `_category_.json` and `_category_.yml` work too:
+
+```yaml
+label: Forms        # default: the folder's index page label, then the folder name
+position: 3         # orders the group among its siblings like a 03. folder prefix
+collapsed: true     # starts closed, except on the pages inside it
+```
+
+The sidebar shows two levels of groups; pages in deeper folders list in the second level, indented. `position` orders the sidebar; the previous/next links follow HTMLKit's file order.
+
+**Outline.** A page with headings in its `toc` range (h2 and h3 by default) shows them in an "On this page" outline beside the content on wide screens. The links are plain fragment links. A small controller (`markupress/controllers/outline.js`, also exported) marks the heading being read with `aria-current="location"`, using an IntersectionObserver; without JavaScript only that marking is missing.
+
+**Narrow screens.** Below 769px the sidebar is a drawer: a native popover, closed until the Navigation button opens it, and it opens without JavaScript. Escape or a tap outside closes it, and following a link in it closes it.
+
+**Not found.** A `404.md` in the default version's content directory is the site's not-found page (HTMLKit's not-found page, R7). It renders in the shell for every unmatched path, with status 404 in `dev` and `preview`, and `build` writes it to `404.html`. Give it `sidebarHidden: true`: the default version's folder also serves it at `/v/<id>/404/`, and the front matter keeps that page out of the sidebar.
 
 ### Layouts
 
@@ -259,6 +316,9 @@ Styles follow the component boundaries. Looma's tokens, its light and dark theme
 | `title` | The site title (`title` option, default "Documentation"). |
 | `home` | The site's base URL. |
 | `navigation` | HTMLKit navigation items for the selected version: `href`, `label`, `current` (`"page"` or `"false"`), `depth` and `pageName`. |
+| `sidebar` | The page's section sidebar: entries with `label`, `href`, `current`, `open`, `depth` and `items`. A group has an empty `href` and its entries in `items`. |
+| `nav`, `social`, `footer` | The resolved `nav`, `social` and `footer` options: links have `label`, `href` and `current`, a dropdown has `items`, and a social link has its `icon` URL. |
+| `logo`, `favicon`, `badge` | The logo's `light` and `dark` URLs, the icon URL (both `null` when unset), and the badge text. |
 | `crumbs` | Navigation items from the version home down to this page. |
 | `previous`, `next` | The neighbouring navigation items, absent at either end. |
 | `versions` | Version links: `href`, `label`, `current` and `note`, which explains a fallback to that version's home. |

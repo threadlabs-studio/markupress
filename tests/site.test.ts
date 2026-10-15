@@ -52,7 +52,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title>Installation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
-  expect(page).toContain('data-component="hk-nav"');
+  expect(page).toContain('<nav class="sidebar" aria-label="Documentation">');
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
   expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
@@ -147,4 +147,76 @@ it('replaces the shell with a site layout that receives the loader data it decla
     expect(html).toMatch(/<a class="previous" href="\/v\/current\/">Welcome<\/a>/);
     expect(html).toMatch(/<section class="guide"[^>]* data-pages="2"[^>]*>.*Install/s);
   } finally { await application.close(); }
+}, 30_000);
+
+it('gives each top-level section its own grouped sidebar, and the root every page unless configured', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/02.components/01.forms/button.md', '# Button');
+  await write(root, 'docs/02.components/02.layout/stack.md', '# Stack');
+  await write(root, 'docs/02.components/02.layout/_category.yml', 'label: Layout\nposition: 0\ncollapsed: true\n');
+  await write(root, 'docs/editor.md', '# Editor\n\n## Tables');
+  const sidebar = (html: string) => /<nav class="sidebar"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  let application = await createApplication(siteOptions({ root }));
+  try {
+    expect(sidebar((await application.render('/')).html)).toBe('Welcome guide Installation components Layout Stack forms Button Editor');
+    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '');
+    expect(sidebar(button)).toBe('Layout Stack forms Button');
+    // A collapsed group stays closed unless it holds the current page.
+    expect(button).toMatch(/<details[^>]*><summary[^>]*>Layout<\/summary>/);
+    expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>forms<\/summary>/);
+    expect(button).toContain('href="/v/current/components/forms/button/" aria-current="page"');
+  } finally { await application.close(); }
+  application = await createApplication(siteOptions({ root, sidebar: {
+    '/': ['/', { label: 'Start here', items: ['/guide/install/'] }],
+    '/editor/': ['/editor/', { label: 'Tables', href: '/editor/#tables' }],
+  } }));
+  try {
+    expect(sidebar((await application.render('/')).html)).toBe('Welcome Start here Installation');
+    expect(sidebar((await application.render('/v/current/editor/')).html)).toBe('Editor Tables');
+    expect((await application.render('/editor/')).html).toContain('href="/v/current/editor/#tables"');
+    // A section without a configured sidebar is still generated.
+    expect(sidebar((await application.render('/components/forms/button/')).html)).toBe('Layout Stack forms Button');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('renders the configured top navigation, logo, favicon, badge, social links, footer and the page outline', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\n---\n# Install\n\n## Requirements\n\n### Node');
+  const application = await createApplication(siteOptions({ root, base: '/docs/', logo: { light: '/logo.svg', dark: '/logo-dark.svg' }, favicon: '/icon.svg',
+    versionBadge: 'v2.1', nav: [{ label: 'Guide', href: '/guide/install/' }, { label: 'More', items: [{ label: 'Proposal', href: 'https://nextwebwg.org/' }] }],
+    social: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }],
+    footer: { columns: [{ title: 'Docs', items: [{ label: 'Home', href: '/' }] }], copyright: 'Copyright 2026 Example.' } }));
+  try {
+    const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/icon.svg">');
+    expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
+    expect(html).toMatch(/data-component="ui-badge"[^>]*>.*v2\.1/s);
+    // A link to the page being read is current; a dropdown is native details.
+    expect(html).toContain('<a href="/docs/v/current/guide/install/" aria-current="page">Guide</a>');
+    expect(html).toMatch(/<details name="markupress-nav"><summary data-current="false">More<\/summary><ul><li><a href="https:\/\/nextwebwg.org\/" aria-current="false">Proposal<\/a>/);
+    expect(html).toContain('<a href="https://github.com/example"><img src="/docs/github.svg" alt="GitHub"></a>');
+    expect(html).toMatch(/<footer>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
+    // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
+    expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
+    // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
+    expect(html).toMatch(/<aside id="documentation-navigation" popover="">/);
+    expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
+  } finally { await application.close(); }
+}, 30_000);
+
+it('renders the default version\'s 404.md in the shell for unmatched paths and builds it as 404.html', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/404.md', '---\ntitle: Page not found\nsidebarHidden: true\n---\n# Page not found\n\n[Home](01.index.md)');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const missing = await application.render('/nowhere/');
+    expect(missing.status).toBe(404);
+    expect(missing.html).toContain('data-component="markupress-shell"');
+    expect(missing.html).toContain('<title>Page not found</title>');
+    expect(missing.html).toContain('href="/v/current/guide/install/"');
+  } finally { await application.close(); }
+  const result = await buildSite({ root });
+  const page = await readFile(join(result.outDir, '404.html'), 'utf8');
+  expect(page).toContain('data-component="markupress-shell"');
+  expect(page).toContain('Page not found');
 }, 30_000);

@@ -12,6 +12,7 @@
     },
     "./controllers/shell.js": "./dist/controllers/shell.js",
     "./controllers/code.js": "./dist/controllers/code.js",
+    "./controllers/outline.js": "./dist/controllers/outline.js",
     "./styles/base.css": "./styles/base.css",
     "./styles/prose.css": "./styles/prose.css"
   },
