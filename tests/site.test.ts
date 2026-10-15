@@ -246,3 +246,18 @@ it('composes the site\'s htmlkit.config plugins and options with Markupress', as
   await write(root, 'htmlkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
   await expect(buildSite({ root })).rejects.toThrow('remove markupress() from its plugins');
 }, 60_000);
+
+it('renders route groups, whose navigation items carry a group, in the shell', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/03.(Getting started)/01.intro.md', '# Intro');
+  await write(root, 'docs/03.(Getting started)/02.setup.md', '# Setup');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const rendered = await application.render('/intro/');
+    expect(rendered.status).toBe(200);
+    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '');
+    // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
+    expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
+    expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
+  } finally { await application.close(); }
+}, 30_000);

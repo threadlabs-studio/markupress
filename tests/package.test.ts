@@ -209,6 +209,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
       expect(await page.locator('h1').textContent()).toBe('Nothing here');
       expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
+      // The root sidebar is HTMLKit's navigation tree in <hk-nav>: the guide folder is an open native <details> after hydration.
+      await page.goto(server.url + 'v/current/');
+      const group = page.locator('#documentation-navigation details').filter({ has: page.locator('summary', { hasText: 'guide' }) });
+      await expect.poll(() => group.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
+      expect(await group.getByRole('link').allTextContents()).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
       await page.goto(server.url + 'v/v1/');
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
