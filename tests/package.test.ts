@@ -35,7 +35,7 @@ beforeAll(() => {
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
   write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
-  write('docs/404.md', '---\nsidebarHidden: true\n---\n# Nothing here\n\n[Home](01.index.md)');
+  write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
   write('docs/01.guide/04.blocks.md', '# Blocks\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n');
   run(process.execPath, [cli, 'build']);
@@ -92,8 +92,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
       expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
-      // The shell styles its sidebar, and the theme's global stylesheet reaches HTMLKit's built-in breadcrumbs and pager.
-      expect(await page.locator('nav.sidebar ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
+      // The theme's global stylesheet reaches HTMLKit's built-in sidebar navigation, breadcrumbs and pager.
+      expect(await page.locator('#documentation-navigation [data-component="hk-nav"] ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
       expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
       expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');

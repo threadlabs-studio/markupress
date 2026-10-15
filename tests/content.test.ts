@@ -113,7 +113,15 @@ it('rejects unknown and mistyped front matter fields with the Markdown file', as
   await expect(page('editLink: true')).rejects.toThrow('front matter editLink must be a URL or false.');
   await expect(page('layout: ""')).rejects.toThrow('front matter layout must be an HTMLKit layout name or false.');
   await expect(page('aliases: /start/')).rejects.toThrow('front matter aliases must be a list of route paths.');
-  await expect(page('sidebarPosition: 2')).rejects.toThrow('/docs/01.page.md: sidebarPosition needs HTMLKit page order metadata; order the file with a number prefix such as 02.page.md.');
+  await expect(page('sidebarPosition: 1.5')).rejects.toThrow('/docs/01.page.md: front matter sidebarPosition must be a whole number.');
+});
+
+it('orders a page with sidebarPosition, and takes default front matter that its own fields override', async () => {
+  const ordered = await compileMarkdown('---\nsidebarPosition: 3\n---\n# Page', { file: '/docs/page.md', pageName: 'page-ordered' });
+  expect(ordered.resource).toContain('<meta name="hk:order" content="3">');
+  const index = await compileMarkdown('---\nsidebarPosition: 1\n---\n# Forms', { file: '/docs/forms/index.md', pageName: 'page-forms', frontmatter: { sidebarLabel: 'Form controls', sidebarPosition: 4 } });
+  expect(index.resource).toContain('<meta name="hk:label" content="Form controls"><meta name="hk:order" content="1">');
+  expect(index.frontmatter).toEqual({ sidebarLabel: 'Form controls', sidebarPosition: 1 });
 });
 
 it('derives titles and anchors from visible heading text rather than Markdown link syntax', async () => {

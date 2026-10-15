@@ -8,15 +8,15 @@
 <prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string" nullable>Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
-<prop name="nav" type="list(object({ label: string, href: string, current: string, items: list(object({ label: string, href: string, current: string })) }))" required>Top navigation: links, and dropdowns with items</prop>
+<prop name="nav" type="list(object({ label: string, href: string, current: string, items: list(object({ label: string, href: string, current: string, ... })), ... }))" required>Top navigation: links, and dropdowns with items</prop>
 <prop name="social" type="list(object({ label: string, href: string, icon: string }))" required>Social links</prop>
-<prop name="sidebar" type="list(object({ label: string, href: string, current: string, open: boolean, depth: number, items: list(object({ label: string, href: string, current: string, open: boolean, depth: number, items: list(object({ label: string, href: string, current: string, open: boolean, depth: number, items: list(string) })) })) }))" required>The section's sidebar: page links, and groups of them two levels deep</prop>
+<prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as &lt;hk-nav&gt; renders them</prop>
 <prop name="outline" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
 <prop name="versions" type="list(object({ href: string, label: string, current: string, note: string }))" required>Documentation versions</prop>
-<prop name="crumbs" type="list(object({ href: string, label: string, current: string, depth: number, pageName: string }))" required>Trail from the version home to this page</prop>
-<prop name="previous" type="object({ href: string, label: string, current: string, depth: number, pageName: string })" nullable>The page before this one</prop>
-<prop name="next" type="object({ href: string, label: string, current: string, depth: number, pageName: string })" nullable>The page after this one</prop>
+<prop name="crumbs" type="list(object({ href: string, label: string, current: string, depth: number, pageName: string, ... }))" required>Trail from the version home to this page</prop>
+<prop name="previous" type="object({ href: string, label: string, current: string, depth: number, pageName: string, ... })" nullable>The page before this one</prop>
+<prop name="next" type="object({ href: string, label: string, current: string, depth: number, pageName: string, ... })" nullable>The page after this one</prop>
 <state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
 <header>
@@ -24,19 +24,13 @@
 <a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template>{$title}</a>
 <ui-badge $if="$badge" tone="accent">{$badge}</ui-badge>
 <nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
-<a $if="$item.href" from:href="$item.href" from:aria-current="$item.current">{$item.label}</a>
-<details $if="not $item.href" name="markupress-nav"><summary from:data-current="$item.current">{$item.label}</summary><ul><li $each="link of $item.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></details>
+<template $match><a $when="$item.href" from:href="$item.href" from:aria-current="$item.current">{$item.label}</a>
+<details $else name="markupress-nav"><summary from:data-current="$item.current">{$item.label}</summary><ul><li $each="link of $item.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></details></template>
 </li></ul></nav>
-<div class="actions"><ul class="social" $if="$social.length"><li $each="link of $social"><a from:href="$link.href"><img $if="$link.icon" from:src="$link.icon" from:alt="$link.label"><template $if="not $link.icon">{$link.label}</template></a></li></ul>
+<div class="actions"><ul class="social" $if="$social.length"><li $each="link of $social"><a from:href="$link.href"><template $match><img $when="$link.icon" from:src="$link.icon" from:alt="$link.label"><template $else>{$link.label}</template></template></a></li></ul>
 <ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <div class="columns"><aside id="documentation-navigation" popover>
-<nav class="sidebar" aria-label="Documentation"><ul><li $each="a of $sidebar">
-<a $if="$a.href" from:href="$a.href" from:aria-current="$a.current">{$a.label}</a>
-<details $if="not $a.href" from:open="$a.open"><summary>{$a.label}</summary><ul><li $each="b of $a.items">
-<a $if="$b.href" from:href="$b.href" from:aria-current="$b.current">{$b.label}</a>
-<details $if="not $b.href" from:open="$b.open"><summary>{$b.label}</summary><ul><li $each="c of $b.items" from:data-depth="$c.depth"><a from:href="$c.href" from:aria-current="$c.current">{$c.label}</a></li></ul></details>
-</li></ul></details>
-</li></ul></nav>
+<hk-nav from:items="$sidebar" label="Documentation"></hk-nav>
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><hk-breadcrumbs from:items="$crumbs"></hk-breadcrumbs><slot name="page"></slot><hk-pager from:previous="$previous" from:next="$next"></hk-pager></main>
 <aside class="outline" $if="$outline.length"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
@@ -62,9 +56,7 @@ header a { color: inherit; text-decoration: none; } header a:hover, header a[ari
 @media (max-width: 768px) { header { position: static; } .columns { display: block; padding: 1rem; }
   #documentation-navigation { inset: 0 auto 0 0; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border, #8885); background: var(--ui-surface); color: var(--ui-text); }
   #documentation-navigation::backdrop { background: rgb(0 0 0 / .4); } }
-.sidebar ul, .versions ul { margin: 0; padding: 0; list-style: none; } .sidebar li, .versions li { margin: .4rem 0; }
-.sidebar details ul { padding-inline-start: .75rem; } .sidebar summary { cursor: pointer; font-weight: 600; }
-.sidebar [data-depth="1"] { padding-inline-start: .75rem; } .sidebar [data-depth="2"] { padding-inline-start: 1.5rem; } .versions { margin-top: 2rem; }
+.versions ul { margin: 0; padding: 0; list-style: none; } .versions li { margin: .4rem 0; } .versions { margin-top: 2rem; }
 a { color: var(--ui-accent); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } small { display: block; color: var(--ui-text-muted, inherit); line-height: 1.4; } :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
 .skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); z-index: 3; } .skip:focus { transform: none; }
 footer { border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - 90rem) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }

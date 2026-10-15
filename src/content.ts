@@ -15,6 +15,8 @@ export interface MarkdownOptions {
   readonly styles?: readonly string[];
   /** Number the lines of highlighted code blocks unless a fence says `:no-line-numbers`. */
   readonly lineNumbers?: boolean;
+  /** Front matter the page's own fields override, such as its folder's `_category` label and position on an index page. */
+  readonly frontmatter?: FrontMatter;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
@@ -22,6 +24,8 @@ export interface FrontMatter {
   readonly description?: string;
   readonly sidebarLabel?: string;
   readonly sidebarHidden?: boolean;
+  /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (HTMLKit `hk:order`). */
+  readonly sidebarPosition?: number;
   readonly id?: string;
   readonly aliases?: readonly string[];
   /** An HTMLKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
@@ -150,6 +154,7 @@ const level = (value: unknown) => Number.isInteger(value) && (value as number) >
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'], sidebarLabel: [text, 'a nonempty string'], id: [text, 'a nonempty string'],
   sidebarHidden: [value => typeof value === 'boolean', 'a boolean'],
+  sidebarPosition: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   layout: [value => value === false || text(value), 'an HTMLKit layout name or false'],
   toc: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
@@ -159,8 +164,6 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
 };
 function validFrontMatter(fields: Record<string, unknown>, file: string): FrontMatter {
   for (const [name, value] of Object.entries(fields)) {
-    // HTMLKit orders pages by file name and has no page metadata for a position.
-    if (name === 'sidebarPosition') throw new Error(`${file}: sidebarPosition needs HTMLKit page order metadata; order the file with a number prefix such as 02.${basename(file).replace(/^\d+\./, '')}.`);
     const type = fieldTypes[name];
     if (type === undefined) throw new Error(`${file}: unknown front matter field ${name}. Fields are ${Object.keys(fieldTypes).join(', ')}.`);
     if (!type[0](value)) throw new Error(`${file}: front matter ${name} must be ${type[1]}.`);
@@ -170,7 +173,7 @@ function validFrontMatter(fields: Record<string, unknown>, file: string): FrontM
 
 export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
   const { body, fields: raw } = frontmatter(source, options.file);
-  const fields = validFrontMatter(raw, options.file);
+  const fields = { ...options.frontmatter, ...validFrontMatter(raw, options.file) };
   const aliases = fields.aliases ?? [];
   // Heading IDs: `used` holds every ID emitted so far, `reserved` every custom ID in the document.
   const used = new Set<string>(), reserved = new Set<string>(), suffixes = new Map<string, number>();
@@ -366,11 +369,12 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   for (const name of components) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   const title = fields.title ?? firstHeading ?? basename(options.file, '.md').replace(/^\d+\./, '');
   const label = fields.sidebarLabel ?? title;
-  // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, visibility, alias routes, the
+  // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, order, visibility, alias routes, the
   // layout choice, and the document head, which merges meta and canonical links by identity.
   const { meta = {}, og = {}, canonical } = fields.head ?? {};
   const head = `<title>${literal(escapeHTML(title))}</title>` + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
     `<meta name="hk:label" content="${escapeHTML(label)}">` + (fields.sidebarHidden === true ? '<meta name="hk:navigation" content="hidden">' : '') +
+    (fields.sidebarPosition === undefined ? '' : `<meta name="hk:order" content="${fields.sidebarPosition}">`) +
     aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
     (fields.layout === undefined ? '' : `<meta name="hk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +

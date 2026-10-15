@@ -1,13 +1,12 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parseComponentResource } from '@nextwebwg/html-next';
-import { buildApplication, devApplication, previewApplication, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type NavigationItem, type ServerOptions } from '@nextwebwg/htmlkit';
 import type { FrontMatter, OutlineItem } from './content.js';
 import { markdown } from './markdown.js';
-import { configuredSidebar, generatedSidebar, type Link, type NavItem, type SidebarItem } from './navigation.js';
+import { category, categoryFrontMatter, configuredSidebar, generatedSidebar, isIndex, type Link, type NavItem, type SidebarItem } from './navigation.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
 
@@ -96,6 +95,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
+    frontmatter(file) { const edition = editionOf(file); return edition && categoryFrontMatter(file, resolve(root, edition.directory)); },
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));
       if (owners.length === 0 || page.href === undefined) return;
@@ -113,7 +113,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     },
   });
   let layoutFile = shell;
-  async function load({ navigation, breadcrumbs, pager, url, base }: LoadContext) {
+  async function load({ navigation, navigationTree, breadcrumbs, pager, url, base, propNames }: LoadContext) {
     const path = '/' + url.pathname.slice(base.length);
     const selected = /^\/v\/([^/]+)\//.exec(path)?.[1] ?? defaultVersion;
     const requested = path.startsWith('/v/') ? path : `/v/${selected}${path}`;
@@ -123,16 +123,15 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
     const items = await navigation(within);
     const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
-      ...chrome(items, catalog.filter(doc => doc.version === selected), selected, within.current, base),
+      ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
       crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {} };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
-    const accepted = await declaredProps(layoutFile);
-    return { props: Object.fromEntries(Object.entries(data).filter(([name]) => accepted.has(name))), data: { markupress: data } };
+    return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data } };
   }
   /** The shell around the page: top navigation, logo, badge, the section's sidebar and the footer. */
-  function chrome(items: readonly NavigationItem[], pages: readonly DocumentationPage[], selected: string, current: string, base: string) {
+  async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly DocumentationPage[], selected: string, current: string, base: string) {
     const home = `${base}v/${selected}/`;
     const href = (to: string) => /^(?:[A-Za-z][\w+.-]*:|\/\/|#)/.test(to) || !to.startsWith('/') ? to : home + to.slice(1);
     const file = (path: string) => path.startsWith('/') ? base + path.slice(1) : path;
@@ -147,12 +146,14 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const section = Object.keys(options.sidebar ?? {}).filter(key => key !== '/' && path.startsWith(key)).sort((a, b) => b.length - a.length)[0]
       ?? (top !== undefined && items.some(item => item.href.startsWith(`${home}${top}/`) && item.href !== `${home}${top}/`) ? `/${top}/` : '/');
     const explicit = options.sidebar?.[section];
+    // A _category's collapsed state is read on each render, so editing it applies in development.
     const sources = new Map(pages.map(doc => [base + doc.pathname.slice(1), doc.source]));
-    const from = home + section.slice(1);
+    const collapsed = (page: string) => { const source = sources.get(page); return source !== undefined && isIndex(source) && category(dirname(source)).collapsed === true; };
     const logo = typeof options.logo === 'string' ? { light: options.logo, dark: options.logo } : options.logo;
     const versions = editions.length > 1 ? editions.find(edition => edition.id === selected) : undefined;
     return {
-      sidebar: explicit ? configuredSidebar(explicit, items, href, current) : generatedSidebar(items.filter(item => item.href.startsWith(from)), from, sources),
+      sidebar: explicit ? configuredSidebar(explicit, items, href, current)
+        : generatedSidebar(await navigationTree({ from: `/v/${selected}${section}`, current }), collapsed),
       nav: (options.nav ?? []).map(item => {
         if (!('items' in item)) return { ...link(item), items: [] };
         const links = item.items.map(link);
@@ -187,25 +188,22 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   } };
 }
 
-// Read on each render, so a layout's new prop takes effect in development; parsed again only when it changes.
-// ponytail: the union of every component in the file, so a helper component's prop name also passes.
-let parsedLayout: { source: string; props: ReadonlySet<string> } | undefined;
-async function declaredProps(file: string): Promise<ReadonlySet<string>> {
-  const source = await readFile(file, 'utf8');
-  if (parsedLayout?.source !== source) {
-    const { definitions } = parseComponentResource(source, pathToFileURL(file).href);
-    parsedLayout = { source, props: new Set(definitions.flatMap(definition => Object.keys(definition.contract.props))) };
-  }
-  return parsedLayout.props;
-}
-
-/** HTMLKit options for a Markupress site, as the CLI runs it. */
-export function siteOptions(options: MarkupressOptions = {}): ServerOptions {
-  const root = resolve(options.root ?? process.cwd());
-  return { root, base: options.base ?? '/', outDir: resolve(root, options.outDir ?? 'site'), plugins: [markupress({ ...options, root })],
+/**
+ * HTMLKit options for a Markupress site, as the CLI runs it: the site's own HTMLKit options (its `htmlkit.config.ts`)
+ * with `markupress()` added after their plugins. Markupress's own `base` and `outDir`, when set, win over HTMLKit's.
+ */
+export function siteOptions(options: MarkupressOptions = {}, htmlkit: ApplicationOptions = {}): ServerOptions {
+  const root = resolve(options.root ?? htmlkit.root ?? process.cwd());
+  // markupress() already holds the markdown() plugin's pages; a second copy of either would compile .md twice.
+  const listed = htmlkit.plugins?.find(plugin => plugin.name === 'markupress' || plugin.name === 'markdown');
+  if (listed) throw new Error(`htmlkit.config: the markupress command adds markupress(), which includes markdown(); remove ${listed.name}() from its plugins.`);
+  return { ...htmlkit, root, base: options.base ?? htmlkit.base ?? '/', outDir: resolve(root, options.outDir ?? htmlkit.outDir ?? 'site'),
+    plugins: [...htmlkit.plugins ?? [], markupress({ ...options, root })],
     ...(options.host === undefined ? {} : { host: options.host }), ...(options.port === undefined ? {} : { port: options.port }) };
 }
-export function buildSite(options: MarkupressOptions = {}): Promise<BuildResult> { return buildApplication(siteOptions(options)); }
-export function previewSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return previewApplication(siteOptions(options)); }
+// Each loads the site's htmlkit.config.ts or .js, as the htmlkit command would, so its plugins compose with Markupress.
+const withConfig = async (options: MarkupressOptions) => siteOptions(options, await loadConfig(resolve(options.root ?? process.cwd())));
+export async function buildSite(options: MarkupressOptions = {}): Promise<BuildResult> { return buildApplication(await withConfig(options)); }
+export async function previewSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return previewApplication(await withConfig(options)); }
 /** HTMLKit's watcher recompiles Markdown and reloads open pages after each edit. */
-export function devSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return devApplication(siteOptions(options)); }
+export async function devSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return devApplication(await withConfig(options)); }
