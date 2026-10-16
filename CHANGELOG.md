@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.2.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.18`, the Looma release that ships Looma Markdown.
 - Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md), the Markdown LoomaEditor reads and writes. It parses with Looma's markdown-it plugin (`@threadlabs/looma/markdown/markdown-it`) and reads fences, braces and front matter with Looma's shared rules, so a document renders the same HTML in Markupress and LoomaEditor. The test suite renders every case in `@threadlabs/looma/markdown/fixtures` and compares the normalized HTML.
