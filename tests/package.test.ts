@@ -149,8 +149,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => example.getByRole('button', { name: 'Wrap' }).getAttribute('aria-pressed')).toBe('true');
       expect(await scrolls()).toBe(false);
       const callout = page.getByRole('note').filter({ hasText: 'Breaking {x}' });
-      expect(await callout.getAttribute('data-tone')).toBe('warning');
-      const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
+      expect(await callout.getAttribute('data-ui-callout-prop-tone')).toBe('warning');
+      const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-ui-callout-prop-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
       expect(await surface('warning')).not.toBe(await surface('danger'));
       expect(await surface('warning')).not.toBe('rgba(0, 0, 0, 0)');
       const details = page.locator('main details');
