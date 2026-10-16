@@ -1,6 +1,6 @@
 {
   "name": "markupress",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
   "license": "MIT",
   "type": "module",
