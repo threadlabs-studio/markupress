@@ -12,7 +12,7 @@ export interface MarkdownPluginOptions {
   readonly styles?: readonly string[];
   /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
   readonly lineNumbers?: boolean;
-  /** Front matter for a page that its own fields override, such as a folder's label and position on its index page. */
+  /** Front matter for a page that its own fields override, such as a site-wide default. */
   readonly frontmatter?: (file: string) => FrontMatter | undefined;
 }
 

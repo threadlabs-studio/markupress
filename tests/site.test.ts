@@ -47,7 +47,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const root = await fixture();
   // The disposable consumer resolves package resources from the installed dependency tree.
   await linkDependencies(root);
-  await write(root, 'docs/01.guide/03.hidden.md', '---\nsidebarHidden: true\n---\n# Hidden document');
+  await write(root, 'docs/01.guide/03.hidden.md', '---\nnavigation: hidden\n---\n# Hidden document');
   const result = await buildSite({ root, base: '/manual/' });
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title>Installation</title>');
@@ -153,13 +153,13 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/02.components/01.forms/button.md', '# Button');
   await write(root, 'docs/02.components/02.layout/stack.md', '# Stack');
-  await write(root, 'docs/02.components/02.layout/_category.yml', 'label: Layout\nposition: 0\ncollapsed: true\n');
-  await write(root, 'docs/02.components/02.layout/index.md', '# Layout components');
-  await write(root, 'docs/editor.md', '---\nsidebarPosition: 1\n---\n# Editor\n\n## Tables');
+  // The folder's index page labels, orders and collapses the folder.
+  await write(root, 'docs/02.components/02.layout/index.md', '---\ntitle: Layout\norder: 0\nnavigation: collapsed\n---\n# Layout components');
+  await write(root, 'docs/editor.md', '---\norder: 1\n---\n# Editor\n\n## Tables');
   const sidebar = (html: string) => /<nav aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   let application = await createApplication(siteOptions({ root }));
   try {
-    // sidebarPosition 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
+    // order 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
     expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
     const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '');
     expect(sidebar(button)).toBe('Layout Stack forms Button');
@@ -228,12 +228,28 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
   expect(page).toContain('Page not found');
 }, 30_000);
 
-it('fails the build for a _category in a folder without an index page', async () => {
-  const root = await fixture();
-  await write(root, 'docs/02.loose/a.md', '# A');
-  await write(root, 'docs/02.loose/_category_.json', '{ "label": "Loose" }');
-  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/02\.loose\/_category_\.json: .*add an index\.md/);
-});
+it('renders a folder index page with an empty body as a list of its pages and folders with their descriptions', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/02.components/index.md', '---\ntitle: Components\ndescription: Every component.\n---\n');
+  await write(root, 'docs/02.components/02.button.md', '---\ndescription: Starts an action.\n---\n# Button');
+  await write(root, 'docs/02.components/01.forms/index.md', '---\ntitle: Forms\ndescription: Form controls.\n---\n');
+  await write(root, 'docs/02.components/01.forms/input.md', '# Input');
+  await write(root, 'docs/02.components/03.secret.md', '---\nnavigation: hidden\n---\n# Secret');
+  await write(root, 'docs/02.components/04.(More)/menu.md', '# Menu');
+  const application = await createApplication(siteOptions({ root }));
+  const list = (html: string) => /<ul class="contents"[^>]*>(.*?)<\/ul>/s.exec(html.replace(/<!--[^>]*-->/g, ''))?.[1];
+  try {
+    const html = (await application.render('/components/')).html;
+    expect(html).toMatch(/<article class="markupress-prose"[^>]*><h1>Components<\/h1><\/article>/);
+    // Direct children in navigation order: a folder by its index page, pages, and a route group's pages; hidden pages stay out.
+    expect(list(html)!.replace(/ data-[\w-]+="[^"]*"/g, '')).toBe('<li><a href="/v/current/components/forms/">Forms</a><p>Form controls.</p></li>' +
+      '<li><a href="/v/current/components/button/">Button</a><p>Starts an action.</p></li><li><a href="/v/current/components/menu/">Menu</a></li>');
+    // The folder is a page at its own URL in the sidebar and the breadcrumbs.
+    expect(list((await application.render('/v/current/components/forms/')).html)).toContain('href="/v/current/components/forms/input/"');
+    expect(list((await application.render('/components/button/')).html)).toBeUndefined();
+    expect((await application.render('/components/button/')).html).toMatch(/data-component="hk-breadcrumbs".*?<a href="\/v\/current\/components\/"[^>]*>Components<\/a>/s);
+  } finally { await application.close(); }
+}, 30_000);
 
 it('composes the site\'s htmlkit.config plugins and options with Markupress', async () => {
   const root = await fixture(); await linkDependencies(root);
