@@ -36,3 +36,10 @@ figure:not(.code) > figcaption { margin-top: .5rem; font-size: .9rem; color: var
 img[data-placement="center"] { display: block; margin-inline: auto; }
 img[data-placement="wrap-left"] { float: left; margin: 0 1rem 1rem 0; }
 img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
+/* A home page's hero: its title, tagline and actions, beside its image on wide screens. */
+.hero { display: grid; gap: 2rem; align-items: center; padding-block: 2rem 3rem; }
+@media (min-width: 769px) { .hero:has(.hero-image) { grid-template-columns: 3fr 2fr; } }
+.hero h1 { margin: 0 0 1rem; font-size: clamp(2.2rem, 6vw, 3.5rem); }
+.hero p { margin: 0 0 1rem; font-size: 1.25rem; color: var(--ui-text-secondary, inherit); }
+.hero .actions { margin-top: 1.5rem; }
+.hero-image img { display: block; margin-inline: auto; max-block-size: min(18rem, 40vh); }

@@ -23,7 +23,7 @@ beforeAll(() => {
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
-  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }] }));
+  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' }));
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
@@ -36,6 +36,10 @@ beforeAll(() => {
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
+  // The current version's home is a home page; v1 keeps the plain one.
+  write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
+    '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
+  write('docs/03.about.md', '# About');
   write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
   mkdirSync(join(workspace, 'docs/02.reference'));
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
@@ -58,6 +62,9 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // Whitespace inside <pre> survives rendering, so each highlighted line stays on its own line.
   expect(html).toMatch(/<\/span><\/span>\n<span class="line">/);
   expect(html).not.toContain('controller="');
+  // The editLink option links each page to its file; outside a git checkout no page has a date.
+  expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
+  expect(html).not.toContain('Last updated');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
@@ -231,8 +238,28 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
       expect(await page.locator('h1').textContent()).toBe('Nothing here');
       expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
-      // The root sidebar is HTMLKit's navigation tree in <hk-nav>: the guide folder is an open native <details> after hydration.
+      // The home page reads its hero and feature cards from its Markdown, between the top navigation and footer, with no sidebar.
       await page.goto(server.url + 'v/current/');
+      expect(await page.locator('[data-component="markupress-home"] .hero h1').textContent()).toBe('Welcome');
+      expect(await page.locator('.hero-image img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
+      expect(await page.locator('.features [data-component="ui-card"] h2').allTextContents()).toEqual(['Components', 'Versions']);
+      expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
+      expect(await page.locator('#documentation-navigation, [data-component="hk-pager"]').count()).toBe(0);
+      // Audited in both themes: the saved dark theme, then light.
+      for (const theme of ['dark', 'light']) {
+        // A reload settles the theme, so no color is caught mid-transition.
+        if (theme === 'light') { await page.getByRole('button', { name: 'Dark theme' }).click(); await page.reload(); }
+        await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe(theme);
+        const homeAudit = await new AxeBuilder({ page }).analyze(); expect(homeAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      }
+      // Its actions are links: the first leads to the guide, in the shell.
+      await page.getByRole('link', { name: 'Installation' }).click();
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/install/#install');
+      await expect.poll(() => page.locator('[data-component="markupress-shell"]').count(), { timeout: 30_000 }).toBe(1);
+      if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + 'v/current/'); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
+      // The root sidebar is HTMLKit's navigation tree in <hk-nav>: the guide folder is an open native <details> after hydration.
+      await page.goto(server.url + 'v/current/about/');
       const group = page.locator('#documentation-navigation details').filter({ has: page.locator('summary', { hasText: 'guide' }) });
       await expect.poll(() => group.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
       expect(await group.getByRole('link').allTextContents()).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
@@ -251,6 +278,9 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
+      // The home page fits a narrow screen too.
+      await page.goto(server.url + 'v/current/');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       expect(errors).toEqual([]); await context.close(); await server.close(); server = undefined;
     }
   } finally { await server?.close(); await browser.close(); }

@@ -1,0 +1,25 @@
+<link rel="component" href="./chrome.html">
+<!-- The home layout (front matter layout: home): the shell's top navigation and footer around a full-width page, which
+     Markupress reads as a hero and feature cards. A site's app/layouts/home.html replaces it. -->
+<template component="markupress-home" controller="../dist/controllers/shell.js">
+<title>{$title}</title><link $if="$favicon" rel="icon" from:href="$favicon"><defs>
+<prop name="title" type="string" required>Site title</prop>
+<prop name="home" type="string" required>Home URL</prop>
+<prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>
+<prop name="favicon" type="string" nullable>Site icon URL</prop>
+<prop name="badge" type="string" default="">Badge beside the title</prop>
+<prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links</prop>
+<prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
+<state name="dark" type="boolean" value="false"></state></defs>
+<div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
+<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:dark="$dark"></markupress-header>
+<main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
+<markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
+<style>
+:host { display: block; background: var(--ui-surface); color: var(--ui-text); font: 1rem/1.7 system-ui, sans-serif; min-height: 100vh; }
+.site { display: flex; flex-direction: column; min-height: 100vh; }
+main { flex: 1; inline-size: 100%; max-inline-size: 75rem; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+.skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-accent); z-index: 3; } .skip:focus { transform: none; }
+:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+@media (max-width: 768px) { main { padding: 1rem 1rem 3rem; } }
+</style></template>

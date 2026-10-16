@@ -47,6 +47,14 @@
 .markupress-prose pre.line-numbers code { counter-reset: line; }
 .markupress-prose pre.line-numbers .line::before { counter-increment: line; content: counter(line); display: inline-block; inline-size: 2ch; margin-inline-end: 1.5ch; text-align: end; color: var(--ui-text-muted, #888); user-select: none; }
 /* The logo for the theme in use: the head script sets data-theme before first paint, and without it the light logo shows. */
-[data-component~="markupress-shell"] .logo-dark { display: none; }
-:root[data-theme="dark"] [data-component~="markupress-shell"] .logo-dark { display: inline; }
-:root[data-theme="dark"] [data-component~="markupress-shell"] .logo-light { display: none; }
+[data-component~="markupress-header"] .logo-dark { display: none; }
+:root[data-theme="dark"] [data-component~="markupress-header"] .logo-dark { display: inline; }
+:root[data-theme="dark"] [data-component~="markupress-header"] .logo-light { display: none; }
+/* A home page's feature cards. Their Markdown is projected into Looma's card, where the page's scoped prose styles
+   never reach, so these rules set its type; the card spaces its children. */
+.markupress-prose .features { margin-block: 1rem; }
+.markupress-prose .features :is(h2, p, ul, ol, pre, figure) { margin: 0; }
+.markupress-prose .features h2 { font-size: 1.15rem; line-height: 1.3; }
+.markupress-prose .features h2 a { color: inherit; text-decoration: none; }
+.markupress-prose .features p { color: var(--ui-text-secondary, inherit); }
+.markupress-prose .features a { color: var(--ui-accent); text-underline-offset: .2em; }

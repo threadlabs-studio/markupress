@@ -313,3 +313,39 @@ it('links ::toc entries to the anchors the outline lists', async () => {
   expect([...toc.matchAll(/href="#([^"]*)"/g)].map(match => match[1])).toEqual(['start', ...compiled.outline.filter(item => item.depth === 2).map(item => item.id)]);
   expect(toc).toContain('<ol role="list">');
 });
+
+it('reads a home page from its Markdown: a hero of title, tagline, image and actions, then a feature card per h2', async () => {
+  const compiled = await compileMarkdown(`---
+layout: home
+---
+# Markupress
+
+Docs from *Markdown* {literally}.
+
+![Logo](./logo.svg)
+
+[Get started](./guide.md) [GitHub](https://github.com/example)
+
+## Components
+
+Use them in Markdown.
+
+## Versions
+
+- Snapshot
+- Switch
+`, { file: '/project/docs/index.md', pageName: 'page-home', resolveLink: href => href === './guide.md' ? '/v/current/guide/' : href });
+  const article = /<article class="markupress-prose">(.*)<\/article>/s.exec(compiled.resource)![1]!;
+  expect(article).toBe('<header class="hero"><div class="hero-text"><h1 id="markupress"><a href="#markupress">Markupress</a></h1><p>Docs from <em>Markdown</em> \\{literally}.</p>' +
+    '<ui-cluster class="actions" gap="m"><ui-button as="a" href="/v/current/guide/" variant="solid" size="lg">Get started</ui-button>' +
+    '<ui-button as="a" href="https://github.com/example" variant="outline" size="lg">GitHub</ui-button></ui-cluster></div>' +
+    '<div class="hero-image"><img src="./logo.svg" alt="Logo"></div></header>' +
+    '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components"><a href="#components">Components</a></h2><p>Use them in Markdown.</p></ui-card>' +
+    '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul>\n<li>Snapshot</li>\n<li>Switch</li>\n</ul></ui-card></ui-grid>');
+  for (const name of ['ui-cluster', 'ui-button', 'ui-grid', 'ui-card']) expect(compiled.resource).toContain(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
+  expect(compiled.resource).toContain('<meta name="hk:layout" content="home">');
+  // Without an h1 the hero is titled by the page title, and without h2s or actions it has no cards or buttons.
+  const plain = await compileMarkdown('---\nlayout: home\ntitle: Welcome\n---\nJust a tagline.', { file: '/project/docs/index.md', pageName: 'page-home' });
+  expect(plain.resource).toContain('<article class="markupress-prose"><header class="hero"><div class="hero-text"><h1>Welcome</h1><p>Just a tagline.</p></div></header></article>');
+  expect(plain.resource).not.toContain('ui-card');
+});

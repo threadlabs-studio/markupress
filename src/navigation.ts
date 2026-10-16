@@ -5,6 +5,14 @@ import type { Token } from 'markdown-it';
 
 /** A top navigation or footer link. A path starting with `/` is a page of the selected version. */
 export interface Link { readonly label: string; readonly href: string }
+/**
+ * Where a site link points: a path starting with `/` is a page path below `home` (the version's home, or the site's
+ * base), and any other link, such as a URL, a fragment or a relative path, stays as written. Markdown links, the
+ * footer and the `nav` option share it, so `/tokens/` means the same page everywhere.
+ */
+export function siteLink(to: string, home: string): string {
+  return /^(?:[A-Za-z][\w+.-]*:|\/\/|#)/.test(to) || !to.startsWith('/') ? to : home + to.slice(1);
+}
 /** A top navigation link after the sections, shown as its `icon` image (a path starting with `/` is in `public/`) or its label. */
 export type NavItem = Link & { readonly icon?: string };
 

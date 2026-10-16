@@ -2,21 +2,18 @@
 
 Build a versioned Markdown documentation site with native HTML Next components, HTMLKit routing and a Looma theme. Markupress provides `build`, `dev`, `preview` and `snapshot` commands. Production output is a portable static directory; controllers enhance the rendered HTML in the browser.
 
-The npm package `markupress@0.0.1` only reserves the name. The implementation below is being prepared for the first product release.
+## Get started
 
-## Try the source build
-
-Use Node 22.22.2 or later in Node 22, or Node 24.15 or later in Node 24, and pnpm through Corepack:
+Markupress is published on npm as `markupress`. Use Node 22.22.2 or later in Node 22, or Node 24.15 or later in Node 24:
 
 ```sh
-corepack pnpm install --frozen-lockfile
-corepack pnpm build
-node dist/cli.js dev --root examples/site
-node dist/cli.js build --root examples/site
-node dist/cli.js preview --root examples/site
+npm install markupress
+npx markupress dev       # serve docs/ with live reload
+npx markupress build     # write the static site to site/
+npx markupress preview   # serve the built site
 ```
 
-The example serves at `/manual/`. Open a version-specific link directly to verify that a reload preserves the selected version. Markupress is a thin layer over HTMLKit: it translates Markdown and manages versions, and HTMLKit routes, orders, renders, watches and builds the pages. The dev server reloads open pages after any edit, addition or deletion. `build` writes a static site, which is the only production output for now.
+`docs/index.md` is a complete site. Markupress is a thin layer over HTMLKit: it translates Markdown and manages versions, and HTMLKit routes, orders, renders, watches and builds the pages. The dev server reloads open pages after any edit, addition or deletion. `build` writes a static site, which is the production output.
 
 ## Author a site
 
@@ -37,6 +34,7 @@ A site needs no configuration. `docs/index.md` is a complete site, and `markupre
 | `public/logo.svg`, `public/logo-dark.svg` | The logo before the title, and its dark-theme version. |
 | `public/favicon.svg` | The site icon. |
 | `app/layouts/default.html` | A layout that replaces the Markupress shell (see [Layouts](#layouts)). |
+| `app/layouts/home.html` | A layout that replaces the home layout (see [Home page](#home-page)). |
 | `htmlkit.config.ts` | HTMLKit options and plugins. |
 | `versions/<id>/` | A recorded version, written by `markupress snapshot` (see [Versions](#versions)). |
 
@@ -95,10 +93,10 @@ Front matter is a YAML mapping. Each field becomes HTMLKit page metadata or page
 | `navigation` | `hidden` or `collapsed` | `hidden` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). On a folder's index page, `collapsed` starts the folder's sidebar group closed. |
 | `id` | string | The document identity across versions, independent of the file name and route. |
 | `aliases` | list of route paths | Further URLs serving the page, relative to its version (HTMLKit `hk:alias`). |
-| `layout` | string or `false` | An HTMLKit layout, `app/layouts/<name>.html`, in place of the site's layout for this page (HTMLKit `hk:layout`). `false` renders the page with no layout. |
+| `layout` | string or `false` | An HTMLKit layout, `app/layouts/<name>.html`, in place of the site's layout for this page (HTMLKit `hk:layout`). `home` is Markupress's [home page](#home-page). `false` renders the page with no layout. |
 | `outline` | `false` or `[min, max]` | The heading levels in the page's "On this page" outline, `[2, 3]` by default. `false` gives an empty outline. |
 | `head` | mapping | `meta` (name to content), `og` (Open Graph property without `og:`, to content) and `canonical` (a URL), rendered into the document head. |
-| `editLink` | URL or `false` | The page's "Edit this page" URL, as `page.editLink` for the layout. `false` asks the layout to show none. |
+| `editLink` | URL or `false` | The page's "Edit this page" URL, in place of the one the [`editLink` option](#edit-link-and-last-updated) gives. `false` shows none. |
 
 ```yaml
 ---
@@ -114,7 +112,7 @@ head:
 
 Number prefixes order pages, and `order` takes the place of a file's prefix: `order: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
 
-Every heading has an anchor, derived by the Looma Markdown rule: the text is normalized to NFC and lowercased, letters, numbers and combining marks in any script stay, and every other run of characters becomes one hyphen. "Über uns" is `über-uns`, "設定 と 使い方" is `設定-と-使い方`, and a duplicate takes the first free suffix (`installation-1`). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading. A custom ID is reserved for its heading, so a generated ID skips it. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Every heading has an anchor, derived by the Looma Markdown rule: the text is normalized to NFC and lowercased, letters, numbers and combining marks in any script stay, and every other run of characters becomes one hyphen. "Über uns" is `über-uns`, "設定 と 使い方" is `設定-と-使い方`, and a duplicate takes the first free suffix (`installation-1`). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading. A custom ID is reserved for its heading, so a generated ID skips it. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. A link starting with `/` is a page path in the page's version, as in the footer and the `nav` option, so `[Tokens](/tokens/)` opens `/v/<id>/tokens/` under the deployment base; with `markdown()` alone it is a path under the base. A root-relative link naming a file, such as `/report.pdf`, is a file in the public directory. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
 Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md): CommonMark with GitHub Flavored Markdown (tables, task lists, strikethrough and autolinks), plus Looma's blocks and inline elements. It parses with Looma's markdown-it plugin and is tested against Looma Markdown's conformance fixtures, so a document reads the same in Markupress, Looma's components and LoomaEditor. A container's name is matched without regard to case, and the rest of the opening line is its title:
 
@@ -260,11 +258,11 @@ The `versions` option sets the versions, their order and their labels in place o
 }
 ```
 
-Version IDs are URL slugs; they need not follow SemVer. A document's `id` identifies it across versions independently of its filename, route and generated component name. The version selector links to that identity in the other version, even if its route changed. If it is absent, the selector explains the fallback and links to that version's home. Selection lives in the URL and survives reloads.
+A site with several versions shows their links in the sidebar and the selected version's label beside the title. Version IDs are URL slugs; they need not follow SemVer. A document's `id` identifies it across versions independently of its filename, route and generated component name. The version selector links to that identity in the other version, even if its route changed. If it is absent, the selector explains the fallback and links to that version's home. Selection lives in the URL and survives reloads.
 
 ## Theme and migration inputs
 
-The default theme imports Looma's button and badge resources and CSS exports selectively. Its shell has a skip link, a top navigation bar, a grouped sidebar per section, native version links, an "on this page" outline, a footer and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
+The default theme imports Looma's button and badge resources and CSS exports selectively. Its shell has a skip link, a top navigation bar, a grouped sidebar per section, native version links, an "on this page" outline, an edit link and last-updated date, a footer and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
 Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header, sidebar, columns and footer. `theme/theme.css` is page-wide too, because HTMLKit's built-in breadcrumbs and pager have no styles of their own and no component's scoped style reaches them; it also picks the logo for the theme in use. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
 
@@ -312,6 +310,56 @@ A group starts open unless its index page says `navigation: collapsed`, and a gr
 
 **Not found.** A `404.md` in the default version's content directory is the site's not-found page (HTMLKit's not-found page, R7). It renders in the shell for every unmatched path, including those under `/v/<id>/`, with status 404 in `dev` and `preview`, and `build` writes it to `404.html`. It is no page of its version, so it has no URL of its own and no sidebar entry.
 
+### Home page
+
+`layout: home` makes a page a home page: a hero and feature cards, full width between the shell's top navigation and footer. The page's Markdown is the data, so it reads the same anywhere Markdown renders:
+
+```markdown
+---
+layout: home
+---
+# Markupress
+
+Versioned documentation from Markdown, with native HTML Next components.
+
+![](/hero.svg)
+
+[Get started](01.guide/01.install.md) [GitHub](https://github.com/threadlabs-studio/markupress)
+
+## Components in Markdown
+
+Declare an HTML Next component in a page and use it on the next line.
+
+## Versions
+
+`markupress snapshot v1` records the docs as they stand.
+```
+
+| Markdown | Is |
+| --- | --- |
+| Everything before the first `##` heading | The hero. |
+| The `#` heading | The hero's title. Without one, the page's `title` is. |
+| A paragraph of only links | The actions: a `ui-button` link each, the first solid and the rest outlined. |
+| An image alone in its paragraph | The hero image, beside the text on wide screens. |
+| Any other paragraph | The tagline. |
+| Each `##` heading and everything up to the next | A feature card, a Looma `ui-card` in a `ui-grid`. A card holds any Markdown: lists, code, links, images. |
+
+The hero and cards use Looma's components and `--ui-*` tokens, in both themes. `app/layouts/home.html` replaces the home layout as an ordinary HTMLKit layout, with its own `home.server.ts` loader when it needs data. The page keeps its hero and card structure, so the site's layout supplies only the frame and styles.
+
+### Edit link and last updated
+
+Each page in the shell ends with an "Edit this page" link and the date its file last changed, above the previous/next links.
+
+**Edit link.** The `editLink` option is a URL ending in `/`, and each page's link is that URL followed by the page file's path in the project. For a site at `examples/site/` in a GitHub repository:
+
+```json
+{ "editLink": "https://github.com/threadlabs-studio/markupress/edit/main/examples/site/" }
+```
+
+`docs/01.guide/01.authoring.md` links to `…/edit/main/examples/site/docs/01.guide/01.authoring.md`, and a snapshot's page to its file in `versions/<id>/`. A page's own `editLink` front matter takes its place, and `editLink: false` shows none.
+
+**Last updated.** A page's date is the author date of the last commit that touched its file, as `YYYY-MM-DD` in a `<time>` element. It needs no configuration: one `git log` call reads the dates of every page when a build or development server starts. Outside a git checkout, or for a file with no commit yet, the page shows no date. A shallow clone dates every file by its oldest fetched commit, so a CI build that shows dates fetches the full history (`fetch-depth: 0` in `actions/checkout`).
+
 ### Layouts
 
 `app/layouts/default.html` replaces the Markupress shell with the site's own HTML Next layout for every documentation page, as it is the default layout of the site's other HTMLKit pages. The layout renders `<slot name="page">` where the page goes, and receives Markupress's loader data as props. It receives each prop it declares with `<prop>`, so it declares only the data it uses:
@@ -343,7 +391,7 @@ A group starts open unless its index page says `navigation: collapsed`, and a gr
 | `versions` | Version links: `href`, `label`, `current` and `note`, which explains a fallback to that version's home. |
 | `outline` | The page's headings in its `outline` range: `id`, `href` (`#id`), `label` and `depth`. |
 | `contents` | A generated index's entries, `label`, `href` and `description`, and an empty list on every other page. |
-| `page` | The page's front matter, plus its resolved `title` and document `id`. |
+| `page` | The page's front matter, plus its resolved `title` and document `id`, its `editLink` (absent when it has none), and `lastUpdated`, the `YYYY-MM-DD` date its file last changed in git (absent outside git). |
 
 Markupress gives the layout its loader data, so the layout has no `default.server.ts` of its own. A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
 
@@ -383,10 +431,21 @@ Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, h
 | `nav` | none | Links after the sections in the top navigation: `{ "label", "href" }`, with an optional `icon` image shown in place of the label. |
 | `logo` | `public/logo.svg` and `public/logo-dark.svg` | One image path, or `{ "light", "dark" }`, in place of the logo files. |
 | `favicon` | `public/favicon.svg` | The site icon's path, in place of the icon file. |
+| `editLink` | none | A URL ending in `/`, which each page's file path follows to make its "Edit this page" link (see [Edit link and last updated](#edit-link-and-last-updated)). |
 
 Image paths starting with `/` are files in `public/`. An unknown key fails with the list of options. The programmatic `buildSite`, `devSite` and `previewSite` APIs, and the `markupress()` plugin, take the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
 ## Verification and contribution
+
+Build and try the source with pnpm through Corepack. The example site serves at `/manual/`; open a version-specific link directly to see a reload keep the selected version:
+
+```sh
+corepack pnpm install --frozen-lockfile
+corepack pnpm build
+node dist/cli.js dev --root examples/site
+node dist/cli.js build --root examples/site
+node dist/cli.js preview --root examples/site
+```
 
 ```sh
 corepack pnpm verify:inner
@@ -395,7 +454,7 @@ corepack pnpm exec playwright install chromium
 MARKUPRESS_BROWSER_TEST=1 corepack pnpm exec vitest run tests/package.test.ts --maxWorkers=1
 ```
 
-The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers, keyboard version selection, reloads, mobile navigation and an axe accessibility audit. CI runs that browser proof separately.
+The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers, keyboard version selection, reloads, mobile navigation, the home page and an axe accessibility audit. CI runs that browser proof separately.
 
 Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is the contributor contract; [threadlabs.config.json](threadlabs.config.json) records ownership. The [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md) defines product boundaries. Publishing uses the protected GitHub release workflow and npm environment.
 

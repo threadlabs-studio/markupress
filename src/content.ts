@@ -291,8 +291,10 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     }
   };
   visit(fragment, false);
-  for (const name of components) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   const title = fields.title ?? headings[0]?.label ?? basename(options.file, '.md').replace(/^\d+\./, '');
+  const blocks = new Set(components);
+  const article = fields.layout === 'home' ? home(fragment, title, blocks) : serialize(fragment);
+  for (const name of blocks) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   // A folder's index page with front matter only generates the folder's listing, which the layout's loader supplies.
   const generated = isIndex(options.file) && body.trim() === '';
   // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, order, visibility, alias routes, the
@@ -310,5 +312,39 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const styles = options.styles?.length ? `<style>${options.styles.map(file => `@import "${pathToFileURL(file).href}";`).join('')}</style>` : '';
   return { title, aliases, generated, ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${serialize(fragment)}</article>${styles}</template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+}
+
+type Node = DefaultTreeAdapterMap['node'];
+type Element = DefaultTreeAdapterMap['element'];
+const element = (node: Node, tag: string): node is Element => 'tagName' in node && node.tagName === tag;
+/** A paragraph holding only `tag` elements, at least one, and the space between them. */
+const only = (node: Node, tag: string): node is Element => element(node, 'p') && node.childNodes.some(child => element(child, tag)) &&
+  node.childNodes.every(child => element(child, tag) || (child.nodeName === '#text' && 'value' in child && child.value.trim() === ''));
+
+/**
+ * A home page (`layout: home`) is read from its Markdown structure, so it reads the same as plain Markdown anywhere.
+ * Everything before the first h2 is the hero: its h1 is the title, a paragraph of only links is its actions (the first
+ * one primary), an image alone in its paragraph is its image, and the rest is its tagline. Each h2 starts a feature card
+ * that holds everything up to the next h2.
+ */
+function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string, components: Set<string>): string {
+  const hero: Node[] = [], features: Node[][] = [];
+  for (const node of fragment.childNodes) {
+    if (element(node, 'h2')) features.push([node]);
+    else (features.at(-1) ?? hero).push(node);
+  }
+  // Looma Markdown renders an image alone in its paragraph as a block image, with no paragraph.
+  const actions = hero.find(node => only(node, 'a')), image = hero.find(node => element(node, 'img') || only(node, 'img'));
+  // Markdown puts text in blocks, so the fragment's own text nodes are only the space between them.
+  const outer = (nodes: readonly Node[]) => nodes.map(node => 'tagName' in node ? serializeOuter(node) : '').join('');
+  const heading = hero.some(node => element(node, 'h1')) ? '' : `<h1>${literal(escapeHTML(title))}</h1>`;
+  const buttons = (actions && 'childNodes' in actions ? actions.childNodes : []).filter(child => element(child, 'a')).map((link, index) =>
+    `<ui-button as="a" href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" size="lg">${serialize(link)}</ui-button>`).join('');
+  if (buttons) components.add('ui-cluster').add('ui-button');
+  if (features.length > 0) components.add('ui-grid').add('ui-card');
+  return `<header class="hero"><div class="hero-text">${heading}${outer(hero.filter(node => node !== actions && node !== image))}` +
+    (buttons ? `<ui-cluster class="actions" gap="m">${buttons}</ui-cluster>` : '') + '</div>' +
+    (image ? `<div class="hero-image">${element(image, 'p') ? serialize(image) : outer([image])}</div>` : '') + '</header>' +
+    (features.length === 0 ? '' : `<ui-grid class="features" min="md">${features.map(nodes => `<ui-card as="section">${outer(nodes)}</ui-card>`).join('')}</ui-grid>`);
 }
