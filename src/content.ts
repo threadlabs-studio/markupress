@@ -1,6 +1,6 @@
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parseLoomaFenceInfo, splitLoomaFrontmatter, type LoomaFenceInfo } from '@threadlabs/looma/markdown';
+import { applyLoomaCodeNotation, parseLoomaFenceInfo, splitLoomaFrontmatter, type LoomaFenceInfo } from '@threadlabs/looma/markdown';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import type { StateBlock, Token } from 'markdown-it';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
@@ -103,21 +103,6 @@ const lineClasses = (marked: ReadonlySet<number>, numbers: boolean, meta: string
   code(node) { if (meta) node.properties['data-meta'] = meta; },
   line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
 });
-// `// [!code highlight]` at the end of a line highlights it and is removed, and `[!code highlight:3]` covers three
-// lines. Alone on a line, the marker is removed with its line and applies to the lines after it.
-// ponytail: matched on source lines rather than on Shiki's comment tokens, so a string ending in the marker counts too.
-const notation = /[ \t]*(?:\/\/|#|--|<!--|\{?\/\*)[ \t]*\[!code highlight(?::(\d+))?\][ \t]*(?:-->|\*\/\}?)?[ \t]*$/;
-function highlightNotation(code: string, marked: Set<number>): string {
-  const lines: string[] = [];
-  for (const line of code.split('\n')) {
-    const match = notation.exec(line);
-    if (!match) { lines.push(line); continue; }
-    const rest = line.slice(0, match.index), own = rest.trim() !== '';
-    if (own) lines.push(rest);
-    for (let n = 0; n < Number(match[1] ?? 1); n++) marked.add(lines.length + (own ? 0 : 1) + n);
-  }
-  return lines.join('\n');
-}
 // Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
 const codeActions = '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button>' +
   '<button type="button" data-code-action="copy">Copy</button></div>';
@@ -148,8 +133,9 @@ rules.code_inline = (tokens, index, _options, _env, self) => `<code${self.render
 // Each heading links to its own anchor, which the plugin assigned.
 rules.heading_open = (tokens, index, options, _env, self) => `${self.renderToken(tokens, index, options)}<a href="#${escapeHtml(tokens[index]!.attrGet('id') ?? '')}">`;
 rules.heading_close = (tokens, index, options, _env, self) => `</a>${self.renderToken(tokens, index, options)}`;
+// Code reads as Looma's code notation leaves it: `[!code highlight]` comments are removed from every fence.
 const plainCode = (code: string, { language, meta }: Pick<LoomaFenceInfo, 'language' | 'meta'>) =>
-  `<pre><code${language ? ` class="language-${escapeHtml(language)}"` : ''}${meta ? ` data-meta="${escapeHtml(meta)}"` : ''}>${literal(escapeHtml(code.replace(/\n$/, '')))}</code></pre>`;
+  `<pre><code${language ? ` class="language-${escapeHtml(language)}"` : ''}${meta ? ` data-meta="${escapeHtml(meta)}"` : ''}>${literal(escapeHtml(applyLoomaCodeNotation(code.replace(/\n$/, '')).code))}</code></pre>`;
 const codeFigure = (pre: string, title?: string) =>
   `<figure class="code">${title ? `<figcaption>${literal(escapeHtml(title))}</figcaption>` : ''}${codeActions}${pre}</figure>\n`;
 rules.fence = (tokens, index, _options, env: RenderEnv) => {
@@ -245,8 +231,10 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     const { language, meta, lines, lineNumbers = options.lineNumbers ?? false } = parseLoomaFenceInfo(token.info);
     // Languages Shiki does not bundle stay escaped plain text.
     if (!language || !(Object.hasOwn(bundledLanguages, language) || plain.has(language))) continue;
-    const marked = new Set(lines);
-    highlighted.set(token, await highlight(highlightNotation(token.content.replace(/\n$/, ''), marked), language, lineClasses(marked, lineNumbers, meta)));
+    // Highlighted lines are the fence's `{1,3-5}` and the lines its `[!code highlight]` comments mark.
+    const { code, lines: noted } = applyLoomaCodeNotation(token.content.replace(/\n$/, ''));
+    const marked = new Set([...lines, ...noted]);
+    highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta)));
   }
   const fragment = parseFragment(md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv));
   const declarations: string[] = [];

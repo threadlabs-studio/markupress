@@ -202,7 +202,7 @@ const d = 4;
 - `{1,3-4}` highlights lines 1, 3 and 4, with or without a space after the language (```` ```ts{1} ````).
 - A `// [!code highlight]` comment at the end of a line highlights that line, and the comment is removed. `#`, `--`, `/* */` and `<!-- -->` comments work too. `[!code highlight:3]` covers three lines, and a marker alone on its line applies to the lines after it.
 - `:line-numbers` numbers the lines. The `lineNumbers: true` option, in `markupress.config.json`, `markupress()` or `markdown()`, numbers every block, and `:no-line-numbers` opts a block out.
-- These features apply to languages Shiki highlights and to plain text (`text`, `txt`, `plain` or `plaintext`). A fence with an unknown language or no language stays escaped text.
+- Line highlighting and numbers apply to languages Shiki highlights and to plain text (`text`, `txt`, `plain` or `plaintext`). A fence with an unknown language or no language stays escaped text, without its `[!code highlight]` comments.
 
 Every code block has Copy and Wrap buttons. Copy puts the code on the clipboard, without line numbers or highlight comments. Wrap toggles line wrapping. They are native buttons, reached with Tab, and a page with code loads a small controller (`markupress/controllers/code.js`) that handles them through one delegated listener. The buttons stay hidden until that controller runs, so without JavaScript a code block is only its code. The theme shows them while the block is hovered or holds focus, and always on touch screens.
 

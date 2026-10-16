@@ -130,6 +130,13 @@ it('orders a page with order, hides it with navigation, and takes default front 
   expect(folded.resource).not.toContain('hk:navigation');
 });
 
+it('reads front matter whose fields are all lists or mappings', async () => {
+  const compiled = await compileMarkdown('---\naliases:\n  - /old/\nhead:\n  canonical: https://example.com/page/\n---\n# Page', { file: '/docs/page.md', pageName: 'page-nested' });
+  expect(compiled.aliases).toEqual(['/old/']);
+  expect(compiled.resource).toContain('<link rel="canonical" href="https://example.com/page/">');
+  expect(compiled.resource).not.toContain('<hr>');
+});
+
 it('generates an index page with front matter and an empty body, titled by its front matter', async () => {
   const generated = await compileMarkdown('---\ntitle: Forms\ndescription: Form controls.\n---\n\n', { file: '/docs/forms/index.md', pageName: 'page-forms' });
   expect(generated.generated).toBe(true);
@@ -265,9 +272,9 @@ it('highlights lines from fence meta and [!code highlight] comments at build tim
   expect(lines(await page('```ts{2}\nconst a = 1;\nconst b = 2; // [!code highlight]\n// [!code highlight:2]\nconst c = 3;\nconst d = 4;\nconst e = 5;\n```'))).toEqual([
     ' const a = 1;', '+const b = 2;', '+const c = 3;', '+const d = 4;', ' const e = 5;']);
   expect(lines(await page('```sh\nnpm install # [!code highlight]\nnpm test\n```\n\n```html\n<p>One</p> <!-- [!code highlight] -->\n```'))).toEqual(['+npm install', ' npm test', '+<p>One</p>']);
-  // Plain text takes line features without a grammar; an unknown language stays escaped text.
+  // Plain text takes line features without a grammar; an unknown language stays escaped text without its notation comments.
   expect(lines(await page('```text {2}\nfirst\nsecond\n```'))).toEqual([' first', '+second']);
-  expect(await page('```not-a-language {1}\nraw // [!code highlight]\n```')).toContain('<pre><code class="language-not-a-language" data-meta="{1}">raw // [!code highlight]</code></pre>');
+  expect(await page('```not-a-language {1}\nraw // [!code highlight]\n```')).toContain('<pre><code class="language-not-a-language" data-meta="{1}">raw</code></pre>');
 });
 
 it('numbers lines from fence meta or the lineNumbers default', async () => {
@@ -295,7 +302,7 @@ it('renders chips, mentions, task lists, figures and image placement, with liter
   expect(resource).toContain('<span data-looma-chip="" data-label="Ready {x}" data-color="green">Ready \\{x}</span>');
   expect(resource).toContain('data-color="neutral">Draft</span>');
   expect(resource).toContain('<span data-type="mention" class="looma-mention" data-id="u1" data-label="Ada">@Ada</span>');
-  expect(resource).toContain('<ul data-type="taskList">\n<li data-type="taskItem" data-checked="true"><input type="checkbox" disabled="" checked="">Done</li>');
+  expect(resource).toContain('<ul data-type="taskList">\n<li data-type="taskItem" data-checked="true"><label><input type="checkbox" disabled="" checked=""> Done</label></li>');
   expect(resource).toContain('<figure>\n<img src="./pipeline.svg" alt="Pipeline" width="640" data-placement="wrap-left"><figcaption>The <em>build</em></figcaption>\n</figure>');
   expect(resource).not.toContain('<link rel="component"');
 });

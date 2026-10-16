@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.17`, the Looma release that ships Looma Markdown.
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.18`, the Looma release that ships Looma Markdown.
 - Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md), the Markdown LoomaEditor reads and writes. It parses with Looma's markdown-it plugin (`@threadlabs/looma/markdown/markdown-it`) and reads fences, braces and front matter with Looma's shared rules, so a document renders the same HTML in Markupress and LoomaEditor. The test suite renders every case in `@threadlabs/looma/markdown/fixtures` and compares the normalized HTML.
 
 Breaking changes from 0.1.0:
@@ -12,7 +12,6 @@ Breaking changes from 0.1.0:
 - Heading anchors follow Looma Markdown: NFC, lowercase, letters, numbers and combining marks kept in any script, and every other run one hyphen. Anchors of headings with accented or non-Latin text change: "Über uns" is `über-uns`. Links to those anchors need the new IDs.
 - A closing `:::` line closes the innermost open container. `::: tabs` content before its first `== Label` line, and other content in a `::: code-group`, renders before the panels.
 - A fence's meta, everything after its language, is on its `<code>` as `data-meta`.
-- Front matter is a YAML mapping with at least one `key: value` line, closed by `---` or `...`.
 - A folder is a page: its index page's front matter labels, orders and collapses the folder. `_category.yml`, `_category_.yml` and `_category_.json` files are no longer read; move their fields into the folder's `index.md` (`label` becomes `title`, `position` becomes `order`, and `collapsed: true` becomes `navigation: collapsed`). A label for pages with no folder URL is an HTMLKit route group, a folder named in parentheses.
 - Front matter keys follow HTMLKit's page metadata. Rename `sidebarPosition` to `order` (HTMLKit `hk:order`), `sidebarHidden: true` to `navigation: hidden` (HTMLKit `hk:navigation`), and `toc` to `outline`. `sidebarLabel` is removed: `title` is the navigation, breadcrumb and pager label (HTMLKit `hk:label`). Each old key fails the build as an unknown field, naming the file and the valid fields.
 - `compileMarkdown` no longer returns `label` or `sidebarHidden`, and a layout's `page` data no longer has `label`; read `title` and `frontmatter.navigation`.
