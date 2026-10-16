@@ -169,9 +169,6 @@ importers:
       '@nextwebwg/htmlkit':
         specifier: 1.0.0-alpha.52
         version: 1.0.0-alpha.52(@types/node@22.20.1)(yaml@2.9.1)
-      marked:
-        specifier: 18.1.1
-        version: 18.1.1
       parse5:
         specifier: 8.0.1
         version: 8.0.1
@@ -195,11 +192,17 @@ importers:
         specifier: 1.0.0-alpha.52
         version: 1.0.0-alpha.52
       '@threadlabs/looma':
-        specifier: 0.28.15
-        version: 0.28.15(@nextwebwg/html-next@1.0.0-alpha.52)
+        specifier: 0.28.18
+        version: 0.28.18(@nextwebwg/html-next@1.0.0-alpha.52)
+      '@types/markdown-it':
+        specifier: 14.2.0
+        version: 14.2.0
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
+      jsdom:
+        specifier: 30.1.2
+        version: 30.1.2
       oxlint:
         specifier: 1.88.0
         version: 1.88.0
@@ -570,8 +573,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.28.15':
-    resolution: {integrity: sha512-B0GZa8n3DGh7izZDQNtBYPrdI/YVQ0fmIHSFM69eve/sisGxsjJekSH09A90eEn1CM24FpGJ+17EgQzO7cc15Q==}
+  '@threadlabs/looma@0.28.18':
+    resolution: {integrity: sha512-0y9JCisydKy18yfV1KIEI3YE/O/jKDyNWFKd4cIFbGMhJN72IRq0KjtykYkTk6Ka9vnpeh6t2Zq6pYRrOpobTQ==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     peerDependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.52
@@ -601,8 +604,17 @@ packages:
   '@types/hast@3.0.5':
     resolution: {integrity: sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g==}
 
+  '@types/linkify-it@5.0.0':
+    resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
+
+  '@types/markdown-it@14.2.0':
+    resolution: {integrity: sha512-NoQ2yGlLWj4wpxMs+TYmRKk3thDrQ97agr7sFqfLsAlvoS8SNQuTrlObhFqG9iugdTtgOE9jpJ6FNM4ZGsa5xQ==}
+
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
+
+  '@types/mdurl@2.0.0':
+    resolution: {integrity: sha512-RGdgjQUZba5p6QEFAVx2OGb8rQDL/cPRG7GiedRzMcJ1tYnUANBncjbSB1NRGwbvjcPeikRABz2nshyPk1bhWg==}
 
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
@@ -968,11 +980,6 @@ packages:
 
   markdown-it@14.3.1:
     resolution: {integrity: sha512-4Ej49aYTDFIQ+uBkfX8GBvJGccoARxxPep+7aWTs55ozbjQJpW9M26Fe53vnGgvLeVzva/amzjQQaQu9w0vMhA==}
-    hasBin: true
-
-  marked@18.1.1:
-    resolution: {integrity: sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg==}
-    engines: {node: '>= 20'}
     hasBin: true
 
   mdast-util-to-hast@13.2.1:
@@ -1555,7 +1562,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.28.15(@nextwebwg/html-next@1.0.0-alpha.52)':
+  '@threadlabs/looma@0.28.18(@nextwebwg/html-next@1.0.0-alpha.52)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.52
       dompurify: 3.4.15
@@ -1577,9 +1584,18 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/linkify-it@5.0.0': {}
+
+  '@types/markdown-it@14.2.0':
+    dependencies:
+      '@types/linkify-it': 5.0.0
+      '@types/mdurl': 2.0.0
+
   '@types/mdast@4.0.4':
     dependencies:
       '@types/unist': 3.0.3
+
+  '@types/mdurl@2.0.0': {}
 
   '@types/node@22.20.1':
     dependencies:
@@ -1866,8 +1882,6 @@ snapshots:
       mdurl: 2.1.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
-
-  marked@18.1.1: {}
 
   mdast-util-to-hast@13.2.1:
     dependencies:

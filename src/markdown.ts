@@ -26,16 +26,9 @@ export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
     const href = page.href(page.file);
     // The URL, not the machine's path, names the page, so builds are reproducible.
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
-    // compileMarkdown also passes through links it already resolved; return those unchanged.
-    const resolved = new Set<string>();
     const frontmatter = options.frontmatter?.(page.file);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), resolveLink(target, kind) {
-      if (resolved.has(target)) return target;
-      const url = link(target, kind, page, options);
-      resolved.add(url);
-      return url;
-    } });
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), resolveLink: (target, kind) => link(target, kind, page, options) });
     options.onPage?.({ ...compiled, file: page.file, href });
     return compiled.resource;
   } } };

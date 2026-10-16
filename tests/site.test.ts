@@ -198,7 +198,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
     expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
-    expect(html).toMatch(/<aside id="documentation-navigation" popover="">/);
+    expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation">/);
     expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
   } finally { await application.close(); }
 }, 30_000);

@@ -27,12 +27,12 @@
 <a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
 </li></ul></nav>
 <div class="actions"><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
-<div class="columns"><aside id="documentation-navigation" popover>
+<div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation">
 <hk-nav from:items="$sidebar" label="Documentation"></hk-nav>
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><hk-breadcrumbs from:items="$crumbs"></hk-breadcrumbs><slot name="page"></slot>
 <ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul><hk-pager from:previous="$previous" from:next="$next"></hk-pager></main>
-<aside class="outline" $if="$outline.length"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
+<aside class="outline" $if="$outline.length" aria-label="On this page"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
 <footer $if="$footer.columns.length or $footer.copyright"><div class="footer-columns" $if="$footer.columns.length"><div $each="column of $footer.columns"><strong>{$column.title}</strong><ul><li $each="link of $column.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></div></div>
 <p $if="$footer.copyright">{$footer.copyright}</p></footer></div>
 <style>

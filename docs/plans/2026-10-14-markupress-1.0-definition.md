@@ -107,7 +107,7 @@ alpha.41).
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Missing (JSON only) | **In** |
 | D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Missing | **In** |
-| D5 | Markdown extension hook (Marked extensions and Shiki transformers) | Missing | **In** |
+| D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Missing | **In** |
 | D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Missing (0.0.2 predates #7) | **In** |
 | D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Missing | **In** |
 
