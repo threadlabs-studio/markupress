@@ -1,8 +1,9 @@
-import { cp, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { cp, mkdir, readFile, realpath, rename, rm } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
-import { siteOptions, type DocumentationVersion, type MarkupressOptions } from './site.js';
+import { siteOptions, snapshotOf, type DocumentationVersion, type MarkupressOptions } from './site.js';
 import { stylesheet } from './styles.js';
 
 export interface VersionLink {
@@ -21,7 +22,10 @@ export function versionLinks(documents: readonly { readonly id: string; readonly
   });
 }
 
-/** Snapshot author content without overwriting an existing edition. The manifest preserves explicit ordering. */
+/**
+ * Snapshot author content into `versions/<id>/` without overwriting an existing edition. The snapshot is staged in a
+ * dot folder and renamed into place, so a version appears whole or not at all.
+ */
 export async function snapshotVersion(id: string, options: MarkupressOptions = {}): Promise<DocumentationVersion> {
   if (!/^[A-Za-z0-9_-]+$/.test(id) || id === 'current') throw new Error('Snapshot id must be a URL slug other than current.');
   const root = resolve(options.root ?? process.cwd());
@@ -29,29 +33,23 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
   const source = resolve(root, options.contentDir ?? 'docs');
   const relation = relative(root, source);
   if (isAbsolute(relation) || relation.startsWith('..')) throw new Error('Snapshot contentDir must be inside the project.');
-  const snapshots = join(root, 'versioned_docs');
+  const snapshots = join(root, 'versions');
   await mkdir(snapshots, { recursive: true });
   const lock = join(snapshots, '.snapshot-lock');
   try { await mkdir(lock); } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Another snapshot owns versioned_docs/.snapshot-lock; finish or recover that operation first.');
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Another snapshot owns versions/.snapshot-lock; finish or recover that operation first.');
     throw error;
   }
   const destination = join(snapshots, id);
-  let owned = false;
+  const staging = join(snapshots, `.${id}-pending`);
   try {
-    const manifest = join(snapshots, 'versions.json');
-    let versions: DocumentationVersion[] = [];
-    try { versions = JSON.parse(await readFile(manifest, 'utf8')) as DocumentationVersion[]; }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    if (versions.some(version => version.id === id)) throw new Error(`Documentation version ${id} already exists.`);
-    try { await mkdir(destination); owned = true; } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error(`Documentation version ${id} already exists.`);
-      throw error;
-    }
+    if (existsSync(destination)) throw new Error(`Documentation version ${id} already exists.`);
+    await rm(staging, { recursive: true, force: true });
+    await mkdir(staging);
     // Let HTMLKit/Vite identify the authored HTML, module, stylesheet and asset closure.
     // Mirroring project-relative paths keeps imports valid without rewriting source code.
     const site = siteOptions({ ...options, versions: [{ id: 'current', directory: relation }], defaultVersion: 'current' });
-    const validation = join(destination, '.validation');
+    const validation = join(staging, '.validation');
     const built = await buildApplication({ ...site, outDir: validation });
     const application = await createApplication(site);
     // Files that Markdown references, which HTMLKit serves, belong to the snapshot too.
@@ -73,27 +71,21 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
       visited.add(input);
       for (const dependency of stylesheet(await readFile(input, 'utf8'), input, false).files) inputs.add(dependency);
     }
-    const mirror = join(destination, '_source');
-    await cp(source, join(mirror, relation), { recursive: true, dereference: false });
+    await cp(source, join(staging, relation), { recursive: true, dereference: false });
     for (const input of inputs) {
       const file = input.split('?')[0]!;
       if (file.endsWith('.htmlkit.css')) continue; // HTMLKit's virtual inline stylesheet, not an authored file.
       const path = relative(canonicalRoot, await realpath(file));
-      if (isAbsolute(path) || path.startsWith('..') || path.split(/[/\\]/).some(part => ['node_modules', '.markupress', 'versioned_docs'].includes(part))) continue;
-      const target = join(mirror, path); await mkdir(dirname(target), { recursive: true }); await cp(file, target);
+      if (isAbsolute(path) || path.startsWith('..') || path.split(/[/\\]/).includes('node_modules') || /^versions[/\\]/.test(path)) continue;
+      const target = join(staging, path); await mkdir(dirname(target), { recursive: true }); await cp(file, target);
     }
-    let publicDir: string | undefined;
-    try { await cp(join(root, 'public'), join(mirror, 'public'), { recursive: true, dereference: false }); publicDir = `versioned_docs/${id}/_source/public`; }
+    try { await cp(join(root, 'public'), join(staging, 'public'), { recursive: true, dereference: false }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     await rm(validation, { recursive: true, force: true });
-    const version: DocumentationVersion = { id, label: id, directory: `versioned_docs/${id}/_source/${relation.replace(/\\/g, '/')}`, ...(publicDir ? { publicDir } : {}) };
-    const pending = join(snapshots, '.versions-pending.json');
-    await writeFile(pending, JSON.stringify([...versions, version], null, 2) + '\n');
-    await rename(pending, manifest);
-    owned = false;
-    return version;
+    await rename(staging, destination);
+    return snapshotOf(root, id, relation.replace(/\\/g, '/'));
   } finally {
-    if (owned) await rm(destination, { recursive: true, force: true });
+    await rm(staging, { recursive: true, force: true });
     await rm(lock, { recursive: true, force: true });
   }
 }

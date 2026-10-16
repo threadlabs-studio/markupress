@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
@@ -48,11 +48,20 @@ export interface DocumentationPage {
 function inside(root: string, path: string) {
   const part = relative(root, path); return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith('../') && !part.startsWith('..\\'));
 }
+/**
+ * A snapshot recorded in `versions/<id>/`, which keeps the project's layout: its content is `versions/<id>/<contentDir>`
+ * and its public files `versions/<id>/public`. Snapshots follow the current version, highest number first.
+ */
+export function snapshotOf(root: string, id: string, contentDir: string): DocumentationVersion {
+  return { id, directory: `versions/${id}/${contentDir}`, ...(existsSync(join(root, 'versions', id, 'public')) ? { publicDir: `versions/${id}/public` } : {}) };
+}
 async function versions(options: MarkupressOptions, root: string): Promise<readonly DocumentationVersion[]> {
   if (options.versions) return options.versions;
-  const manifest = join(root, 'versioned_docs/versions.json');
-  const snapshots = existsSync(manifest) ? JSON.parse(await readFile(manifest, 'utf8')) as DocumentationVersion[] : [];
-  return [{ id: 'current', label: 'Current', directory: options.contentDir ?? 'docs' }, ...snapshots];
+  const content = options.contentDir ?? 'docs';
+  // A folder whose name starts with "." is a snapshot in progress, or its lock.
+  const ids = existsSync(join(root, 'versions')) ? (await readdir(join(root, 'versions'), { withFileTypes: true }))
+    .filter(entry => entry.isDirectory() && !entry.name.startsWith('.')).map(entry => entry.name).sort((a, b) => b.localeCompare(a, 'en', { numeric: true })) : [];
+  return [{ id: 'current', label: 'Current', directory: content }, ...ids.map(id => snapshotOf(root, id, content))];
 }
 
 const shell = fileURLToPath(new URL('../theme/shell.html', import.meta.url));

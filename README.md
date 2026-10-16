@@ -38,7 +38,7 @@ A site needs no configuration. `docs/index.md` is a complete site, and `markupre
 | `public/favicon.svg` | The site icon. |
 | `app/layouts/default.html` | A layout that replaces the Markupress shell (see [Layouts](#layouts)). |
 | `htmlkit.config.ts` | HTMLKit options and plugins. |
-| `versioned_docs/versions.json` | Recorded versions (see [Versions](#versions)). |
+| `versions/<id>/` | A recorded version, written by `markupress snapshot` (see [Versions](#versions)). |
 
 Pages and their front matter come next, and `markupress.config.json` comes last: plain JSON data for the title, the base path and a few more settings (see [Configuration](#configuration)).
 
@@ -227,17 +227,17 @@ markupress snapshot v1
 markupress build
 ```
 
-The command validates a build and writes `versioned_docs/v1/`, then atomically appends its descriptor to `versioned_docs/versions.json`. It mirrors Markdown, public assets and project-local component, controller, stylesheet and asset dependencies, preserving relative imports. Existing snapshots are never replaced. Keep those files in version control. Package imports continue to use the project's installed dependencies and lockfile; snapshots freeze authored sources rather than vendoring npm packages.
+The command validates a build and writes `versions/v1/`, a copy of the project's layout: `versions/v1/docs/` and `versions/v1/public/`. It stages the copy in a `.`-prefixed folder and renames it into place, so a version appears whole. The folders in `versions/` are the version list: the current version first, then each snapshot, highest number first (`v10`, `v2`, `v1`), labelled by its folder name. It mirrors Markdown, public assets and project-local component, controller, stylesheet and asset dependencies, preserving relative imports. Existing snapshots are never replaced. Keep those files in version control. Package imports continue to use the project's installed dependencies and lockfile; snapshots freeze authored sources rather than vendoring npm packages.
 
-Use relative project-local imports for snapshot content. Absolute filesystem imports and remote resources retain their external ownership. If a snapshot process crashes, check that it has stopped before removing its `versioned_docs/.snapshot-lock` directory and recovering any incomplete destination.
+Use relative project-local imports for snapshot content. Absolute filesystem imports and remote resources retain their external ownership. If a snapshot process crashes, check that it has stopped before removing its `versions/.snapshot-lock` directory; the next snapshot replaces any `.<id>-pending` folder it left.
 
-For explicit versions, configure their order and labels:
+The `versions` option sets the versions, their order and their labels in place of the folder list:
 
 ```json
 {
   "versions": [
     { "id": "current", "label": "Next", "directory": "docs" },
-    { "id": "v1", "label": "Version 1", "directory": "versioned_docs/v1/_source/docs", "publicDir": "versioned_docs/v1/_source/public" }
+    { "id": "v1", "label": "Version 1", "directory": "versions/v1/docs", "publicDir": "versions/v1/public" }
   ],
   "defaultVersion": "v1"
 }
@@ -361,7 +361,7 @@ Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, h
 | `base` | `/` | The URL path the site is served under. It starts and ends with `/`. |
 | `contentDir` | `docs` | The current version's content directory. |
 | `outDir` | `site` | Where `build` writes the static site. |
-| `versions`, `defaultVersion` | `versioned_docs/versions.json`, `current` | The versions and their order and labels, and the version the site root serves (see [Versions](#versions)). |
+| `versions`, `defaultVersion` | the folders in `versions/`, `current` | The versions and their order and labels, and the version the site root serves (see [Versions](#versions)). |
 | `lineNumbers` | `false` | Numbers the lines of every code block. |
 | `nav` | none | Links after the sections in the top navigation: `{ "label", "href" }`, with an optional `icon` image shown in place of the label. |
 | `logo` | `public/logo.svg` and `public/logo-dark.svg` | One image path, or `{ "light", "dark" }`, in place of the logo files. |

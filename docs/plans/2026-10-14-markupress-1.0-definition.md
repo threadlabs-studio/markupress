@@ -119,7 +119,7 @@ alpha.41).
 | G2 | Getting started: `create`, project structure, dev, build, preview | **In** |
 | G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | **In** |
 | G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | **In** |
-| G5 | Versions: snapshots, `versions.json`, the switcher and its fallback | **In** |
+| G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | **In** |
 | G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | **In** |
 | G7 | Search, SEO and deployment | **In** |
 | G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | **In** |
