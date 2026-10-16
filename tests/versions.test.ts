@@ -51,8 +51,10 @@ it('records immutable snapshots in versions/ and discovers them from its folders
     expect(await readFile(join(root, version.directory, 'index.md'), 'utf8')).toBe(frozen);
     // No staging folder, lock or manifest is left behind; the folders are the list.
     expect((await readdir(join(root, 'versions'))).sort()).toEqual(['v1']);
-    await snapshotVersion('v2', { root });
-    await snapshotVersion('v10', { root });
+    // Discovery reads only the folders, so further versions need no snapshot build (each one validates a full build).
+    for (const id of ['v2', 'v10']) { await mkdir(join(root, `versions/${id}/docs`), { recursive: true }); await writeFile(join(root, `versions/${id}/docs/index.md`), `# ${id}`); }
+    // A crashed snapshot's staging folder is no version.
+    await mkdir(join(root, 'versions/.v3-pending/docs'), { recursive: true }); await writeFile(join(root, 'versions/.v3-pending/docs/index.md'), '# Partial');
     const application = await createApplication(siteOptions({ root }));
     try {
       // Snapshots follow the current version, highest number first, each labelled by its folder name.
