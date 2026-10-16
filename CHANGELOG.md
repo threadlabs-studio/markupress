@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.15`, the Looma release built on HTML Next alpha.52.
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.17`, the Looma release that ships Looma Markdown.
+- Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md), the Markdown LoomaEditor reads and writes. It parses with Looma's markdown-it plugin (`@threadlabs/looma/markdown/markdown-it`) and reads fences, braces and front matter with Looma's shared rules, so a document renders the same HTML in Markupress and LoomaEditor. The test suite renders every case in `@threadlabs/looma/markdown/fixtures` and compares the normalized HTML.
 
 Breaking changes from 0.1.0:
 
+- Heading anchors follow Looma Markdown: NFC, lowercase, letters, numbers and combining marks kept in any script, and every other run one hyphen. Anchors of headings with accented or non-Latin text change: "Über uns" is `über-uns`. Links to those anchors need the new IDs.
+- A closing `:::` line closes the innermost open container. `::: tabs` content before its first `== Label` line, and other content in a `::: code-group`, renders before the panels.
+- A fence's meta, everything after its language, is on its `<code>` as `data-meta`.
+- Front matter is a YAML mapping with at least one `key: value` line, closed by `---` or `...`.
 - A folder is a page: its index page's front matter labels, orders and collapses the folder. `_category.yml`, `_category_.yml` and `_category_.json` files are no longer read; move their fields into the folder's `index.md` (`label` becomes `title`, `position` becomes `order`, and `collapsed: true` becomes `navigation: collapsed`). A label for pages with no folder URL is an HTMLKit route group, a folder named in parentheses.
 - Front matter keys follow HTMLKit's page metadata. Rename `sidebarPosition` to `order` (HTMLKit `hk:order`), `sidebarHidden: true` to `navigation: hidden` (HTMLKit `hk:navigation`), and `toc` to `outline`. `sidebarLabel` is removed: `title` is the navigation, breadcrumb and pager label (HTMLKit `hk:label`). Each old key fails the build as an unknown field, naming the file and the valid fields.
 - `compileMarkdown` no longer returns `label` or `sidebarHidden`, and a layout's `page` data no longer has `label`; read `title` and `frontmatter.navigation`.
@@ -23,6 +28,11 @@ Breaking changes from 0.1.0:
 
 Added:
 
+- `::toc{depth=2 format=numbered}` renders a table of contents linking the page's headings by their anchors.
+- `:chip[Ready]{tone=green}` renders an inline chip in one of the hues `neutral`, `blue`, `green`, `yellow`, `red` and `purple`, and `:mention[Ada]{id=u1}` renders a mention.
+- `::: figure Caption` wraps an image in `<figure>` with an inline Markdown caption, and braces after an image set its `width`, `height` and `placement` (`center`, `wrap-left` or `wrap-right`).
+- A list whose every item starts with `[ ]` or `[x]` renders as a task list with checkboxes. The theme styles chips, mentions, task lists, the table of contents, figures and placed images.
+- The shell's sidebar and outline are named landmarks, "Documentation" and "On this page".
 - An index page with front matter and an empty body is a generated index: below its title it lists the pages and folders directly in its folder, each linked with its `description`, from HTMLKit's navigation tree. A replacement layout receives the list as the `contents` prop, and `compileMarkdown` reports it as `generated`.
 
 ## 0.1.0

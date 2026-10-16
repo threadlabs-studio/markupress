@@ -114,9 +114,9 @@ head:
 
 Number prefixes order pages, and `order` takes the place of a file's prefix: `order: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
 
-Heading IDs are deterministic (`installation`, then `installation-1` for a duplicate). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading; a duplicate still gets a suffix. A custom ID wins: a generated ID skips every custom ID and every ID already used, taking the next free suffix instead. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Every heading has an anchor, derived by the Looma Markdown rule: the text is normalized to NFC and lowercased, letters, numbers and combining marks in any script stay, and every other run of characters becomes one hyphen. "Über uns" is `über-uns`, "設定 と 使い方" is `設定-と-使い方`, and a duplicate takes the first free suffix (`installation-1`). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading. A custom ID is reserved for its heading, so a generated ID skips it. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
-Containers and GitHub alerts render [Looma's shared blocks](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/shared-blocks.md), so a block looks the same in Markupress, Looma's components and LoomaEditor. The container name is matched without regard to case, and the rest of the opening line is its title:
+Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md): CommonMark with GitHub Flavored Markdown (tables, task lists, strikethrough and autolinks), plus Looma's blocks and inline elements. It parses with Looma's markdown-it plugin and is tested against Looma Markdown's conformance fixtures, so a document reads the same in Markupress, Looma's components and LoomaEditor. A container's name is matched without regard to case, and the rest of the opening line is its title:
 
 ````markdown
 ::: warning Before you upgrade
@@ -147,6 +147,17 @@ Usage examples.
 == API
 The reference.
 :::
+
+::toc{depth=2}
+
+Status :chip[Ready]{tone=green}, owned by :mention[Ada Lovelace]{id=u1}.
+
+- [x] Read the changelog
+- [ ] Run the migration
+
+::: figure The build, from *source* to release
+![The build pipeline](./pipeline.svg){width=640 placement=center}
+:::
 ````
 
 | Markdown | Renders |
@@ -155,9 +166,15 @@ The reference.
 | `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` alone on a quote's first line | An untitled `<ui-callout>`: NOTE is `note` and CAUTION is `danger`. |
 | `::: details Title`, with `{open}` to start expanded | Native `<details><summary>Title</summary>`, which opens without JavaScript. The title defaults to "Details". |
 | `::: tabs` with `== Label` panels | `<ui-tabs group="tabs">`, one `<section aria-label="Label">` per panel. |
-| `::: code-group` with a fence per panel | `<ui-tabs group="code-group">`, each panel labelled by its fence's `title`. `== Label` panels also work. |
+| `::: code-group` with a fence per panel | `<ui-tabs group="code-group">`, each panel labelled by its fence's `title`, or its language. `== Label` panels also work. |
+| `::: figure Caption` | `<figure>` with the caption, inline Markdown, as its `<figcaption>`. |
+| `::toc{depth=2 format=numbered}` | A table of contents linking the page's headings by their anchors. `depth` is 1 to 3 (default 3), and `format` is `plain`, `bulleted` or `numbered`. |
+| `:chip[Label]{tone=green}` | An inline chip. Its tone is a hue: `neutral` (the default), `blue`, `green`, `yellow`, `red` or `purple`. |
+| `:mention[Name]{id=u1}` | A mention of the entity `u1`, shown as `@Name`. |
+| `- [x] Done` | A task list, when every item of the list starts with `[ ]` or `[x]`. |
+| `![Alt](./image.svg){width=640 height=360 placement=wrap-left}` | An image with its size in CSS pixels and a placement: `center`, `wrap-left` or `wrap-right`. |
 
-Tabs in one group keep one selection across the page, matched by label, and remember it for the next visit: choosing "npm" in one code group switches every code group. `::: tabs name` or `::: code-group name` sets the group. Without JavaScript every panel shows. Any other container name stays text. To nest containers, give the outer one more colons (`::::` around `:::`). Titles and labels are literal text.
+Tabs in one group keep one selection across the page, matched by label, and remember it for the next visit: choosing "npm" in one code group switches every code group. `::: tabs name` or `::: code-group name` sets the group. Without JavaScript every panel shows. Any other container name stays text. A closing `:::` closes the innermost open container, and a fence's content is code, so a `:::` line inside a fence stays code. Give an outer container more colons (`::::` around `:::`) so the nesting shows in the source. Titles and labels are literal text.
 
 A page links the Looma components its blocks use by package name, as the theme links `ui-button`, so `@threadlabs/looma` resolves from the site. The Markupress theme spaces the blocks and styles the Markdown inside them.
 
