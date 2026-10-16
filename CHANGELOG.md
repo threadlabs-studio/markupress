@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.15`, the Looma release built on HTML Next alpha.52.
+
 Breaking changes from 0.1.0:
 
 - A folder is a page: its index page's front matter labels, orders and collapses the folder. `_category.yml`, `_category_.yml` and `_category_.json` files are no longer read; move their fields into the folder's `index.md` (`label` becomes `title`, `position` becomes `order`, and `collapsed: true` becomes `navigation: collapsed`). A label for pages with no folder URL is an HTMLKit route group, a folder named in parentheses.
