@@ -28,7 +28,8 @@ execution: code
 
 VitePress and Docusaurus are a feature reference. Parity means Markupress has their
 capabilities, built on its own model: HTMLKit routing and page metadata, folders as
-pages, and one front matter vocabulary. Markupress reads no other tool's file formats,
+pages, and one front matter vocabulary. A site is described by convention first,
+then by its content, and by configuration last, as plain JSON data. Markupress reads no other tool's file formats,
 config shapes or front matter names. A migration converts a site's content into this
 model once.
 
@@ -62,8 +63,8 @@ alpha.41).
 |---|---|---|---|
 | N1 | Sidebar generated from the file tree, ordered by `01.` | Present (flat) | Keep |
 | N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by HTMLKit route groups. An index page with an empty body generates the folder's list of pages. | Missing | **In** |
-| N3 | One sidebar per section (`/components/`, `/editor/`), with an optional explicit sidebar in config | Missing | **In** |
-| N4 | Top navigation: logo, title, links, dropdowns, version badge, social links | Missing | **In** |
+| N3 | One sidebar per section (`/components/`, `/editor/`), generated from the section's folder | Missing | **In** |
+| N4 | Top navigation: logo, title, a link per section folder, extra links with optional icons, version badge | Missing | **In** |
 | N5 | Breadcrumbs and the previous/next pager | Present (HTMLKit) | Keep; front matter can drop the pager |
 | N6 | Right-hand "on this page" outline, with the active heading tracked | Missing | **In** |
 | N7 | Mobile navigation drawer | Partial (an inline toggle, open by default) | **In** |
@@ -78,10 +79,10 @@ alpha.41).
 | T1 | Default Looma theme: accessible landmarks, skip link, responsive, light and dark | Present (sparse) | Polish: inline code, blockquotes, tables, prose rhythm |
 | T2 | Dark mode with no flash | Present | Keep |
 | T3 | Customization through Looma `--ui-*` tokens and a documented Markupress token set | Partial (undocumented) | **In** |
-| T4 | A layout override: a site layout can replace the shell and still receive Markupress's loader data (navigation, crumbs, pager, outline, page metadata) | Missing | **In**: nextwebwg.org needs its own design |
+| T4 | A layout override: a site's `app/layouts/default.html` can replace the shell and still receive Markupress's loader data (navigation, crumbs, pager, outline, page metadata) | Missing | **In**: nextwebwg.org needs its own design |
 | T5 | Home layout (`layout: home`): hero (title, tagline, image, actions) and feature cards | Missing | **In** |
-| T6 | Footer: links in columns, plus copyright | Missing | **In** |
-| T7 | Logo (light and dark) and favicon config | Missing | **In** |
+| T6 | Footer from `_footer.md`: links in columns, plus copyright | Missing | **In** |
+| T7 | Logo (light and dark) and favicon from `public/`, with config overrides | Missing | **In** |
 | T8 | Announcement bar | Missing | Out |
 
 ### Search and site

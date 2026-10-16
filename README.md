@@ -26,18 +26,21 @@ The example serves at `/manual/`. Open a version-specific link directly to verif
 pnpm add markupress @nextwebwg/html-next @threadlabs/looma
 ```
 
-Create `docs/01.index.md` and optionally `markupress.config.json`:
+A site needs no configuration. `docs/index.md` is a complete site, and `markupress dev` serves it. Files in known places shape the rest:
 
-```json
-{
-  "title": "Project documentation",
-  "contentDir": "docs",
-  "base": "/manual/",
-  "outDir": "site"
-}
-```
+| File | Is |
+| --- | --- |
+| `docs/index.md` | The version home, which every version needs. A number prefix such as `01.index.md` is allowed. |
+| `docs/<folder>/index.md` | The folder's page and its metadata (see [Folders](#navigation-logo-and-footer)). Each top-level folder with an index page is a section: a top navigation link with its own sidebar. |
+| `docs/404.md` | The not-found page. |
+| `docs/_footer.md` | The footer: a heading per column, a list of links under each, and a copyright paragraph. |
+| `public/logo.svg`, `public/logo-dark.svg` | The logo before the title, and its dark-theme version. |
+| `public/favicon.svg` | The site icon. |
+| `app/layouts/default.html` | A layout that replaces the Markupress shell (see [Layouts](#layouts)). |
+| `htmlkit.config.ts` | HTMLKit options and plugins. |
+| `versioned_docs/versions.json` | Recorded versions (see [Versions](#versions)). |
 
-Every version needs an `index.md` at its root; a numeric prefix such as `01.index.md` is allowed. `base` starts and ends with `/`. `layout` names a layout component that replaces the Markupress shell (see [Layouts](#layouts)). Configuration is JSON. The programmatic `buildSite`, `devSite` and `previewSite` APIs accept the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
+Pages and their front matter come next, and `markupress.config.json` comes last: plain JSON data for the title, the base path and a few more settings (see [Configuration](#configuration)).
 
 The `markupress` command and these APIs also load the site's `htmlkit.config.ts` (or `.js`) with HTMLKit's `loadConfig`, and add `markupress()` after its plugins, so HTMLKit plugins and options compose with Markupress:
 
@@ -250,44 +253,26 @@ Styles follow the component boundaries. Looma's tokens, its light and dark theme
 
 ### Navigation, logo and footer
 
-`markupress.config.json` (or `markupress()`) configures the shell around the pages:
+The shell around the pages comes from the content. **Top navigation.** Each top-level folder with an index page is a section, linked from the top navigation by its index page's `title`, in navigation order. The `nav` option adds links after the sections. A link to the page being read, or to a section holding it, is marked current. **Logo and icon.** `public/logo.svg` is the logo, `public/logo-dark.svg` replaces it in the dark theme, and `public/favicon.svg` is the site icon. **Badge.** A site with several versions shows the selected version's label beside the title. **Footer.** `_footer.md` in a version's content directory is that version's footer. HTMLKit routes no file whose name starts with `_`, so the footer has no URL of its own:
 
-```json
-{
-  "title": "Looma",
-  "logo": { "light": "/img/mark.svg", "dark": "/img/mark-dark.svg" },
-  "favicon": "/favicon.svg",
-  "versionBadge": "v0.28",
-  "nav": [
-    { "label": "Get started", "href": "/" },
-    { "label": "Components", "href": "/components/" },
-    { "label": "Resources", "items": [{ "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" }] }
-  ],
-  "social": [{ "label": "GitHub", "href": "https://github.com/threadlabs-studio/looma", "icon": "/img/github.svg" }],
-  "sidebar": {
-    "/": ["/", { "label": "Foundations", "items": ["/architecture/", "/tokens/"] }],
-    "/editor/": ["/editor/", { "label": "Tables", "href": "/editor/#tables" }]
-  },
-  "footer": {
-    "columns": [{ "title": "Docs", "items": [{ "label": "Tokens", "href": "/tokens/" }] }],
-    "copyright": "Copyright 2026 Threadlabs Studio contributors."
-  }
-}
+```markdown
+## Docs
+
+- [Tokens](/tokens/)
+- [Proposal](https://nextwebwg.org/declarative-components/)
+
+## Project
+
+- [GitHub](https://github.com/threadlabs-studio/looma)
+
+Copyright 2026 Threadlabs Studio contributors.
 ```
 
-| Option | Does |
-| --- | --- |
-| `logo` | An image before the title: one path, or `{ "light", "dark" }`, one per theme. Paths starting with `/` are files in `public/`. |
-| `favicon` | The site icon, a `<link rel="icon">` on every page. |
-| `versionBadge` | The badge text beside the title. Without it, a site with several versions shows the selected version's label. |
-| `nav` | Top navigation links, and dropdowns (`{ "label", "items" }`), which are native `<details>`. A link to the page being read, or to a section holding it, is marked current. |
-| `social` | Links at the end of the top bar, each shown as its `icon` image, labelled by `label`, or as its label. |
-| `sidebar` | Explicit sidebars by section path. |
-| `footer` | Link columns (`{ "title", "items" }`) and a `copyright` line. |
+Each heading starts a column, and each item in the list below it is a link. A paragraph after the lists is the copyright line. Anything else in the file fails the build with the file's path.
 
-An `href` starting with `/` is a page path in the version being read, so `/components/` opens that version's components. Other links stay as written.
+In the footer and the `nav` option, an `href` starting with `/` is a page path in the version being read, so `/components/` opens that version's components. Other links stay as written.
 
-**Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. A `sidebar` entry replaces the generated sidebar of the section at its path. Its entries are page paths, which take the page's label, links (`{ "label", "href" }`), and groups (`{ "label", "items", "collapsed" }`, where `"collapsed": true` starts the group closed). A path such as `/editor/` that names a page also makes that page a section. A page path that names no page fails the build.
+**Sidebars.** Each top-level folder of a version is a section with its own sidebar, generated from the folder's pages; a page at the version's root shows every page. Folders, `order` and `navigation` front matter shape every sidebar.
 
 **Folders.** A folder is a page: its index page (`index.md`, or `01.index.md` with a number prefix) is the folder's entry, at the folder's URL, and its front matter is the folder's metadata. A generated sidebar is HTMLKit's navigation tree, rendered by `<hk-nav>`: each folder below the section is a labelled group, a native `<details>` that collapses without JavaScript, nested as deep as the folders go, and its summary links to the index page.
 
@@ -312,7 +297,7 @@ A group starts open unless its index page says `navigation: collapsed`, and a gr
 
 ### Layouts
 
-`"layout": "theme/layout.html"` in `markupress.config.json`, or `markupress({ layout })`, replaces the Markupress shell with a site's own HTML Next layout for every documentation page. The layout renders `<slot name="page">` where the page goes, and receives Markupress's loader data as props. It receives each prop it declares with `<prop>`, so it declares only the data it uses:
+`app/layouts/default.html` replaces the Markupress shell with the site's own HTML Next layout for every documentation page, as it is the default layout of the site's other HTMLKit pages. The layout renders `<slot name="page">` where the page goes, and receives Markupress's loader data as props. It receives each prop it declares with `<prop>`, so it declares only the data it uses:
 
 ```html
 <template component="site-layout"><defs>
@@ -332,9 +317,10 @@ A group starts open unless its index page says `navigation: collapsed`, and a gr
 | `title` | The site title (`title` option, default "Documentation"). |
 | `home` | The site's base URL. |
 | `navigation` | HTMLKit navigation items for the selected version: `href`, `label`, `current` (`"page"` or `"false"`), `depth` and `pageName`. |
-| `sidebar` | The page's section sidebar, in `<hk-nav>`'s tree shape: entries with `label`, `current`, `open`, `depth` and `children`, and an `href` on a page or link. A folder with an index page has both `href` and `children`; a configured group has no `href`. Pass it to `<hk-nav from:items="$sidebar">`. |
-| `nav`, `social`, `footer` | The resolved `nav`, `social` and `footer` options: links have `label`, `href` and `current`, a dropdown has `items`, and a social link has its `icon` URL. |
-| `logo`, `favicon`, `badge` | The logo's `light` and `dark` URLs, the icon URL (both `null` when unset), and the badge text. |
+| `sidebar` | The page's section sidebar, in `<hk-nav>`'s tree shape: entries with `label`, `current`, `open`, `depth` and `children`, and an `href` on a page. A folder with an index page has both `href` and `children`. Pass it to `<hk-nav from:items="$sidebar">`. |
+| `nav` | The sections, then the `nav` option's links: each has `label`, `href`, `current` and `icon` (a URL, or `""`). |
+| `footer` | `_footer.md`'s `columns`, each a `title` and `items` of links with `label`, `href` and `current`, and its `copyright`. |
+| `logo`, `favicon`, `badge` | The logo's `light` and `dark` URLs, the icon URL (both `null` when absent), and the badge text. |
 | `crumbs` | Navigation items from the version home down to this page. |
 | `previous`, `next` | The neighbouring navigation items, absent at either end. |
 | `versions` | Version links: `href`, `label`, `current` and `note`, which explains a fallback to that version's home. |
@@ -342,7 +328,7 @@ A group starts open unless its index page says `navigation: collapsed`, and a gr
 | `contents` | A generated index's entries, `label`, `href` and `description`, and an empty list on every other page. |
 | `page` | The page's front matter, plus its resolved `title` and document `id`. |
 
-A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
+Markupress gives the layout its loader data, so the layout has no `default.server.ts` of its own. A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
 
 ```ts
 export function load({ parent }) { return { props: { section: parent.markupress.page.title } }; }
@@ -353,6 +339,35 @@ A layout receives exactly the props its component declares, which HTMLKit gives 
 HTMLKit plugins compose with Markupress through the site's `htmlkit.config.ts`, which the `markupress` command loads (see [Author a site](#author-a-site)).
 
 Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, heading anchors and route aliases are migration inputs. The installed consumer fixture checks those under a nested base. A live Jess/Less documentation migration and visual/content parity comparison remain separate work.
+
+## Configuration
+
+`markupress.config.json` is plain JSON data, read by the `markupress` command. Every key is optional:
+
+```json
+{
+  "title": "Looma",
+  "base": "/looma/",
+  "nav": [
+    { "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" },
+    { "label": "GitHub", "href": "https://github.com/threadlabs-studio/looma", "icon": "/github.svg" }
+  ]
+}
+```
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `title` | `"Documentation"` | The site title in the top bar. |
+| `base` | `/` | The URL path the site is served under. It starts and ends with `/`. |
+| `contentDir` | `docs` | The current version's content directory. |
+| `outDir` | `site` | Where `build` writes the static site. |
+| `versions`, `defaultVersion` | `versioned_docs/versions.json`, `current` | The versions and their order and labels, and the version the site root serves (see [Versions](#versions)). |
+| `lineNumbers` | `false` | Numbers the lines of every code block. |
+| `nav` | none | Links after the sections in the top navigation: `{ "label", "href" }`, with an optional `icon` image shown in place of the label. |
+| `logo` | `public/logo.svg` and `public/logo-dark.svg` | One image path, or `{ "light", "dark" }`, in place of the logo files. |
+| `favicon` | `public/favicon.svg` | The site icon's path, in place of the icon file. |
+
+Image paths starting with `/` are files in `public/`. An unknown key fails with the list of options. The programmatic `buildSite`, `devSite` and `previewSite` APIs, and the `markupress()` plugin, take the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
 ## Verification and contribution
 

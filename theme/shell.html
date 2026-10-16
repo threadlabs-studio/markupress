@@ -8,8 +8,7 @@
 <prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string" nullable>Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
-<prop name="nav" type="list(object({ label: string, href: string, current: string, items: list(object({ label: string, href: string, current: string, ... })), ... }))" required>Top navigation: links, and dropdowns with items</prop>
-<prop name="social" type="list(object({ label: string, href: string, icon: string }))" required>Social links</prop>
+<prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
 <prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as &lt;hk-nav&gt; renders them</prop>
 <prop name="contents" type="list(object({ label: string, href: string, description: string }))" required>A generated index's pages and folders</prop>
 <prop name="outline" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings</prop>
@@ -25,11 +24,9 @@
 <a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template>{$title}</a>
 <ui-badge $if="$badge" tone="accent">{$badge}</ui-badge>
 <nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
-<template $match><a $when="$item.href" from:href="$item.href" from:aria-current="$item.current">{$item.label}</a>
-<details $else name="markupress-nav"><summary from:data-current="$item.current">{$item.label}</summary><ul><li $each="link of $item.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></details></template>
+<a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
 </li></ul></nav>
-<div class="actions"><ul class="social" $if="$social.length"><li $each="link of $social"><a from:href="$link.href"><template $match><img $when="$link.icon" from:src="$link.icon" from:alt="$link.label"><template $else>{$link.label}</template></template></a></li></ul>
-<ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
+<div class="actions"><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <div class="columns"><aside id="documentation-navigation" popover>
 <hk-nav from:items="$sidebar" label="Documentation"></hk-nav>
 <nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
@@ -45,10 +42,8 @@ header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; a
 .brand { display: flex; align-items: center; gap: .5rem; color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .logo { block-size: 2rem; inline-size: auto; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-inline-start: auto; }
 header ul { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0; padding: 0; list-style: none; }
-header a { color: inherit; text-decoration: none; } header a:hover, header a[aria-current="page"], header a[aria-current="true"], summary[data-current="true"] { color: var(--ui-accent); }
-.social img { display: block; block-size: 1.25rem; inline-size: auto; }
-.top details { position: relative; } .top summary { cursor: pointer; }
-.top details ul { position: absolute; inset-block-start: calc(100% + .5rem); inset-inline-start: 0; display: grid; gap: .25rem; min-inline-size: 12rem; padding: .5rem 1rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); background: var(--ui-surface); }
+header a { color: inherit; text-decoration: none; } header a:hover, header a[aria-current="page"], header a[aria-current="true"] { color: var(--ui-accent); }
+.top ul { align-items: center; } .top img { display: block; block-size: 1.25rem; inline-size: auto; }
 .columns { display: flex; gap: 3rem; flex: 1; inline-size: 100%; max-inline-size: 90rem; margin: auto; padding: 2rem 1.5rem; }
 #documentation-navigation { flex: 0 0 15rem; } main { min-width: 0; flex: 1; max-width: 65ch; } .outline { flex: 0 0 13rem; }
 /* Wide screens show the sidebar in the page; narrow ones open it as a native popover, which needs no script. */

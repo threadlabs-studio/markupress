@@ -118,10 +118,10 @@ it('renders front matter head metadata, a named HTMLKit layout, and no layout', 
   } finally { await application.close(); }
 }, 30_000);
 
-it('replaces the shell with a site layout that receives the loader data it declares', async () => {
+it('replaces the shell with the site\'s app/layouts/default.html, which receives the loader data it declares', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\neditLink: https://example.com/edit/install.md\n---\n# Install\n\n## Requirements\n\n### Node');
-  await write(root, 'theme/layout.html', `<template component="site-layout"><defs>
+  await write(root, 'app/layouts/default.html', `<template component="site-layout"><defs>
 <prop name="navigation" type="list(object({ href: string, label: string, current: string, ... }))" required>Links</prop>
 <prop name="crumbs" type="list(object({ href: string, label: string, ... }))" required>Trail</prop>
 <prop name="previous" type="object({ href: string, label: string, ... })" nullable>Before</prop>
@@ -135,7 +135,7 @@ it('replaces the shell with a site layout that receives the loader data it decla
   // A folder layout nests inside the site layout, and its loader reads all of Markupress's data.
   await write(root, 'docs/01.guide/_layout.html', '<template component="guide-layout"><defs><prop name="section" type="string" required>Section</prop></defs><section class="guide" from:data-pages="$section"><slot name="page"></slot></section></template>');
   await write(root, 'docs/01.guide/_layout.server.js', 'export function load({ parent }) { return { props: { section: String(parent.markupress.navigation.length) } }; }');
-  const application = await createApplication(siteOptions({ root, layout: 'theme/layout.html' }));
+  const application = await createApplication(siteOptions({ root }));
   try {
     const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
     expect(html).not.toContain('data-component="markupress-shell"');
@@ -149,7 +149,7 @@ it('replaces the shell with a site layout that receives the loader data it decla
   } finally { await application.close(); }
 }, 30_000);
 
-it('gives each top-level section its own grouped sidebar, and the root every page unless configured', async () => {
+it('gives each top-level section its own grouped sidebar, and the root every page', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/02.components/01.forms/button.md', '# Button');
   await write(root, 'docs/02.components/02.layout/stack.md', '# Stack');
@@ -157,7 +157,7 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   await write(root, 'docs/02.components/02.layout/index.md', '---\ntitle: Layout\norder: 0\nnavigation: collapsed\n---\n# Layout components');
   await write(root, 'docs/editor.md', '---\norder: 1\n---\n# Editor\n\n## Tables');
   const sidebar = (html: string) => /<nav aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  let application = await createApplication(siteOptions({ root }));
+  const application = await createApplication(siteOptions({ root }));
   try {
     // order 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
     expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
@@ -169,42 +169,67 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
     expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>(?:<[^>]*>)*forms</);
     expect(button).toContain('href="/v/current/components/forms/button/" aria-current="page"');
   } finally { await application.close(); }
-  application = await createApplication(siteOptions({ root, sidebar: {
-    '/': ['/', { label: 'Start here', items: ['/guide/install/'] }],
-    '/editor/': ['/editor/', { label: 'Tables', href: '/editor/#tables' }],
-  } }));
-  try {
-    expect(sidebar((await application.render('/')).html)).toBe('Welcome Start here Installation');
-    expect(sidebar((await application.render('/v/current/editor/')).html)).toBe('Editor Tables');
-    expect((await application.render('/editor/')).html).toContain('href="/v/current/editor/#tables"');
-    // A section without a configured sidebar is still generated.
-    expect(sidebar((await application.render('/components/forms/button/')).html)).toBe('Layout Stack forms Button');
-  } finally { await application.close(); }
 }, 30_000);
 
-it('renders the configured top navigation, logo, favicon, badge, social links, footer and the page outline', async () => {
+it('builds the top navigation from the sections, logo and favicon from public/, and the footer from _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\n---\n# Install\n\n## Requirements\n\n### Node');
-  const application = await createApplication(siteOptions({ root, base: '/docs/', logo: { light: '/logo.svg', dark: '/logo-dark.svg' }, favicon: '/icon.svg',
-    versionBadge: 'v2.1', nav: [{ label: 'Guide', href: '/guide/install/' }, { label: 'More', items: [{ label: 'Proposal', href: 'https://nextwebwg.org/' }] }],
-    social: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }],
-    footer: { columns: [{ title: 'Docs', items: [{ label: 'Home', href: '/' }] }], copyright: 'Copyright 2026 Example.' } }));
+  // A top-level folder with an index page is a section, labelled and ordered by that page; one without is not.
+  await write(root, 'docs/01.guide/index.md', '---\ntitle: Guide\norder: 2\n---\n');
+  await write(root, 'docs/02.components/index.md', '---\ntitle: Components\norder: 1\n---\n');
+  await write(root, 'docs/02.components/button.md', '# Button');
+  await write(root, 'docs/03.loose/page.md', '# Loose page');
+  for (const file of ['logo.svg', 'logo-dark.svg', 'favicon.svg', 'github.svg']) await write(root, `public/${file}`, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  await write(root, 'docs/_footer.md', '## Docs\n\n- [Home](/)\n- [Proposal](https://nextwebwg.org/)\n\n## Project\n\n- [GitHub](https://github.com/example)\n\nCopyright 2026 Example.\n');
+  const application = await createApplication(siteOptions({ root, base: '/docs/', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
-    expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/icon.svg">');
+    expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg">');
     expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
-    expect(html).toMatch(/data-component="ui-badge"[^>]*>.*v2\.1/s);
-    // A link to the page being read is current; a dropdown is native details.
-    expect(html).toContain('<a href="/docs/v/current/guide/install/" aria-current="page">Guide</a>');
-    expect(html).toMatch(/<details name="markupress-nav"><summary data-current="false">More<\/summary><ul><li><a href="https:\/\/nextwebwg.org\/" aria-current="false">Proposal<\/a>/);
-    expect(html).toContain('<a href="https://github.com/example"><img src="/docs/github.svg" alt="GitHub"></a>');
-    expect(html).toMatch(/<footer>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
+    // One version shows no badge.
+    expect(html).not.toContain('data-component="ui-badge"');
+    const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '');
+    // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
+    expect(top).toBe('<ul><li><a href="/docs/v/current/components/" aria-current="false">Components</a></li><li><a href="/docs/v/current/guide/" aria-current="true">Guide</a></li>' +
+      '<li><a href="https://github.com/example" aria-current="false"><img src="/docs/github.svg" alt="GitHub"></a></li></ul>');
+    expect(html).toMatch(/<footer>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
+    // _footer.md is no page.
+    expect((await application.render('/docs/_footer/')).status).toBe(404);
     // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
     expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
     expect(html).toMatch(/<aside id="documentation-navigation" popover="">/);
     expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
   } finally { await application.close(); }
+}, 30_000);
+
+it('lets the logo and favicon options override public/, and shows the selected version as the badge', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>');
+  const application = await createApplication(siteOptions({ root, logo: '/mark.svg', favicon: '/icon.png',
+    versions: [{ id: 'current', label: 'Next', directory: 'docs' }, { id: 'v1', label: 'Version 1', directory: 'docs' }] }));
+  try {
+    const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->/g, '');
+    expect(html).toContain('<link rel="icon" href="/icon.png">');
+    expect(html).toMatch(/<img class="logo logo-light"[^>]* src="\/mark.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/mark.svg"/);
+    expect(html).toMatch(/data-component="ui-badge"[^>]*>.*Version 1/s);
+    // No folder holds pages and no links are configured, so there is no top navigation.
+    expect(html).not.toContain('<nav class="top"');
+    expect(html).not.toContain('<footer');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('rejects unknown options and a malformed _footer.md', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav.`);
+  }
+  await write(root, 'docs/_footer.md', '- [Home](/)\n');
+  let application = await createApplication(siteOptions({ root }));
+  try { await expect(application.render('/')).rejects.toThrow(/_footer\.md: a footer list follows a heading/); } finally { await application.close(); }
+  await write(root, 'docs/_footer.md', '## Docs\n\n- Home\n');
+  application = await createApplication(siteOptions({ root }));
+  try { await expect(application.render('/')).rejects.toThrow('the footer list item "Home" is a link.'); } finally { await application.close(); }
 }, 30_000);
 
 it('renders the default version\'s 404.md in the shell for unmatched paths and builds it as 404.html', async () => {

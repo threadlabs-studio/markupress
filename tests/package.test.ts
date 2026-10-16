@@ -22,9 +22,11 @@ beforeAll(() => {
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
-  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', logo: '/mark.svg', nav: [{ label: 'Guide', href: '/guide/install/' },
-    { label: 'More', items: [{ label: 'Outline', href: '/guide/outline/' }] }], footer: { columns: [{ title: 'Docs', items: [{ label: 'Home', href: '/' }] }], copyright: 'Copyright Example.' } }));
+  // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
+  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }] }));
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
+  write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
+  write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
   write('docs/01.index.md', '# Welcome\n\n[Installation](01.guide/02.install.md#install)\n\n![Mark](/mark.svg)');
   write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="../../components/counter.html">\n\n<demo-counter></demo-counter>\n\n<template component="inline-example"><p>Inline component</p><style>@import "../../components/counter.css"; :host { border-color: teal; }</style></template>\n\n<inline-example></inline-example>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
   write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><div><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
@@ -205,15 +207,16 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.locator('#second').evaluate(element => element.scrollIntoView());
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
-      // A top navigation dropdown is native details; following a link in it closes it.
-      const more = page.locator('header details');
-      await page.locator('header summary').click();
-      await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
-      await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Outline' }).click();
-      await expect.poll(() => more.evaluate(element => (element as HTMLDetailsElement).open)).toBe(false);
+      // The top navigation links each section folder with an index page, then the configured links; the logo and footer come from conventions.
+      const main = page.getByRole('navigation', { name: 'Main' });
+      expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      expect(await main.getByRole('link', { name: 'Outline' }).getAttribute('aria-current')).toBe('page');
+      expect(await page.locator('header img.logo-light').getAttribute('src')).toBe('/manual/logo.svg');
+      expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       // A generated folder index is a page of links, which navigate like any other.
-      await page.goto(server.url + 'v/current/reference/');
-      expect(await page.locator('main h1').textContent()).toBe('Reference');
+      await main.getByRole('link', { name: 'Reference' }).click();
+      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Reference');
+      await expect.poll(() => main.getByRole('link', { name: 'Reference' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('ul.contents p').textContent()).toBe('Configure the site.');
       const indexAudit = await new AxeBuilder({ page }).analyze(); expect(indexAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       await page.locator('ul.contents').getByRole('link', { name: 'Options' }).click();

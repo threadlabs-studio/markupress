@@ -3,7 +3,7 @@ export { compileMarkdown } from './content.js';
 export type { CompiledMarkdown, FrontMatter, MarkdownOptions, OutlineItem } from './content.js';
 export { markdown } from './markdown.js';
 export type { MarkdownPluginOptions } from './markdown.js';
-export type { Link, NavItem, SidebarItem, SidebarNode } from './navigation.js';
+export type { Link, NavItem, SidebarNode } from './navigation.js';
 export { buildSite, devSite, markupress, previewSite, siteOptions } from './site.js';
 export type { DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
 export { snapshotVersion, versionLinks } from './versions.js';
