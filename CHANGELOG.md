@@ -17,6 +17,7 @@ Breaking changes from 0.1.0:
   - `versionBadge` is removed: a site with several versions shows the selected version's label.
   - `logo` and `favicon` default to `public/logo.svg` (with `public/logo-dark.svg` for the dark theme) and `public/favicon.svg`.
   - The `SidebarItem` type is removed, and `NavItem` is a link with an optional `icon`. A replacement layout's `nav` items have `icon`, and the `social` prop is removed.
+- Snapshots live in `versions/<id>/`, a copy of the project's layout (`versions/v1/docs/`, `versions/v1/public/`), and the folders are the version list: the current version, then snapshots highest number first, labelled by folder name. `versioned_docs/versions.json` is no longer read; move `versioned_docs/<id>/_source/` to `versions/<id>/`, or list the versions in the `versions` option. A snapshot is staged and renamed into place, so a version appears whole. `snapshotVersion` returns the version's `id`, `directory` and `publicDir`, with no `label`.
 
 Added:
 

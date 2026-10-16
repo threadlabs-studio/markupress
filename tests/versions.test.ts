@@ -1,4 +1,6 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createApplication } from '@nextwebwg/htmlkit';
+import { siteOptions } from '../src/site.js';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { expect, it } from 'vitest';
@@ -20,7 +22,7 @@ it('retains logical document identity across versions and explains landing-page 
   ]);
 });
 
-it('records immutable snapshots and discovers their explicit version descriptors', async () => {
+it('records immutable snapshots in versions/ and discovers them from its folders', async () => {
   const { snapshotVersion } = await import('../src/versions.js');
   const root = await mkdtemp(join(tmpdir(), 'markupress-versions-'));
   try {
@@ -34,7 +36,11 @@ it('records immutable snapshots and discovers their explicit version descriptors
     await writeFile(join(root, 'components/counter.ts'), 'import { value } from "./value.js"; export default function(host) { host.root.dataset.value = value; }');
     await writeFile(join(root, 'components/value.ts'), 'export const value = "frozen";');
     await writeFile(join(root, 'components/counter.css'), 'button { color: rgb(20,30,40); }');
+    await mkdir(join(root, 'public')); await writeFile(join(root, 'public/logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
     const version = await snapshotVersion('v1', { root });
+    // The snapshot keeps the project's layout.
+    expect(version).toEqual({ id: 'v1', directory: 'versions/v1/docs', publicDir: 'versions/v1/public' });
+    expect(await readFile(join(root, 'versions/v1/public/logo.svg'), 'utf8')).toContain('<svg');
     const frozen = await readFile(join(root, version.directory, 'index.md'), 'utf8');
     expect(frozen).toContain('# Frozen');
     expect(await readFile(join(root, version.directory, '../components/value.ts'), 'utf8')).toContain('frozen');
@@ -43,6 +49,15 @@ it('records immutable snapshots and discovers their explicit version descriptors
     await writeFile(join(root, 'docs/index.md'), '# Changed');
     await expect(snapshotVersion('v1', { root })).rejects.toThrow(/already exists/);
     expect(await readFile(join(root, version.directory, 'index.md'), 'utf8')).toBe(frozen);
-    expect(JSON.parse(await readFile(join(root, 'versioned_docs/versions.json'), 'utf8'))).toEqual([version]);
+    // No staging folder, lock or manifest is left behind; the folders are the list.
+    expect((await readdir(join(root, 'versions'))).sort()).toEqual(['v1']);
+    await snapshotVersion('v2', { root });
+    await snapshotVersion('v10', { root });
+    const application = await createApplication(siteOptions({ root }));
+    try {
+      // Snapshots follow the current version, highest number first, each labelled by its folder name.
+      const html = (await application.render('/')).html;
+      expect(/Versions.*?<\/nav>/s.exec(html)![0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).toBe('Versions Current v10 v2 v1');
+    } finally { await application.close(); }
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 30_000);
