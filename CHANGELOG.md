@@ -4,8 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.54, and its Looma peer range is `^0.29.1`, the Looma release built with HTML Next 1.0.0-alpha.54.
+
+Breaking changes from 0.2.0:
+
+- `build` fails on a broken internal link: a link within the site to a page or file missing from the output, or to a `#fragment` naming no element in its page, in any page, the `nav` option or a footer. HTMLKit's check lists each page and link. A `nav` or footer link starting with `/` is checked in every version, so the page it names must be in each one. `linkCheck: "warn"` in the site's `htmlkit.config.ts` reports the links as a warning and finishes the build.
+- A site's own Looma dependency moves to `^0.29.1`, whose LoomaEditor asks for uploads, mentions, links, slash commands and extensions as HTML Next requests.
+- HTML Next keeps whitespace between inline elements in templates as a space, as HTML does, so a site's own components and layouts render the spaces their markup has. The Markupress shell, home layout and theme render as before.
+
 Added:
 
+- The `origin` option, such as `"https://example.com"`, makes `build` write `sitemap.xml` at the base, and the `robots` option writes `robots.txt`, which links the sitemap when `origin` is set. Both set HTMLKit's options of the same names, as `base` does.
 - `layout: home` makes a page a home page, read from its Markdown: everything before the first `##` heading is the hero (its `#` heading, a paragraph of only links as `ui-button` actions, an image alone in its paragraph, and the tagline), and each `##` section is a feature card (`ui-card` in a `ui-grid`). The home layout keeps the shell's top navigation and footer. Markupress supplies it as an HTMLKit plugin layout, so a site's `app/layouts/home.html` replaces it.
 - The shell shows an "Edit this page" link and the date the page's file last changed, above the previous/next links.
   - The `editLink` option is a URL ending in `/`, and each page's link is that URL followed by its file's path in the project. A page's `editLink` front matter takes its place, and `editLink: false` shows none.

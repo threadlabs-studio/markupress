@@ -22,6 +22,10 @@ export interface MarkupressOptions {
   readonly root?: string;
   readonly contentDir?: string;
   readonly base?: string;
+  /** The site's origin, such as https://example.com: HTMLKit writes `sitemap.xml` for it, and `robots.txt` links that sitemap. */
+  readonly origin?: string;
+  /** HTMLKit's `robots.txt`: true allows every crawler, and a string is the file's text. */
+  readonly robots?: boolean | string;
   readonly outDir?: string;
   readonly title?: string;
   readonly versions?: readonly DocumentationVersion[];
@@ -39,7 +43,7 @@ export interface MarkupressOptions {
   /** Every page's "Edit this page" link: this URL, ending in `/`, followed by the page file's path in the project. */
   readonly editLink?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -223,7 +227,7 @@ function contents(tree: readonly NavigationNode[], catalog: readonly (Documentat
 
 /**
  * HTMLKit options for a Markupress site, as the CLI runs it: the site's own HTMLKit options (its `htmlkit.config.ts`)
- * with `markupress()` added after their plugins. Markupress's own `base` and `outDir`, when set, win over HTMLKit's.
+ * with `markupress()` added after their plugins. Markupress's own `base`, `origin`, `robots` and `outDir`, when set, win over HTMLKit's.
  */
 export function siteOptions(options: MarkupressOptions = {}, htmlkit: ApplicationOptions = {}): ServerOptions {
   const root = resolve(options.root ?? htmlkit.root ?? process.cwd());
@@ -232,6 +236,7 @@ export function siteOptions(options: MarkupressOptions = {}, htmlkit: Applicatio
   if (listed) throw new Error(`htmlkit.config: the markupress command adds markupress(), which includes markdown(); remove ${listed.name}() from its plugins.`);
   return { ...htmlkit, root, base: options.base ?? htmlkit.base ?? '/', outDir: resolve(root, options.outDir ?? htmlkit.outDir ?? 'site'),
     plugins: [...htmlkit.plugins ?? [], markupress({ ...options, root })],
+    ...(options.origin === undefined ? {} : { origin: options.origin }), ...(options.robots === undefined ? {} : { robots: options.robots }),
     ...(options.host === undefined ? {} : { host: options.host }), ...(options.port === undefined ? {} : { port: options.port }) };
 }
 // Each loads the site's htmlkit.config.ts or .js, as the htmlkit command would, so its plugins compose with Markupress.

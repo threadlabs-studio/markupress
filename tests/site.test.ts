@@ -83,7 +83,7 @@ it('renders shared blocks with the Looma components the page links', async () =>
   await write(root, 'docs/blocks.md', '# Blocks\n\n::: warning Breaking {x}\nBack up {first}.\n:::\n\n> [!TIP]\n> Alerts too.\n\n::: details More\nHidden\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm add x\n```\n\n```sh title="npm"\nnpm install x\n```\n:::');
   const application = await createApplication(siteOptions({ root }));
   try {
-    const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
     expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="">Back up \{first\}\.<\/p>/s);
     expect(html).toMatch(/data-component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="">Alerts too\.<\/p>/s);
     expect(html).toContain('<details><summary>More</summary>');
@@ -164,7 +164,7 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   try {
     // order 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
     expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
-    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '');
+    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '').replace(/>\s+</g, '><');
     expect(sidebar(button)).toBe('Layout Stack forms Button');
     // A collapsed group stays closed unless it holds the current page.
     // A folder with an index page is that page's node, so its summary links to the page.
@@ -191,7 +191,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
     // One version shows no badge.
     expect(html).not.toContain('data-component="ui-badge"');
-    const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '');
+    const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
     expect(top).toBe('<ul><li><a href="/docs/v/current/components/" aria-current="false">Components</a></li><li><a href="/docs/v/current/guide/" aria-current="true">Guide</a></li>' +
       '<li><a href="https://github.com/example" aria-current="false"><img src="/docs/github.svg" alt="GitHub"></a></li></ul>');
@@ -225,7 +225,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -299,7 +299,7 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
   try {
     const rendered = await application.render('/intro/');
     expect(rendered.status).toBe(200);
-    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '');
+    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
     expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
     expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
@@ -313,7 +313,7 @@ it('renders layout: home in the home layout, with the top navigation and footer 
   await write(root, 'docs/_footer.md', '## Docs\n\n- [Guide](/guide/)\n\nCopyright Example.\n');
   const application = await createApplication(siteOptions({ root, title: 'Example' }));
   try {
-    const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
     expect(html).toContain('data-component="markupress-home"');
     expect(html).not.toContain('data-component="markupress-shell"');
     expect(html).toMatch(/<nav class="top"[^>]*><ul><li[^>]*><a href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
@@ -384,12 +384,12 @@ it('dates each page by the last commit touching its file, from one git log, and 
 
 it('resolves root-relative Markdown links within the site under its base, like the footer and nav', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/01.index.md', '# Welcome\n\n[Install](/guide/install/) [Install now](/guide/install/#now) [Report](/report.pdf) [Remote](https://example.com/)');
+  await write(root, 'docs/01.index.md', '# Welcome\n\n[Install](/guide/install/) [Install now](/guide/install/#install) [Report](/report.pdf) [Remote](https://example.com/)');
   await write(root, 'public/report.pdf', '%PDF');
   const result = await buildSite({ root, base: '/looma-next/', versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] });
   const html = await readFile(join(result.outDir, 'index.html'), 'utf8');
   const links = [...html.matchAll(/<a href="([^"]*)"[^>]*>(?:Install|Install now|Report|Remote)<\/a>/g)].map(match => match[1]);
-  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#now', expect.stringMatching(/^\/looma-next\/_htmlkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
+  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#install', expect.stringMatching(/^\/looma-next\/_htmlkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
   // Every root-relative page link reaches a built page under the base, in each version.
   for (const version of ['current', 'v1']) {
     expect(await readFile(join(result.outDir, `v/${version}/index.html`), 'utf8')).toContain(`href="/looma-next/v/${version}/guide/install/"`);
@@ -399,6 +399,13 @@ it('resolves root-relative Markdown links within the site under its base, like t
   await write(root, 'app/pages/index.md', '# Plain\n\n[Install](/guide/install/)');
   const plain = await createApplication({ root, base: '/kit/', plugins: [markdown()] });
   try { expect((await plain.render('/kit/')).html).toContain('href="/kit/guide/install/"'); } finally { await plain.close(); }
+}, 60_000);
+
+it('passes origin and robots to HTMLKit, which writes sitemap.xml and robots.txt', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const result = await buildSite({ root, base: '/docs/', origin: 'https://example.com', robots: true });
+  expect(await readFile(join(result.outDir, 'sitemap.xml'), 'utf8')).toContain('<loc>https://example.com/docs/v/current/guide/install/</loc>');
+  expect(await readFile(join(result.outDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://example.com/docs/sitemap.xml');
 }, 60_000);
 
 it('shows the version links only when a site has several versions', async () => {

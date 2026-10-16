@@ -33,6 +33,8 @@ beforeAll(() => {
   write('components/counter.css', 'button { border: 2px solid rgb(20, 30, 40); }');
   write('components/counter.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; import { increment } from "./value.js"; export default function(host: ComponentHost) { host.on("connect", () => { const button = host.root.querySelector("button")!; const click = () => { host.state.count = Number(host.state.count) + increment; }; button.addEventListener("click", click); return () => button.removeEventListener("click", click); }); }');
   write('components/value.ts', 'export const increment = 1;');
+  // The nav option's Outline link is a page of every version, v1 included, so the build's link check passes.
+  write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
   write('docs/01.guide/03.new.md', '# New document');
@@ -40,7 +42,6 @@ beforeAll(() => {
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
   write('docs/03.about.md', '# About');
-  write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
   mkdirSync(join(workspace, 'docs/02.reference'));
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');

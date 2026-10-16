@@ -45,9 +45,9 @@ The `markupress` command and these APIs also load the site's `htmlkit.config.ts`
 ```ts
 // htmlkit.config.ts
 import { defineConfig } from '@nextwebwg/htmlkit';
-import { sitemap } from './plugins/sitemap.js';
+import { feed } from './plugins/feed.js';
 
-export default defineConfig({ plugins: [sitemap()], redirects: { '/start/': '/guide/install/' } });
+export default defineConfig({ plugins: [feed()], redirects: { '/start/': '/guide/install/' } });
 ```
 
 `base` and `outDir` from `markupress.config.json` or the command line win over the HTMLKit config's; without either, they are `/` and `site`. `markupress()` includes the `markdown()` plugin, so the HTMLKit config lists neither.
@@ -112,7 +112,7 @@ head:
 
 Number prefixes order pages, and `order` takes the place of a file's prefix: `order: 2` on `install.md` orders it as `02.install.md` would. Pages with the same number sort by name.
 
-Every heading has an anchor, derived by the Looma Markdown rule: the text is normalized to NFC and lowercased, letters, numbers and combining marks in any script stay, and every other run of characters becomes one hyphen. "Über uns" is `über-uns`, "設定 と 使い方" is `設定-と-使い方`, and a duplicate takes the first free suffix (`installation-1`). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading. A custom ID is reserved for its heading, so a generated ID skips it. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; missing documents fail at build time. A link starting with `/` is a page path in the page's version, as in the footer and the `nav` option, so `[Tokens](/tokens/)` opens `/v/<id>/tokens/` under the deployment base; with `markdown()` alone it is a path under the base. A root-relative link naming a file, such as `/report.pdf`, is a file in the public directory. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
+Every heading has an anchor, derived by the Looma Markdown rule: the text is normalized to NFC and lowercased, letters, numbers and combining marks in any script stay, and every other run of characters becomes one hyphen. "Über uns" is `über-uns`, "設定 と 使い方" is `設定-と-使い方`, and a duplicate takes the first free suffix (`installation-1`). `## Setup {#install}` sets the ID to `install` and removes the marker from the heading. A custom ID is reserved for its heading, so a generated ID skips it. Relative `.md` links resolve to the corresponding version-specific document, retaining fragments and queries; a link to a missing `.md` document fails when its page compiles, in `dev` as in `build`, naming the Markdown file. A link starting with `/` is a page path in the page's version, as in the footer and the `nav` option, so `[Tokens](/tokens/)` opens `/v/<id>/tokens/` under the deployment base; with `markdown()` alone it is a path under the base. A root-relative link naming a file, such as `/report.pdf`, is a file in the public directory. Relative assets are copied, and image paths starting with `/` resolve from that edition's public directory under the deployment base. Remote links remain unchanged. `navigation: hidden` hides a document from navigation while keeping its route available. Aliases do not add duplicate sidebar entries.
 
 Markupress renders [Looma Markdown](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/looma-markdown.md): CommonMark with GitHub Flavored Markdown (tables, task lists, strikethrough and autolinks), plus Looma's blocks and inline elements. It parses with Looma's markdown-it plugin and is tested against Looma Markdown's conformance fixtures, so a document reads the same in Markupress, Looma's components and LoomaEditor. A container's name is matched without regard to case, and the rest of the opening line is its title:
 
@@ -424,6 +424,8 @@ Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, h
 | --- | --- | --- |
 | `title` | `"Documentation"` | The site title in the top bar. |
 | `base` | `/` | The URL path the site is served under. It starts and ends with `/`. |
+| `origin` | none | The site's origin, such as `"https://example.com"`. With it, `build` writes `sitemap.xml` at the base, listing every page. |
+| `robots` | none | `build` writes `robots.txt`: `true` allows every crawler, and a string is the file's text. With `origin` set, the file ends with a `Sitemap` line. |
 | `contentDir` | `docs` | The current version's content directory. |
 | `outDir` | `site` | Where `build` writes the static site. |
 | `versions`, `defaultVersion` | the folders in `versions/`, `current` | The versions and their order and labels, and the version the site root serves (see [Versions](#versions)). |
@@ -433,7 +435,16 @@ Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, h
 | `favicon` | `public/favicon.svg` | The site icon's path, in place of the icon file. |
 | `editLink` | none | A URL ending in `/`, which each page's file path follows to make its "Edit this page" link (see [Edit link and last updated](#edit-link-and-last-updated)). |
 
-Image paths starting with `/` are files in `public/`. An unknown key fails with the list of options. The programmatic `buildSite`, `devSite` and `previewSite` APIs, and the `markupress()` plugin, take the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
+Image paths starting with `/` are files in `public/`. `base`, `origin`, `robots` and `outDir` set the HTMLKit options of the same names, in place of the HTMLKit config's. An unknown key fails with the list of options.
+
+`build` checks every link in the pages it writes. A link within the site to a page or file missing from the output, or to a `#fragment` naming no heading or element in its page, fails the build with each page and link. A `nav` or footer link starting with `/` is checked in every version, so the page it names must be in each one. A site whose links are not ready yet builds with HTMLKit's `linkCheck` option set to `"warn"` in its `htmlkit.config.ts`, which reports the same links as a warning:
+
+```ts
+// htmlkit.config.ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+
+export default defineConfig({ linkCheck: 'warn' });
+``` The programmatic `buildSite`, `devSite` and `previewSite` APIs, and the `markupress()` plugin, take the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
 ## Verification and contribution
 
