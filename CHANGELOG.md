@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Added:
+
+- `layout: home` makes a page a home page, read from its Markdown: everything before the first `##` heading is the hero (its `#` heading, a paragraph of only links as `ui-button` actions, an image alone in its paragraph, and the tagline), and each `##` section is a feature card (`ui-card` in a `ui-grid`). The home layout keeps the shell's top navigation and footer. Markupress supplies it as an HTMLKit plugin layout, so a site's `app/layouts/home.html` replaces it.
+- The shell shows an "Edit this page" link and the date the page's file last changed, above the previous/next links.
+  - The `editLink` option is a URL ending in `/`, and each page's link is that URL followed by its file's path in the project. A page's `editLink` front matter takes its place, and `editLink: false` shows none.
+  - The date is the author date of the last commit touching the file, as `YYYY-MM-DD`, read for every page with one `git log` when a build or development server starts. Outside a git checkout pages show no date.
+- A layout's `page` data has the resolved `editLink` and `lastUpdated`.
+- The shell's top navigation and footer are the `markupress-header` and `markupress-footer` components in `theme/chrome.html`, which the shell and the home layout share.
+
+Changed:
+
+- A layout's `page.editLink` is absent for a page with no edit link, where `editLink: false` front matter used to pass `false`.
+
+Fixed:
+
+- A root-relative Markdown link (`[Tokens](/tokens/)`) is a page path in the page's version under the deployment base, as in the footer and the `nav` option, which share one resolver. With `markdown()` alone it is a path under the base. A root-relative link naming a file (`/report.pdf`) is a public file, as a root-relative image is.
+- A site with one version shows no version links in the sidebar.
+- The README describes the published package: installing it from npm, then building from source.
+
 ## 0.2.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.52, and its Looma peer range is `^0.28.18`, the Looma release that ships Looma Markdown.

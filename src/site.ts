@@ -1,12 +1,13 @@
 import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type NavigationItem, type NavigationNode, type ServerOptions } from '@nextwebwg/htmlkit';
 import { isIndex, type FrontMatter, type OutlineItem } from './content.js';
+import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
-import { footer, generatedSidebar, type Link, type NavItem } from './navigation.js';
+import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
 
@@ -35,8 +36,10 @@ export interface MarkupressOptions {
   readonly favicon?: string;
   /** Links after the sections in the top navigation, each shown as its `icon` image or its label. */
   readonly nav?: readonly NavItem[];
+  /** Every page's "Edit this page" link: this URL, ending in `/`, followed by the page file's path in the project. */
+  readonly editLink?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav'];
+const optionNames = ['root', 'contentDir', 'base', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -44,6 +47,9 @@ export interface DocumentationPage {
   /** Application-relative URL in its version, such as /v/current/guide/install/. */
   readonly pathname: string;
 }
+
+type Document = DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
+  readonly outline: readonly OutlineItem[]; readonly generated: boolean };
 
 function inside(root: string, path: string) {
   const part = relative(root, path); return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith('../') && !part.startsWith('..\\'));
@@ -65,6 +71,7 @@ async function versions(options: MarkupressOptions, root: string): Promise<reado
 }
 
 const shell = fileURLToPath(new URL('../theme/shell.html', import.meta.url));
+const homeLayout = fileURLToPath(new URL('../theme/home.html', import.meta.url));
 const own = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
 // HTMLKit's css option is page-wide: Looma's :root tokens and its light/dark switch, and document defaults.
 // A component's <style> is scoped to its own region, so these would never reach :root from the shell.
@@ -80,18 +87,19 @@ const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(f
 export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   const defaultVersion = options.defaultVersion ?? 'current';
   let root = resolve(options.root ?? process.cwd());
-  let editions: readonly DocumentationVersion[] = [];
+  let editions: readonly DocumentationVersion[] = [], siteBase = '/';
   const editionOf = (file: string) => editions.find(edition => inside(resolve(root, edition.directory), file));
   // Compiled documents by version and source file. HTMLKit recompiles every page when it rediscovers, so a
   // deleted file's stale entry is filtered by existence rather than cleared.
-  const documents = new Map<string, DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
-    readonly outline: readonly OutlineItem[]; readonly generated: boolean }>();
+  const documents = new Map<string, Document>();
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
   const pages = markdown({
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
+    // A root-relative link is a page of the version the file belongs to.
+    home: file => { const edition = editionOf(file); return edition ? `${siteBase}v/${edition.id}/` : siteBase; },
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));
       if (owners.length === 0 || page.href === undefined) return;
@@ -110,6 +118,15 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   });
   let layoutFile = shell;
   let logo: { readonly light: string; readonly dark?: string } | undefined, favicon: string | undefined;
+  let updated: Promise<ReadonlyMap<string, string>> = Promise.resolve(new Map());
+  /** The page's front matter, with its resolved edit link and the date its file last changed in git. */
+  async function pageData(doc: Document) {
+    const file = relative(root, doc.source).split(sep).join('/');
+    const { editLink, ...page } = doc.page;
+    const edit = editLink ?? (options.editLink === undefined ? false : options.editLink + encodeURI(file));
+    const date = (await updated).get(file);
+    return { ...page, ...(edit === false ? {} : { editLink: edit }), ...(date === undefined ? {} : { lastUpdated: date }) };
+  }
   async function load({ navigation, navigationTree, breadcrumbs, pager, url, base, propNames }: LoadContext) {
     const path = '/' + url.pathname.slice(base.length);
     const selected = /^\/v\/([^/]+)\//.exec(path)?.[1] ?? defaultVersion;
@@ -122,7 +139,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
-      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page?.page ?? {},
+      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
       contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
@@ -131,7 +148,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   /** The shell around the page: the sections and links of the top navigation, logo, badge, the section's sidebar and the footer. */
   async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], selected: string, current: string, base: string) {
     const home = `${base}v/${selected}/`;
-    const href = (to: string) => /^(?:[A-Za-z][\w+.-]*:|\/\/|#)/.test(to) || !to.startsWith('/') ? to : home + to.slice(1);
+    const href = (to: string) => siteLink(to, home);
     const file = (path: string) => path.startsWith('/') ? base + path.slice(1) : path;
     // A link is the page itself, or an ancestor section of it (aria-current="true").
     const link = ({ label, href: to }: Link) => {
@@ -161,14 +178,17 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   }
   // Config is plain data, so an option from another tool, or a removed one, fails rather than doing nothing.
   for (const name of Object.keys(options)) if (!optionNames.includes(name)) throw new Error(`Unknown Markupress option ${name}. Options are ${optionNames.join(', ')}.`);
+  if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
   return { ...pages, name: 'markupress', async config(htmlkit) {
-    root = resolve(htmlkit.root ?? root);
+    root = resolve(htmlkit.root ?? root); siteBase = htmlkit.base ?? '/';
     // Conventions first: public/logo.svg, public/logo-dark.svg and public/favicon.svg, which the options override.
     const own = (name: string) => existsSync(join(root, 'public', name)) ? `/${name}` : undefined;
     const light = own('logo.svg');
     logo = typeof options.logo === 'string' ? { light: options.logo } : options.logo ?? (light === undefined ? undefined : { light, dark: own('logo-dark.svg') ?? light });
     favicon = options.favicon ?? own('favicon.svg');
     editions = await versions(options, root);
+    // One git log dates every page, read once per build or development server.
+    updated = lastUpdated(root, editions.map(edition => edition.directory));
     const ids = new Set<string>();
     for (const edition of editions) {
       if (!/^[A-Za-z0-9_-]+$/.test(edition.id) || ids.has(edition.id)) throw new Error(`Duplicate or invalid documentation version: ${edition.id}.`);
@@ -184,7 +204,8 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const replacement = join(root, 'app/layouts/default.html');
     layoutFile = existsSync(replacement) ? replacement : shell;
     const layout = { component: layoutFile, server: { load } };
-    return { headScript: themeScript, css: pageStyles,
+    // layout: home names this layout; a site's app/layouts/home.html takes its place, as HTMLKit resolves a name.
+    return { headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
   } };
 }

@@ -1,8 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { linkDependencies } from './fixture.js';
 import { mkdtemp, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
+import { lastUpdated } from '../src/git.js';
+import { markdown } from '../src/markdown.js';
 import { buildSite, siteOptions } from '../src/site.js';
 import { createApplication } from '@nextwebwg/htmlkit';
 
@@ -192,7 +195,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
     expect(top).toBe('<ul><li><a href="/docs/v/current/components/" aria-current="false">Components</a></li><li><a href="/docs/v/current/guide/" aria-current="true">Guide</a></li>' +
       '<li><a href="https://github.com/example" aria-current="false"><img src="/docs/github.svg" alt="GitHub"></a></li></ul>');
-    expect(html).toMatch(/<footer>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
+    expect(html).toMatch(/<footer[^>]*>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
     // _footer.md is no page.
     expect((await application.render('/docs/_footer/')).status).toBe(404);
     // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
@@ -222,7 +225,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -301,4 +304,107 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
     expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
     expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
   } finally { await application.close(); }
+}, 30_000);
+
+it('renders layout: home in the home layout, with the top navigation and footer and no sidebar', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nA tagline.\n\n[Install](./01.guide/02.install.md)\n\n## Fast\n\nBuilt at build time.');
+  await write(root, 'docs/01.guide/index.md', '---\ntitle: Guide\n---\n');
+  await write(root, 'docs/_footer.md', '## Docs\n\n- [Guide](/guide/)\n\nCopyright Example.\n');
+  const application = await createApplication(siteOptions({ root, title: 'Example' }));
+  try {
+    const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(html).toContain('data-component="markupress-home"');
+    expect(html).not.toContain('data-component="markupress-shell"');
+    expect(html).toMatch(/<nav class="top"[^>]*><ul><li[^>]*><a href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
+    expect(html).toMatch(/<a href="\/v\/current\/guide\/install\/"[^>]*data-component="ui-button"[^>]*>.*Install/s);
+    expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
+    expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
+    for (const absent of ['id="documentation-navigation"', 'data-component="hk-breadcrumbs"', 'data-component="hk-pager"', 'On this page']) expect(html).not.toContain(absent);
+    // Other pages keep the shell.
+    expect((await application.render('/guide/install/')).html).toContain('data-component="markupress-shell"');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('lets a site\'s app/layouts/home.html replace the home layout', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.index.md', '---\nlayout: home\n---\n# Welcome');
+  await write(root, 'app/layouts/home.html', '<template component="site-home"><div class="site-home"><slot name="page"></slot></div></template>');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const html = (await application.render('/')).html;
+    expect(html).toMatch(/<div class="site-home"[^>]*>.*<header class="hero">/s);
+    expect(html).not.toContain('data-component="markupress-home"');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('links every page to its source from the editLink option, which front matter overrides or turns off', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/03.(Getting started)/intro.md', '# Intro');
+  await write(root, 'docs/own.md', '---\neditLink: https://example.com/own\n---\n# Own');
+  await write(root, 'docs/none.md', '---\neditLink: false\n---\n# None');
+  const edit = (html: string) => /<a href="([^"]*)"[^>]*>Edit this page<\/a>/.exec(html)?.[1];
+  let application = await createApplication(siteOptions({ root, editLink: 'https://github.com/org/repo/edit/main/site/' }));
+  try {
+    expect(edit((await application.render('/guide/install/')).html)).toBe('https://github.com/org/repo/edit/main/site/docs/01.guide/02.install.md');
+    expect(edit((await application.render('/intro/')).html)).toBe('https://github.com/org/repo/edit/main/site/docs/03.(Getting%20started)/intro.md');
+    expect(edit((await application.render('/own/')).html)).toBe('https://example.com/own');
+    expect(edit((await application.render('/none/')).html)).toBeUndefined();
+  } finally { await application.close(); }
+  // Without the option a page shows the link only when its front matter gives one.
+  application = await createApplication(siteOptions({ root }));
+  try {
+    expect(edit((await application.render('/guide/install/')).html)).toBeUndefined();
+    expect(edit((await application.render('/own/')).html)).toBe('https://example.com/own');
+  } finally { await application.close(); }
+  expect(() => siteOptions({ root, editLink: 'https://github.com/org/repo/edit/main' })).toThrow('The editLink option ends in /');
+}, 30_000);
+
+it('dates each page by the last commit touching its file, from one git log, and shows none outside git', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const git = (args: string[], date = '2026-01-02T12:00:00Z') => execFileSync('git', args, { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date,
+    GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.com', GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.com' } });
+  const updated = (html: string) => /<time datetime="([^"]*)">/.exec(html)?.[1];
+  // Not a checkout: no dates, and the site still builds.
+  expect((await lastUpdated(root, ['docs'])).size).toBe(0);
+  let application = await createApplication(siteOptions({ root }));
+  try { expect(updated((await application.render('/guide/install/')).html)).toBeUndefined(); } finally { await application.close(); }
+  git(['init', '-q']); git(['add', 'docs']); git(['commit', '-qm', 'First']);
+  await write(root, 'docs/01.guide/02.install.md', '# Install again');
+  git(['commit', '-qam', 'Second'], '2026-03-04T12:00:00Z');
+  await write(root, 'docs/01.guide/03.new.md', '# Uncommitted');
+  expect(Object.fromEntries(await lastUpdated(root, ['docs']))).toEqual({ 'docs/01.guide/02.install.md': '2026-03-04', 'docs/01.index.md': '2026-01-02', 'docs/mark.svg': '2026-01-02' });
+  application = await createApplication(siteOptions({ root }));
+  try {
+    expect((await application.render('/guide/install/')).html).toContain('Last updated <time datetime="2026-03-04">2026-03-04</time>');
+    expect(updated((await application.render('/')).html)).toBe('2026-01-02');
+    expect(updated((await application.render('/guide/new/')).html)).toBeUndefined();
+  } finally { await application.close(); }
+}, 30_000);
+
+it('resolves root-relative Markdown links within the site under its base, like the footer and nav', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.index.md', '# Welcome\n\n[Install](/guide/install/) [Install now](/guide/install/#now) [Report](/report.pdf) [Remote](https://example.com/)');
+  await write(root, 'public/report.pdf', '%PDF');
+  const result = await buildSite({ root, base: '/looma-next/', versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] });
+  const html = await readFile(join(result.outDir, 'index.html'), 'utf8');
+  const links = [...html.matchAll(/<a href="([^"]*)"[^>]*>(?:Install|Install now|Report|Remote)<\/a>/g)].map(match => match[1]);
+  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#now', expect.stringMatching(/^\/looma-next\/_htmlkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
+  // Every root-relative page link reaches a built page under the base, in each version.
+  for (const version of ['current', 'v1']) {
+    expect(await readFile(join(result.outDir, `v/${version}/index.html`), 'utf8')).toContain(`href="/looma-next/v/${version}/guide/install/"`);
+    await stat(join(result.outDir, `v/${version}/guide/install/index.html`));
+  }
+  // markdown() alone resolves them from the site's base.
+  await write(root, 'app/pages/index.md', '# Plain\n\n[Install](/guide/install/)');
+  const plain = await createApplication({ root, base: '/kit/', plugins: [markdown()] });
+  try { expect((await plain.render('/kit/')).html).toContain('href="/kit/guide/install/"'); } finally { await plain.close(); }
+}, 60_000);
+
+it('shows the version links only when a site has several versions', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  let application = await createApplication(siteOptions({ root }));
+  try { expect((await application.render('/')).html).not.toContain('aria-label="Documentation versions"'); } finally { await application.close(); }
+  application = await createApplication(siteOptions({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] }));
+  try { expect((await application.render('/')).html).toContain('aria-label="Documentation versions"'); } finally { await application.close(); }
 }, 30_000);

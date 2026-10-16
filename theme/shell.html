@@ -1,5 +1,5 @@
 <link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
-<link rel="component" href="@threadlabs/looma/components/ui-badge/ui-badge.html">
+<link rel="component" href="./chrome.html">
 <link rel="component" href="./outline.html">
 <template component="markupress-shell" controller="../dist/controllers/shell.js">
 <title>{$title}</title><link $if="$favicon" rel="icon" from:href="$favicon"><defs>
@@ -17,50 +17,36 @@
 <prop name="crumbs" type="list(object({ href: string, label: string, current: string, depth: number, pageName: string, ... }))" required>Trail from the version home to this page</prop>
 <prop name="previous" type="object({ href: string, label: string, current: string, depth: number, pageName: string, ... })" nullable>The page before this one</prop>
 <prop name="next" type="object({ href: string, label: string, current: string, depth: number, pageName: string, ... })" nullable>The page after this one</prop>
+<prop name="page" type="object({ editLink?: string, lastUpdated?: string, ... })" required>The page's front matter, with its edit link and the date its file last changed in git</prop>
 <state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<header>
-<span class="menu"><ui-button variant="ghost" tone="neutral" popovertarget="documentation-navigation">Navigation</ui-button></span>
-<a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template>{$title}</a>
-<ui-badge $if="$badge" tone="accent">{$badge}</ui-badge>
-<nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
-<a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
-</li></ul></nav>
-<div class="actions"><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
+<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:dark="$dark">
+<span class="menu" slot="menu"><ui-button variant="ghost" tone="neutral" popovertarget="documentation-navigation">Navigation</ui-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation">
 <hk-nav from:items="$sidebar" label="Documentation"></hk-nav>
-<nav class="versions" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
+<nav class="versions" $if="$versions.length > 1" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><hk-breadcrumbs from:items="$crumbs"></hk-breadcrumbs><slot name="page"></slot>
-<ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul><hk-pager from:previous="$previous" from:next="$next"></hk-pager></main>
+<ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul>
+<div class="page-meta" $if="$page.editLink or $page.lastUpdated"><a $if="$page.editLink" from:href="$page.editLink">Edit this page</a><p $if="$page.lastUpdated">Last updated <time from:datetime="$page.lastUpdated">{$page.lastUpdated}</time></p></div><hk-pager from:previous="$previous" from:next="$next"></hk-pager></main>
 <aside class="outline" $if="$outline.length" aria-label="On this page"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
-<footer $if="$footer.columns.length or $footer.copyright"><div class="footer-columns" $if="$footer.columns.length"><div $each="column of $footer.columns"><strong>{$column.title}</strong><ul><li $each="link of $column.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></div></div>
-<p $if="$footer.copyright">{$footer.copyright}</p></footer></div>
+<markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
 :host { display: block; background: var(--ui-surface); color: var(--ui-text); font: 1rem/1.7 system-ui, sans-serif; min-height: 100vh; }
 .site { display: flex; flex-direction: column; min-height: 100vh; }
-header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; border-bottom: 1px solid var(--ui-border, #8885); padding: .75rem max(1rem, calc((100vw - 90rem) / 2)); background: var(--ui-surface); }
-.brand { display: flex; align-items: center; gap: .5rem; color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .logo { block-size: 2rem; inline-size: auto; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-inline-start: auto; }
-header ul { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: 0; padding: 0; list-style: none; }
-header a { color: inherit; text-decoration: none; } header a:hover, header a[aria-current="page"], header a[aria-current="true"] { color: var(--ui-accent); }
-.top ul { align-items: center; } .top img { display: block; block-size: 1.25rem; inline-size: auto; }
 .columns { display: flex; gap: 3rem; flex: 1; inline-size: 100%; max-inline-size: 90rem; margin: auto; padding: 2rem 1.5rem; }
 #documentation-navigation { flex: 0 0 15rem; } main { min-width: 0; flex: 1; max-width: 65ch; } .outline { flex: 0 0 13rem; }
 /* Wide screens show the sidebar in the page; narrow ones open it as a native popover, which needs no script. */
 @media (min-width: 769px) { #documentation-navigation { display: block; position: static; inset: auto; margin: 0; padding: 0; border: 0; background: none; color: inherit; overflow: visible; }
   #documentation-navigation, .outline { position: sticky; top: 5rem; align-self: flex-start; max-block-size: calc(100vh - 6rem); overflow: auto; } .menu { display: none; } }
 @media (max-width: 1199px) { .outline { display: none; } }
-@media (max-width: 768px) { header { position: static; } .columns { display: block; padding: 1rem; }
+@media (max-width: 768px) { .columns { display: block; padding: 1rem; }
   #documentation-navigation { inset: 0 auto 0 0; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border, #8885); background: var(--ui-surface); color: var(--ui-text); }
   #documentation-navigation::backdrop { background: rgb(0 0 0 / .4); } }
 .versions ul { margin: 0; padding: 0; list-style: none; } .versions li { margin: .4rem 0; } .versions { margin-top: 2rem; }
 a { color: var(--ui-accent); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } small { display: block; color: var(--ui-text-muted, inherit); line-height: 1.4; } :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
 .skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); z-index: 3; } .skip:focus { transform: none; }
-footer { border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - 90rem) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }
-.footer-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1.5rem; } footer ul { margin: .5rem 0 0; padding: 0; list-style: none; } footer li { margin: .25rem 0; } footer strong { color: var(--ui-text); }
-footer p { margin: 1.5rem 0 0; }
 .contents { display: grid; gap: .75rem; margin: 1.5rem 0; padding: 0; list-style: none; }
 .contents li { padding: .75rem 1rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
 .contents a { font-weight: 600; } .contents p { margin: .25rem 0 0; color: var(--ui-text-muted, inherit); }
-@media (max-width: 640px) { header { padding-inline: 1rem; } }
+.page-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; margin-top: 3rem; color: var(--ui-text-muted, inherit); font-size: .875rem; } .page-meta p { margin: 0; }
 </style></template>

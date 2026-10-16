@@ -2,7 +2,14 @@
   "title": "Markupress",
   "base": "/manual/",
   "nav": [
-    { "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" },
-    { "label": "GitHub", "href": "https://github.com/threadlabs-studio/markupress" }
-  ]
+    {
+      "label": "HTML Next",
+      "href": "https://nextwebwg.org/declarative-components/"
+    },
+    {
+      "label": "GitHub",
+      "href": "https://github.com/threadlabs-studio/markupress"
+    }
+  ],
+  "editLink": "https://github.com/threadlabs-studio/markupress/edit/main/examples/site/"
 }
