@@ -45,8 +45,8 @@
     "vitest": "5.0.4",
     "playwright": "1.64.0",
     "@axe-core/playwright": "4.13.0",
-    "@nextwebwg/html-next": "1.0.0-alpha.51",
-    "@threadlabs/looma": "0.28.5"
+    "@nextwebwg/html-next": "1.0.0-alpha.52",
+    "@threadlabs/looma": "0.28.15"
   },
   "publishConfig": { "access": "public" },
   "repository": {
@@ -58,7 +58,7 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "@nextwebwg/htmlkit": "1.0.0-alpha.51",
+    "@nextwebwg/htmlkit": "1.0.0-alpha.52",
     "marked": "18.1.1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
@@ -67,8 +67,8 @@
     "shiki": "4.5.0"
   },
   "peerDependencies": {
-    "@nextwebwg/html-next": "1.0.0-alpha.51",
-    "@threadlabs/looma": "^0.28.5"
+    "@nextwebwg/html-next": "1.0.0-alpha.52",
+    "@threadlabs/looma": "^0.28.15"
   },
   "bin": {
     "markupress": "./dist/cli.js"
