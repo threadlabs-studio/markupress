@@ -193,7 +193,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
 };
-function validFrontMatter(fields: Record<string, unknown>, file: string): FrontMatter {
+function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: string): FrontMatter {
   for (const [name, value] of Object.entries(fields)) {
     const type = fieldTypes[name];
     if (type === undefined) throw new Error(`${file}: unknown front matter field ${name}. Fields are ${Object.keys(fieldTypes).join(', ')}.`);
@@ -210,10 +210,27 @@ const blockComponent = (token: Token) => token.type === 'looma_container_open'
   ? (token.info === 'tabs' || token.info === 'code-group' ? 'ui-tabs' : token.info === 'details' || token.info === 'figure' ? undefined : 'ui-callout')
   : token.type === 'blockquote_open' && token.tag === 'ui-callout' ? 'ui-callout' : undefined;
 
-export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
-  const { body, fields: raw } = frontmatter(source, options.file);
-  const fields = { ...options.frontmatter, ...validFrontMatter(raw, options.file) };
-  const aliases = fields.aliases ?? [];
+/** A Markdown document rendered by Looma Markdown and Markupress's presentation, before Markupress's page layer. */
+export interface RenderedMarkdown {
+  /** The document's HTML, as HTML Next template content: Markdown text escapes its braces. */
+  readonly html: string;
+  /** The front matter mapping as parsed, before any host schema reads it. */
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+  /** The document after its front matter. */
+  readonly body: string;
+  /** Every heading, in document order. */
+  readonly headings: readonly OutlineItem[];
+  readonly hasCode: boolean;
+  /** The Looma components the document's blocks render. */
+  readonly components: ReadonlySet<string>;
+}
+
+/**
+ * The Looma Markdown layer: splits the front matter, parses with Looma's plugin and renders with Markupress's
+ * presentation. Front matter fields are left to the host; compileMarkdown validates Markupress's.
+ */
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers'>): Promise<RenderedMarkdown> {
+  const { body, fields } = frontmatter(source, options.file);
   const tokens = md.parse(source, { file: options.file });
   const highlighted = new Map<Token, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
   let hasCode = false;
@@ -236,7 +253,14 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     const marked = new Set([...lines, ...noted]);
     highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta)));
   }
-  const fragment = parseFragment(md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv));
+  return { html: md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv), frontmatter: fields, body, headings, hasCode, components };
+}
+
+export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
+  const { html, frontmatter: raw, body, headings, hasCode, components } = await renderMarkdown(source, options);
+  const fields = { ...options.frontmatter, ...validFrontMatter(raw, options.file) };
+  const aliases = fields.aliases ?? [];
+  const fragment = parseFragment(html);
   const declarations: string[] = [];
   const metadata: string[] = [];
   const original = pathToFileURL(resolve(options.file)).href;
