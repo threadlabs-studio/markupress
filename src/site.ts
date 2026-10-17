@@ -203,6 +203,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     }
     const home = editions.find(edition => edition.id === defaultVersion);
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
+    const same = (a: DocumentationVersion, b: DocumentationVersion) => resolve(root, a.directory) === resolve(root, b.directory);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs. A site's
     // app/layouts/default.html, which HTMLKit gives its other pages, replaces the shell and receives its loader data.
     const replacement = join(root, 'app/layouts/default.html');
@@ -210,7 +211,10 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const layout = { component: layoutFile, server: { load } };
     // layout: home names this layout; a site's app/layouts/home.html takes its place, as HTMLKit resolves a name.
     return { headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
-      pages: [...editions.map(edition => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout })), { dir: home.directory, layout }] };
+      // The root serves the default version's folder as its own; every further mount of a folder, the default's
+      // /v/<id>/ included, is an alias, so its pages name the first as canonical and stay out of the sitemap.
+      pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout,
+        ...(same(edition, home) || editions.slice(0, index).some(earlier => same(earlier, edition)) ? { alias: true } : {}) })), { dir: home.directory, layout }] };
   } };
 }
 

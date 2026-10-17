@@ -263,6 +263,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const fragment = parseFragment(html);
   const declarations: string[] = [];
   const metadata: string[] = [];
+  const imports: string[] = [];
   const original = pathToFileURL(resolve(options.file)).href;
   const rebase = (value: string) => /^(?:\.\.?\/|\/)/.test(value) ? new URL(value, original).href : value;
   const visit = (node: DefaultTreeAdapterMap['node'], inCarrier: boolean): void => {
@@ -284,6 +285,11 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
         visit(child, inCarrier);
         if (!inCarrier && 'tagName' in child && child.tagName === 'template' && child.attrs.some(attr => attr.name === 'component')) declarations.push(serializeOuter(child));
         else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('component'))) declarations.push(serializeOuter(child));
+        // A stylesheet is no head declaration: the page's <style> imports it, which scopes it to the page as its own CSS.
+        else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('stylesheet'))) {
+          const attr = (name: string) => child.attrs.find(item => item.name === name)?.value;
+          imports.push(`@import ${JSON.stringify(attr('href') ?? '')}${attr('media') ? ` ${attr('media')}` : ''};`);
+        }
         else if (!inCarrier && 'tagName' in child && ['title', 'meta', 'link'].includes(child.tagName)) metadata.push(serializeOuter(child));
         else kept.push(child);
       }
@@ -297,10 +303,11 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   for (const name of blocks) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   // A folder's index page with front matter only generates the folder's listing, which the layout's loader supplies.
   const generated = isIndex(options.file) && body.trim() === '';
-  // Front matter becomes HTMLKit page metadata: HTMLKit owns navigation labels, order, visibility, alias routes, the
-  // layout choice, and the document head, which merges meta and canonical links by identity.
+  // Front matter becomes head declarations and HTMLKit settings in the page's <defs>: HTMLKit owns navigation labels,
+  // order, visibility, alias routes, the layout choice, and the document head, where the page's entries win over its layout's.
   const { meta = {}, og = {}, canonical } = fields.head ?? {};
-  const head = `<title>${literal(escapeHTML(title))}</title>` + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
+  // An authored <title> takes the place of the generated one, since a definition declares one title.
+  const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
     `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
     (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
     aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
@@ -309,10 +316,11 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`);
   const [from, to] = fields.outline === false ? [0, -1] : fields.outline ?? [2, 3];
-  const styles = options.styles?.length ? `<style>${options.styles.map(file => `@import "${pathToFileURL(file).href}";`).join('')}</style>` : '';
+  const css = [...(options.styles ?? []).map(file => `@import "${pathToFileURL(file).href}";`), ...imports].join('');
+  const styles = css ? `<style>${stylesheet(css, options.file, true).css}</style>` : '';
   return { title, aliases, generated, ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}>${head}${metadata.join('')}<article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
 }
 
 type Node = DefaultTreeAdapterMap['node'];
