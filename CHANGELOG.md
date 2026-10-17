@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 0.4.0
 
-- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.57, and its Looma peer range is `^0.29.12`, the Looma release built with HTML Next 1.0.0-alpha.57.
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.57, and its Looma peer is exactly 0.29.12, the Looma release built with HTML Next 1.0.0-alpha.57, so an install never pairs it with a Looma built on another HTML Next.
 
 Breaking changes from 0.3.0:
 
-- A site's own Looma dependency moves to `^0.29.12`, which HTML Next 1.0.0-alpha.57 requires exactly.
+- A site's own Looma dependency moves to exactly 0.29.12, which pins HTML Next 1.0.0-alpha.57.
 - Markupress follows HTMLKit's head model: head content is HTML Next head declarations in a component's `<defs>`. Each Markdown page writes its generated `<title>`, description, Open Graph and canonical entries, its `hk:` settings and any `<title>`, `<meta>` or `<link>` its Markdown holds into its page component's `<defs>`; `hk:page` stays at the top of the resource. A rendered title, meta or link carries `data-component-head=""`.
 - The site root serves the default version's pages as their canonical copies. Its `/v/<default>/` mount is an HTMLKit alias, so each of its pages has a `<link rel="canonical">` to the root copy, unless its front matter sets `head.canonical`, and `sitemap.xml` lists only the root copies. A version whose directory an earlier version already serves is an alias of it too.
 - A `<link rel="stylesheet">` in Markdown becomes an `@import` in the page component's `<style>`, so it styles that page as its own CSS. Any other `<link>` that is not a head declaration fails with HTML Next's `HC025`, naming the Markdown file.
