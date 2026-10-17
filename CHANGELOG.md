@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.4.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.57, and its Looma peer range is `^0.29.12`, the Looma release built with HTML Next 1.0.0-alpha.57.
 
