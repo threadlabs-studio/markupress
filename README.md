@@ -77,9 +77,9 @@ aliases: [/getting-started/]
 <demo-counter></demo-counter>
 ```
 
-`01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. The unversioned `/guide/install/` alias selects the configured default version. Changing `02.` to `10.` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
+`01.guide/02.install.md` becomes `/v/current/guide/install/`. Numeric prefixes order HTMLKit navigation and disappear from URLs. In the default version it is also `/guide/install/`, the page's canonical copy (see [Versions](#versions)). Changing `02.` to `10.` changes ordering without changing the path. Duplicate paths or document IDs fail with both source filenames.
 
-Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Explicit `<title>`, `<meta>` and non-component `<link>` elements also become page metadata.
+Markdown text and fenced examples are literal, including braces and component syntax. Raw HTML outside fences can declare or use native components. Resource links remain relative to the original Markdown file. A component declared in Markdown is hoisted alongside the generated page carrier; its expressions retain HTML Next semantics. Explicit `<title>`, `<meta>` and non-component `<link>` elements become head declarations in the page component's `<defs>`; an explicit `<title>` takes the place of the generated one. A `<link rel="stylesheet">` becomes an `@import` in the page component's `<style>`, so it styles that page as the page's own CSS. Any other `<link>` that is not a head declaration, such as `rel="pingback"`, fails with HTML Next's `HC025`.
 
 ### Front matter
 
@@ -260,11 +260,13 @@ The `versions` option sets the versions, their order and their labels in place o
 
 A site with several versions shows their links in the sidebar and the selected version's label beside the title. Version IDs are URL slugs; they need not follow SemVer. A document's `id` identifies it across versions independently of its filename, route and generated component name. The version selector links to that identity in the other version, even if its route changed. If it is absent, the selector explains the fallback and links to that version's home. Selection lives in the URL and survives reloads.
 
+The site root serves the default version, and its pages are the canonical copies. The same pages under `/v/<default>/` are HTMLKit aliases: each has a `<link rel="canonical">` to its root copy, unless its front matter sets `head.canonical`, and `sitemap.xml` lists only the root copies. A version whose directory an earlier version already serves is an alias of it too.
+
 ## Theme and migration inputs
 
 The default theme imports Looma's button and badge resources and CSS exports selectively. Its shell has a skip link, a top navigation bar, a grouped sidebar per section, native version links, an "on this page" outline, an edit link and last-updated date, a footer and a saved light/dark preference, which an inline head script applies before first paint. It uses the platform's existing runtime.
 
-Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header, sidebar, columns and footer. `theme/theme.css` is page-wide too, because HTMLKit's built-in breadcrumbs and pager have no styles of their own and no component's scoped style reaches them; it also picks the logo for the theme in use. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
+Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header, sidebar, columns and footer. `theme/theme.css` is page-wide too, because HTMLKit's built-in breadcrumbs and pager have no styles of their own and no component's scoped style reaches them; it also picks the logo for the theme in use, and draws an accent bar along the top of the window while HTMLKit renders a page in place, when `<html>` has `data-hk-navigating`. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
 
 ### Navigation, logo and footer
 
@@ -393,6 +395,8 @@ Each page in the shell ends with an "Edit this page" link and the date its file 
 | `contents` | A generated index's entries, `label`, `href` and `description`, and an empty list on every other page. |
 | `page` | The page's front matter, plus its resolved `title` and document `id`, its `editLink` (absent when it has none), and `lastUpdated`, the `YYYY-MM-DD` date its file last changed in git (absent outside git). |
 
+A layout declares its head content in its `<defs>`, as HTMLKit pages and layouts do: `<title>`, `<meta>` and `<link>`, bound as `<title>{$title}</title>`, `from:content` and `from:href`. A page's title, meta names and canonical link win over its layout's. A `<title>`, `<meta>` or `<link>` outside `<defs>` fails the build. The Markupress shell and home layout declare `<title>{$title}</title>` and `<link rel="icon" from:href="$favicon">`, which a null favicon leaves out, so a replacement layout declares the icon it wants.
+
 Markupress gives the layout its loader data, so the layout has no `default.server.ts` of its own. A folder's `_layout.html` inside a version's content wraps that folder's pages inside the site layout, as in any HTMLKit site. Its `_layout.server.ts` loader reads all of the data above from `parent.markupress`:
 
 ```ts
@@ -446,6 +450,26 @@ import { defineConfig } from '@nextwebwg/htmlkit';
 export default defineConfig({ linkCheck: 'warn' });
 ``` The programmatic `buildSite`, `devSite` and `previewSite` APIs, and the `markupress()` plugin, take the same options plus `root`, `host` and `port`; `siteOptions` returns the HTMLKit options they use.
 
+### Content Security Policy
+
+HTMLKit gives every page a Content Security Policy it generates from what the site declares: `script-src` with `'self'` for HTMLKit's modules and the controllers, the origin of each declared script, and a hash of each inline head script, plus `object-src 'none'` and `base-uri 'none'`. Built pages carry it as a `<meta http-equiv="Content-Security-Policy">`, and `dev` and `preview` also send it as a header. The Markupress theme's script, which applies the saved theme before first paint, is a head script, so its hash is in the policy. The shell, code and outline controllers are modules from the site, so they run under it unchanged.
+
+A script the site adds from another origin, such as analytics, needs that origin. Load it from `app/head.js`, which HTMLKit inlines and hashes too, and add its origin with HTMLKit's `csp` option in `htmlkit.config.ts`. A directive such as `connect-src`, which the generated policy leaves open, needs no entry:
+
+```js
+// app/head.js
+document.head.append(Object.assign(document.createElement('script'), { src: 'https://analytics.example/script.js', defer: true }));
+```
+
+```ts
+// htmlkit.config.ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+
+export default defineConfig({ csp: { 'script-src': ['https://analytics.example'] } });
+```
+
+The added sources join the generated ones. `reportOnly: true` in the `csp` option sends `Content-Security-Policy-Report-Only` instead, which only a header can, so built pages then carry no policy; `csp: false` turns it off. `dev` reports each violation in the terminal and the browser console.
+
 ## Verification and contribution
 
 Build and try the source with pnpm through Corepack. The example site serves at `/manual/`; open a version-specific link directly to see a reload keep the selected version:
@@ -465,7 +489,7 @@ corepack pnpm exec playwright install chromium
 MARKUPRESS_BROWSER_TEST=1 corepack pnpm exec vitest run tests/package.test.ts --maxWorkers=1
 ```
 
-The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers, keyboard version selection, reloads, mobile navigation, the home page and an axe accessibility audit. CI runs that browser proof separately.
+The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers under HTMLKit's generated Content Security Policy, failing on any violation, keyboard version selection, reloads, mobile navigation, the home page and an axe accessibility audit. CI runs that browser proof separately.
 
 Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is the contributor contract; [threadlabs.config.json](threadlabs.config.json) records ownership. The [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md) defines product boundaries. Publishing uses the protected GitHub release workflow and npm environment.
 

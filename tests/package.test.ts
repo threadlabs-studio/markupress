@@ -37,7 +37,9 @@ beforeAll(() => {
   write('docs/01.guide/05.outline.md', '# Outline\n\n' + ['First', 'Second', 'Third'].map(name => `## ${name}\n\n${'Paragraph text that fills the screen. '.repeat(80)}\n\n`).join(''));
   run(process.execPath, [cli, 'snapshot', 'v1']);
   write('components/value.ts', 'export const increment = 2;');
-  write('docs/01.guide/03.new.md', '# New document');
+  // A stylesheet link in Markdown becomes an @import in the page's own <style>.
+  write('components/page.css', 'h1 { letter-spacing: 2px; }');
+  write('docs/01.guide/03.new.md', '<link rel="stylesheet" href="../../components/page.css">\n\n# New document');
   // The current version's home is a home page; v1 keeps the plain one.
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
@@ -55,7 +57,9 @@ afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
-  expect(html).toContain('<title>Installation</title>'); expect(html).toContain('id="install-1"');
+  expect(html).toContain('<title data-component-head="">Installation</title>'); expect(html).toContain('id="install-1"');
+  // HTMLKit's generated policy comes before any script, and allows the theme script by its hash.
+  expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
   expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
@@ -66,7 +70,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
   expect(html).not.toContain('Last updated');
-  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title>Installation</title>');
+  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
     .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
@@ -90,10 +94,18 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...JSON.parse(readFileSync(join(workspace, 'markupress.config.json'), 'utf8')), root: workspace, port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-      // Records the theme in the first frame that shows the theme button, and any transition the button runs while loading.
+      // Every Content Security Policy violation fails the proof.
+      const violations: string[] = [];
+      await context.exposeFunction('reportViolation', (violation: string) => violations.push(violation));
+      // Records the theme in the first frame that shows the theme button, any transition the button runs while loading,
+      // and the pending bar each time a page renders in place.
       await context.addInitScript(() => {
-        const load = { theme: undefined as string | undefined, transitions: [] as string[] };
+        const load = { theme: undefined as string | undefined, transitions: [] as string[], pending: [] as string[] };
         Object.assign(window, { load });
+        document.addEventListener('securitypolicyviolation', event => (window as unknown as { reportViolation(text: string): void })
+          .reportViolation(`${location.pathname}: ${event.violatedDirective} ${event.blockedURI || 'inline'} ${event.sample}`));
+        new MutationObserver(() => { if (document.documentElement.hasAttribute('data-hk-navigating')) load.pending.push(getComputedStyle(document.body, '::before').blockSize); })
+          .observe(document, { subtree: true, attributeFilter: ['data-hk-navigating'] });
         const record = () => {
           if (document.querySelector('[data-action="theme"]')) load.theme = document.documentElement.dataset.theme;
           else requestAnimationFrame(record);
@@ -127,7 +139,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       // A saved theme is applied before first paint, so nothing fades out of the default theme.
-      expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [] });
+      expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [], pending: [] });
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
@@ -142,8 +154,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
       await page.goto(server.url + 'v/current/guide/new/');
+      // The page's imported stylesheet styles its own heading.
+      expect(await page.locator('main h1').evaluate(element => getComputedStyle(element).letterSpacing)).toBe('2px');
       await page.locator('[data-component="hk-pager"] a[rel="next"]').click();
       await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
+      // The page rendered in place, and the theme drew its pending bar while it did.
+      expect(await page.evaluate(() => (window as unknown as { load: { pending: string[] } }).load.pending)).toContain('3px');
       // Code blocks: build-time highlighted lines and numbers, and keyboard-operable copy and wrap buttons.
       const example = page.locator('figure.code').filter({ hasText: 'example.ts' });
       expect(await example.locator('.line.highlighted').allTextContents()).toEqual(['const first = 1;', 'const second = {braces};']);
@@ -282,7 +298,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The home page fits a narrow screen too.
       await page.goto(server.url + 'v/current/');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      expect(errors).toEqual([]); await context.close(); await server.close(); server = undefined;
+      expect(errors).toEqual([]); expect(violations).toEqual([]); await context.close(); await server.close(); server = undefined;
     }
   } finally { await server?.close(); await browser.close(); }
 }, 90_000);

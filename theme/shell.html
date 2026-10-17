@@ -2,7 +2,10 @@
 <link rel="component" href="./chrome.html">
 <link rel="component" href="./outline.html">
 <template component="markupress-shell" controller="../dist/controllers/shell.js">
-<title>{$title}</title><link $if="$favicon" rel="icon" from:href="$favicon"><defs>
+<defs>
+<title>{$title}</title>
+<!-- A null favicon leaves the link out. -->
+<link rel="icon" from:href="$favicon">
 <prop name="title" type="string" required>Site title</prop>
 <prop name="home" type="string" required>Home URL</prop>
 <prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>

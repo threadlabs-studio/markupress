@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.57, and its Looma peer range is `^0.29.12`, the Looma release built with HTML Next 1.0.0-alpha.57.
+
+Breaking changes from 0.3.0:
+
+- A site's own Looma dependency moves to `^0.29.12`, which HTML Next 1.0.0-alpha.57 requires exactly.
+- Markupress follows HTMLKit's head model: head content is HTML Next head declarations in a component's `<defs>`. Each Markdown page writes its generated `<title>`, description, Open Graph and canonical entries, its `hk:` settings and any `<title>`, `<meta>` or `<link>` its Markdown holds into its page component's `<defs>`; `hk:page` stays at the top of the resource. A rendered title, meta or link carries `data-component-head=""`.
+- The site root serves the default version's pages as their canonical copies. Its `/v/<default>/` mount is an HTMLKit alias, so each of its pages has a `<link rel="canonical">` to the root copy, unless its front matter sets `head.canonical`, and `sitemap.xml` lists only the root copies. A version whose directory an earlier version already serves is an alias of it too.
+- A `<link rel="stylesheet">` in Markdown becomes an `@import` in the page component's `<style>`, so it styles that page as its own CSS. Any other `<link>` that is not a head declaration fails with HTML Next's `HC025`, naming the Markdown file.
+- An explicit `<title>` in Markdown takes the place of the generated title, since a definition declares one title.
+- Every page carries HTMLKit's generated Content Security Policy: `script-src 'self'` with the hash of each inline head script, `object-src 'none'` and `base-uri 'none'`. The theme script that applies the saved theme before first paint is hashed, and the shell, code and outline controllers run under the policy. A site script from another origin needs the HTMLKit `csp` option.
+
+To migrate a site:
+
+1. A site layout, `app/layouts/default.html` or `app/layouts/home.html`, moves its `<title>`, `<meta>` and `<link>` elements into its `<defs>`. Write a bound title as `<title>{$title}</title>`, and bind a link's `from:href`, which leaves the link out when it is null, in place of `$if`. A head element outside `<defs>` fails the build. Head entries of Looma components reached through `@threadlabs/looma/...` are left out, so a layout declares the icon it wants, as the Markupress shell does.
+2. A site script from another origin, such as analytics, adds its origin to the policy with HTMLKit's `csp` option in `htmlkit.config.ts`, such as `csp: { 'script-src': ['https://analytics.example'] }`, and loads from `app/head.js`, which HTMLKit hashes. `csp: false` turns the policy off.
+
+Added:
+
+- While HTMLKit renders a page in place, when `<html>` has `data-hk-navigating`, the theme draws an accent bar along the top of the window, after a moment so a quick navigation never shows it, and without its motion for readers who prefer reduced motion.
+- The README documents the Content Security Policy, the `csp` option for a site's own scripts, and head declarations in a site layout.
+- The browser proof runs every page in development and production under the generated policy, and fails on any violation.
+
 ## 0.3.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.54, and its Looma peer range is `^0.29.1`, the Looma release built with HTML Next 1.0.0-alpha.54.

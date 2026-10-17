@@ -22,7 +22,7 @@ it('adds Markdown pages to any HTMLKit site without Markupress versions or theme
       expect(application.routes.map(route => route.pattern).sort()).toEqual(['/', '/about/', '/guide/']);
       expect((await application.render('/')).html).toContain('href="/guide/"');
       const guide = (await application.render('/guide/')).html;
-      expect(guide).toContain('<title>The guide</title>');
+      expect(guide).toContain('<title data-component-head="">The guide</title>');
       expect(guide).toContain('Plain {braces} stay text.');
       // Highlighted code renders its braces as text rather than binding {$count}.
       expect(guide.replace(/<[^>]*>/g, '')).toContain('&lt;output&gt;{$count}&lt;/output&gt;');

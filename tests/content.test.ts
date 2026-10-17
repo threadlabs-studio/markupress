@@ -31,7 +31,8 @@ Text {notAnExpression}.
   expect(compiled.resource).toContain('<meta name="hk:label" content="Products">');
   expect(compiled.resource).toContain('<title>Products</title>');
   expect(compiled.resource).toContain('<meta name="description" content="Manage products.">');
-  expect(compiled.resource.indexOf('<title>')).toBeGreaterThan(compiled.resource.indexOf('<template component="page-products">'));
+  // Head content and HTMLKit settings are the page component's head declarations, in its <defs>; hk:page names the component.
+  expect(compiled.resource).toMatch(/^<meta name="hk:page" content="page-products">.*<template component="page-products"[^>]*><defs><title>Products<\/title>.*<meta name="hk:label" content="Products">.*<\/defs><article/s);
   expect(compiled.resource).toContain('id="products-1"');
   expect(compiled.resource).toContain('href="file:///project/docs/counter.html"');
   expect(compiled.resource).toContain('<demo-counter>');
@@ -261,6 +262,15 @@ it('imports given stylesheets into the page component itself', async () => {
   const compiled = await compileMarkdown('# Styled', { file: '/docs/index.md', pageName: 'page-index', styles: ['/theme/prose.css'] });
   expect(compiled.resource).toMatch(/<template component="page-index">.*<style>@import "file:\/\/\/theme\/prose\.css";<\/style><\/template>/s);
   expect((await compileMarkdown('# Plain', { file: '/docs/index.md', pageName: 'page-index' })).resource).not.toContain('<style>');
+});
+
+it('lifts authored head elements into the page\'s <defs>, and imports an authored stylesheet in its <style>', async () => {
+  const compiled = await compileMarkdown('<title>Own title</title>\n<meta name="keywords" content="docs">\n<link rel="stylesheet" href="./extra.css" media="print">\n<link rel="stylesheet" href="https://cdn.example/x.css">\n\n# Styled',
+    { file: '/docs/guide/page.md', pageName: 'page-styled', styles: ['/theme/prose.css'] });
+  // An authored title takes the generated title's place, since a definition declares one.
+  expect(compiled.resource).toMatch(/<defs><meta name="hk:label" content="Styled">.*<title>Own title<\/title><meta name="keywords" content="docs"><\/defs>/s);
+  expect(compiled.resource).not.toContain('rel="stylesheet"');
+  expect(compiled.resource).toContain('<style>@import "file:///theme/prose.css";@import "file:///docs/guide/extra.css" print;@import "https://cdn.example/x.css";</style>');
 });
 
 const lines = (resource: string) => [...resource.matchAll(/<span class="line( highlighted)?">(.*?)<\/span>(?=\n|<\/code>)/g)]

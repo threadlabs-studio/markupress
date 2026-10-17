@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { linkDependencies } from './fixture.js';
 import { mkdtemp, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,6 +8,7 @@ import { afterEach, expect, it } from 'vitest';
 import { lastUpdated } from '../src/git.js';
 import { markdown } from '../src/markdown.js';
 import { buildSite, siteOptions } from '../src/site.js';
+import { themeScript } from '../src/theme.js';
 import { createApplication } from '@nextwebwg/htmlkit';
 
 const roots: string[] = [];
@@ -53,7 +55,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   await write(root, 'docs/01.guide/03.hidden.md', '---\nnavigation: hidden\n---\n# Hidden document');
   const result = await buildSite({ root, base: '/manual/' });
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
-  expect(page).toContain('<title>Installation</title>');
+  expect(page).toContain('<title data-component-head="">Installation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
   expect(page).toMatch(/<nav aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
@@ -111,7 +113,7 @@ it('renders front matter head metadata, a named HTMLKit layout, and no layout', 
   try {
     const seo = await application.render('/seo/');
     const head = /<head>.*<\/head>/s.exec(seo.html)![0];
-    for (const element of ['<meta name="description" content="Search engines.">', '<meta property="og:title" content="SEO">', '<link rel="canonical" href="https://example.com/seo/">']) expect(head).toContain(element);
+    for (const element of ['<meta name="description" content="Search engines." data-component-head="">', '<meta property="og:title" content="SEO" data-component-head="">', '<link rel="canonical" href="https://example.com/seo/" data-component-head="">']) expect(head).toContain(element);
     const bare = (await application.render('/bare/')).html;
     expect(bare).toContain('Bare');
     expect(bare).not.toContain('data-component="markupress-shell"');
@@ -187,7 +189,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
   const application = await createApplication(siteOptions({ root, base: '/docs/', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
-    expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg">');
+    expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg" data-component-head="">');
     expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
     // One version shows no badge.
     expect(html).not.toContain('data-component="ui-badge"');
@@ -213,7 +215,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
     versions: [{ id: 'current', label: 'Next', directory: 'docs' }, { id: 'v1', label: 'Version 1', directory: 'docs' }] }));
   try {
     const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->/g, '');
-    expect(html).toContain('<link rel="icon" href="/icon.png">');
+    expect(html).toContain('<link rel="icon" href="/icon.png" data-component-head="">');
     expect(html).toMatch(/<img class="logo logo-light"[^>]* src="\/mark.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/mark.svg"/);
     expect(html).toMatch(/data-component="ui-badge"[^>]*>.*Version 1/s);
     // No folder holds pages and no links are configured, so there is no top navigation.
@@ -243,7 +245,7 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
     const missing = await application.render('/nowhere/');
     expect(missing.status).toBe(404);
     expect(missing.html).toContain('data-component="markupress-shell"');
-    expect(missing.html).toContain('<title>Page not found</title>');
+    expect(missing.html).toContain('<title data-component-head="">Page not found</title>');
     expect(missing.html).toContain('href="/v/current/guide/install/"');
     // The not-found page is no page of its version, so it stays out of navigation and /v/current/404/ is missing too.
     expect(application.routes.map(route => route.pattern)).not.toContain('/v/current/404/');
@@ -289,6 +291,18 @@ it('composes the site\'s htmlkit.config plugins and options with Markupress', as
   expect((await buildSite({ root, base: '/docs/' })).routes).toContain('/docs/guide/install/');
   await write(root, 'htmlkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
   await expect(buildSite({ root })).rejects.toThrow('remove markupress() from its plugins');
+}, 60_000);
+
+it('carries HTMLKit\'s generated Content Security Policy, which hashes the theme script and takes a site\'s csp sources', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const hash = (script: string) => `'sha256-${createHash('sha256').update(script).digest('base64')}'`;
+  const policy = async () => /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(await readFile(join((await buildSite({ root })).outDir, 'index.html'), 'utf8'))?.[1];
+  expect(await policy()).toBe(`script-src 'self' ${hash(themeScript)}; object-src 'none'; base-uri 'none'`);
+  // An analytics snippet: app/head.js loads it, and the site's csp option allows its origin.
+  const snippet = "document.head.append(Object.assign(document.createElement('script'), { src: 'https://analytics.example/script.js', defer: true }));\n";
+  await write(root, 'app/head.js', snippet);
+  await write(root, 'htmlkit.config.js', "export default { csp: { 'script-src': ['https://analytics.example'] } };");
+  expect(await policy()).toBe(`script-src 'self' ${hash(themeScript)} ${hash(snippet)} https://analytics.example; object-src 'none'; base-uri 'none'`);
 }, 60_000);
 
 it('renders route groups, whose navigation items carry a group, in the shell', async () => {
@@ -404,7 +418,11 @@ it('resolves root-relative Markdown links within the site under its base, like t
 it('passes origin and robots to HTMLKit, which writes sitemap.xml and robots.txt', async () => {
   const root = await fixture(); await linkDependencies(root);
   const result = await buildSite({ root, base: '/docs/', origin: 'https://example.com', robots: true });
-  expect(await readFile(join(result.outDir, 'sitemap.xml'), 'utf8')).toContain('<loc>https://example.com/docs/v/current/guide/install/</loc>');
+  // The root serves the default version; its /v/<id>/ copy is an alias, out of the sitemap, that names the root page as canonical.
+  const sitemap = await readFile(join(result.outDir, 'sitemap.xml'), 'utf8');
+  expect(sitemap).toContain('<loc>https://example.com/docs/guide/install/</loc>'); expect(sitemap).not.toContain('/v/current/');
+  expect(await readFile(join(result.outDir, 'v/current/guide/install/index.html'), 'utf8')).toContain('<link rel="canonical" href="https://example.com/docs/guide/install/">');
+  expect(await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8')).not.toContain('rel="canonical"');
   expect(await readFile(join(result.outDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://example.com/docs/sitemap.xml');
 }, 60_000);
 
