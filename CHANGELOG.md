@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.0
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.58, and its Looma peer is exactly 0.30.0, the Looma release built with HTML Next 1.0.0-alpha.58.
+
+Breaking changes from 0.4.0:
+
+- A site's own Looma dependency moves to exactly 0.30.0, which pins HTML Next 1.0.0-alpha.58.
+- HTML Next 1.0.0-alpha.58 reads a slot name as a literal identifier, so a site's own components and layouts name each slot without hyphens and without `from:name`. A scoped slot that passes props declares it with `<slot>` in the component's `<defs>`. `componentRegistry.update` takes the place of `updateComponentProps`.
+- Looma 0.30.0 changes components a site's Markdown or layouts may use: `ui-combobox` renders its declared `item` and `option` slots, the `ui-form-field` slot `label-action` is `labelAction`, and `ui-switcher`, `ui-reel` and `ui-cover` lay out from their own container.
+- The Markupress shell, home layout and theme render as before.
+
 ## 0.4.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.57, and its Looma peer is exactly 0.29.12, the Looma release built with HTML Next 1.0.0-alpha.57, so an install never pairs it with a Looma built on another HTML Next.
