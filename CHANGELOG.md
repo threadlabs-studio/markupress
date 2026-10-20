@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.2
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.65, and its Looma peer is exactly 0.30.5, the Looma release built with HTML Next 1.0.0-alpha.65. A site's own Looma dependency moves to exactly 0.30.5.
+- Server output from HTML Next 1.0.0-alpha.65 names each carrier's component with `<template carrier="<tag>">`, one per component on a root, in place of `<?carrier?>`. A site's own component with content no slot renders writes the new form, which the same build hydrates, and `carrier` on a `<template>` inside a component definition is reserved (`HT027`). The pages the Markupress shell, home layout and theme render are the same HTML as in 0.6.1.
+- In a site's own components, a component whose root is the component it forwards a slot to hydrates in place, and a node forwarded into a closed slot is written once.
+
 ## 0.6.1
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.64, and its Looma peer is exactly 0.30.4, the Looma release built with HTML Next 1.0.0-alpha.64. A site's own Looma dependency moves to exactly 0.30.4.
