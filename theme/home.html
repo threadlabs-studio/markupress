@@ -8,8 +8,8 @@
 <link rel="icon" from:href="$favicon">
 <prop name="title" type="string" required>Site title</prop>
 <prop name="home" type="string" required>Home URL</prop>
-<prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>
-<prop name="favicon" type="string" nullable>Site icon URL</prop>
+<prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
+<prop name="favicon" type="string">Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>

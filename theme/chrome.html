@@ -4,7 +4,7 @@
 <defs>
 <prop name="title" type="string" required>Site title</prop>
 <prop name="home" type="string" required>Home URL</prop>
-<prop name="logo" type="object({ light: string, dark: string })" nullable>Logo images for the light and dark themes</prop>
+<prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
 <prop name="dark" type="boolean" default="false">Whether the dark theme is on, which the layout's controller sets</prop></defs>

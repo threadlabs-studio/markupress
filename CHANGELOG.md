@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.63, and its Looma peer is exactly 0.30.3, the Looma release built with HTML Next 1.0.0-alpha.63.
+- The shell, home layout and header declare `logo`, `favicon`, `previous` and `next` as props with no default, which read null until a site supplies them. A site with no logo shows its title alone, one with no favicon has no icon link, and the first and last pages show only the pager link they have.
+
+Breaking changes from 0.5.0:
+
+- A site's own Looma dependency moves to exactly 0.30.3, which pins HTML Next 1.0.0-alpha.63. Looma 0.30.3 types an optional field as `?: T | null`, so a site's TypeScript that reads a Looma type handles null there.
+- A `nullable` attribute on a `<prop>`, `<state>` or field in a site's own components and layouts fails with HTML Next's `HC013`. Delete it: a prop with a `default`, or a state with a `value`, reads as its type and null clears it back to that value, and one with neither reads null until it is given one. A null write to a state with a `value` reverts it to that value.
+- `$else` after a `$if` fails with `HT031`; a site writes the branches as `$when` and `$else` inside `$match`.
+- A bound slot prop is checked in full against its declared type, so a value with an undeclared field, a missing `required` field or a field of the wrong type reads as absent and warns `HR007`.
+
+Added:
+
+- A test renders the shell with no logo or favicon, and the first and last pages with only their next and previous links.
+
 ## 0.5.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.58, and its Looma peer is exactly 0.30.0, the Looma release built with HTML Next 1.0.0-alpha.58.
