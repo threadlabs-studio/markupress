@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.3
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.66, and its Looma peer is exactly 0.30.6, the Looma release built with HTML Next 1.0.0-alpha.66. A site's own Looma dependency moves to exactly 0.30.6.
+- Following a link to another version whose page defines one of the current page's tags differently, such as its own `<demo-counter>`, loads that page as a document with no console error. It opens at the page's top or its `#fragment`, and takes the place of the history entry the link made, so back returns to the page the link was on.
+- The browser proof follows a version link to a page that defines its own component, and fails on any console error or warning during it. It checks that the page opens at its top and that back and forward move between the two pages.
+
 ## 0.6.2
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.65, and its Looma peer is exactly 0.30.5, the Looma release built with HTML Next 1.0.0-alpha.65. A site's own Looma dependency moves to exactly 0.30.5.
