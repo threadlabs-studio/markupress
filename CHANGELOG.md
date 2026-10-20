@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.1
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.64, and its Looma peer is exactly 0.30.4, the Looma release built with HTML Next 1.0.0-alpha.64. A site's own Looma dependency moves to exactly 0.30.4.
+- In a site's own components, a bound slot prop that is null or that its declared type rejects takes the prop's `default`, and a component that forwards its slot to a child's slot of the same name renders the content once. Toggling a named slot with fallback is faster in compiled output.
+
 ## 0.6.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.63, and its Looma peer is exactly 0.30.3, the Looma release built with HTML Next 1.0.0-alpha.63.
