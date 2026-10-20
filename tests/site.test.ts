@@ -129,7 +129,7 @@ it('replaces the shell with the site\'s app/layouts/default.html, which receives
   await write(root, 'app/layouts/default.html', `<template component="site-layout"><defs>
 <prop name="navigation" type="list(object({ href: string, label: string, current: string, ... }))" required>Links</prop>
 <prop name="crumbs" type="list(object({ href: string, label: string, ... }))" required>Trail</prop>
-<prop name="previous" type="object({ href: string, label: string, ... })" nullable>Before</prop>
+<prop name="previous" type="object({ href: string, label: string, ... })">Before</prop>
 <prop name="outline" type="list(object({ href: string, label: string, depth: number, ... }))" required>Headings</prop>
 <prop name="page" type="object({ title: string, editLink?: string, ... })" required>Front matter</prop></defs>
 <div class="layout"><header class="site">{$page.title}</header><nav><a $each="item of $navigation" from:href="$item.href">{$item.label}</a></nav>
@@ -205,6 +205,23 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
     expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation">/);
     expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
+  } finally { await application.close(); }
+}, 30_000);
+
+it('renders no logo, icon or missing pager link when the shell receives null for them', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const first = (await application.render('/')).html.replace(/<!--[^>]*-->/g, '');
+    const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
+    for (const html of [first, last]) {
+      expect(html).not.toContain('rel="icon"');
+      expect(html).toMatch(/<a class="brand" href="\/">Documentation<\/a>/);
+    }
+    expect(first).not.toContain('rel="prev"');
+    expect(first).toMatch(/<a [^>]*rel="next"/);
+    expect(last).toMatch(/<a [^>]*rel="prev"/);
+    expect(last).not.toContain('rel="next"');
   } finally { await application.close(); }
 }, 30_000);
 
