@@ -157,7 +157,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
       await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      try { await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page'); }
+      catch (error) {
+        const state = await page.evaluate(() => ({ url: location.href, h1: document.querySelector('h1')?.textContent, current: document.querySelector('nav.versions [aria-current="page"]')?.textContent,
+          entries: (window as any).navigation?.entries().map((entry: any) => [entry.index, entry.url, entry.sameDocument]), currentIndex: (window as any).navigation?.currentEntry?.index,
+          type: (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type, navigating: document.documentElement.hasAttribute('data-hk-navigating'), age: performance.now() }));
+        throw new Error(`DIAG ${mode} ${JSON.stringify({ state, logged, errors })}`, { cause: error });
+      }
       await page.waitForLoadState(); expect(logged).toEqual([]);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
