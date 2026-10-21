@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - Markupress's Looma peer is exactly 0.30.8, the Looma release whose Looma Markdown has footnotes. A site's own Looma dependency moves to exactly 0.30.8.
 - `Text[^1]` and a `[^1]: The note.` definition render a footnote: a numbered superscript link to the note, and GFM's notes section at the end of the page, with a link back from each note to its reference. The theme sets the notes below a rule, in smaller type, and keeps their "Footnotes" heading for assistive technology only.
 - The browser proof follows a footnote reference to its note and audits the page with axe.
+- `markupress.config.ts`, or `markupress.config.js`, configures a site in place of `markupress.config.json`, which stays accepted. `defineConfig` from `markupress` types its options. Vite loads a TypeScript or JavaScript configuration, as HTMLKit loads `htmlkit.config.ts`, so it imports its own files by their `.js` names. A site with more than one of the three files fails with their names. `loadConfig(root)` returns the options the `markupress` command reads.
+- The installed consumer test configures its site with `markupress.config.ts` and type-checks it against the packed package.
 
 ## 0.6.4
 

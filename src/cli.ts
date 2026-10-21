@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { loadConfig } from './config.js';
 import { buildSite, devSite, previewSite, type MarkupressOptions } from './site.js';
 import { snapshotVersion } from './versions.js';
 
@@ -9,11 +9,9 @@ async function main() {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
     root: { type: 'string' }, base: { type: 'string' }, port: { type: 'string' }, help: { type: 'boolean', short: 'h' },
   } });
-  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000]\n       markupress snapshot <version-id> [--root directory]\nConfiguration: markupress.config.json, and htmlkit.config.ts for HTMLKit options and plugins\n'); return; }
+  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000]\n       markupress snapshot <version-id> [--root directory]\nConfiguration: markupress.config.ts, .js or .json, and htmlkit.config.ts for HTMLKit options and plugins\n'); return; }
   const root = resolve(values.root ?? process.cwd());
-  let config: MarkupressOptions = {};
-  try { config = JSON.parse(await readFile(resolve(root, 'markupress.config.json'), 'utf8')) as MarkupressOptions; }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  const config = await loadConfig(root);
   const options: MarkupressOptions = { ...config, root, ...(values.base === undefined ? {} : { base: values.base }),
     ...(values.port === undefined ? {} : { port: Number(values.port) }) };
   const command = positionals[0] ?? 'dev';
