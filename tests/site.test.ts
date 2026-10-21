@@ -450,3 +450,11 @@ it('shows the version links only when a site has several versions', async () => 
   application = await createApplication(siteOptions({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] }));
   try { expect((await application.render('/')).html).toContain('aria-label="Documentation versions"'); } finally { await application.close(); }
 }, 30_000);
+
+it('resolves a Markdown page\'s @/ component link from the project root, at the root and under /v/<id>/', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'app/components/root-card.html', '<template component="root-card"><p>Card from the root</p></template>');
+  await write(root, 'docs/01.guide/03.card.md', '# Card\n\n<link rel="component" href="@/app/components/root-card.html">\n\n<root-card></root-card>');
+  const result = await buildSite({ root });
+  for (const page of ['guide/card/index.html', 'v/current/guide/card/index.html']) expect(await readFile(join(result.outDir, page), 'utf8')).toContain('Card from the root');
+}, 60_000);
