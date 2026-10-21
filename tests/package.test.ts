@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -81,6 +81,32 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
     .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
 });
+
+it('creates a starter site from the packed create-markupress, at the shared version, that builds with the installed package', () => {
+  const created = mkdtempSync(join(tmpdir(), 'markupress-create-'));
+  try {
+    const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string; peerDependencies: Record<string, string> };
+    const creator = join(root, 'packages/create-markupress');
+    expect((JSON.parse(readFileSync(join(creator, 'package.json'), 'utf8')) as { version: string }).version).toBe(own.version);
+    const packed = execFileSync('npm', ['pack', '--pack-destination', created], { cwd: creator, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
+    execFileSync('tar', ['-xzf', join(created, packed), '-C', created], { shell });
+    const create = (folder: string) => execFileSync(process.execPath, [join(created, 'package/index.js'), folder], { cwd: created, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    expect(create('my-docs')).toContain('npm run dev');
+    const site = join(created, 'my-docs');
+    const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
+    // The starter depends on this release of Markupress and on the HTML Next and Looma it pins.
+    expect(starter.name).toBe('my-docs');
+    expect(starter.dependencies).toEqual({ ...own.peerDependencies, markupress: `^${own.version}` });
+    expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
+    // A folder with files is refused.
+    expect(() => create('my-docs')).toThrow(/already has files/);
+    symlinkSync(join(workspace, 'node_modules'), join(site, 'node_modules'), shell ? 'junction' : 'dir');
+    execFileSync(process.execPath, [cli, 'build'], { cwd: site, encoding: 'utf8', timeout: 120_000, stdio: ['ignore', 'pipe', 'pipe'] });
+    expect(readFileSync(join(site, 'site/index.html'), 'utf8')).toContain('My project');
+    expect(readFileSync(join(site, 'site/guide/getting-started/index.html'), 'utf8')).toContain('Getting started');
+    expect(readFileSync(join(site, 'site/guide/writing/index.html'), 'utf8')).toContain('data-component="demo-counter"');
+  } finally { rmSync(created, { recursive: true, force: true }); }
+}, 150_000);
 
 it('accepts maintained TypeScript controllers and rejects an invalid lifecycle callback', () => {
   const compiler = join(root, 'node_modules/typescript/bin/tsc');

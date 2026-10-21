@@ -13,7 +13,13 @@ Build a versioned Markdown documentation site with native HTML Next components, 
 
 ## Get started
 
-Use Node 22.22.2 or later in Node 22, or Node 24.15 or later in Node 24:
+Use Node 22.22.2 or later in Node 22, or Node 24.15 or later in Node 24. `npm create markupress` starts a site:
+
+```sh
+npm create markupress@latest docs
+```
+
+Or add Markupress to a project:
 
 ```sh
 npm install markupress

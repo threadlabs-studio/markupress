@@ -1,0 +1,15 @@
+{
+  "name": "markupress-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "markupress dev",
+    "build": "markupress build",
+    "preview": "markupress preview"
+  },
+  "dependencies": {
+    "@nextwebwg/html-next": "1.0.0-alpha.67",
+    "@threadlabs/looma": "0.30.8",
+    "markupress": "^0.6.4"
+  }
+}

@@ -36,6 +36,10 @@
     },
     {
       "mode": "local",
+      "path": "CHANGELOG.md"
+    },
+    {
+      "mode": "local",
       "path": "README.md"
     },
     {
@@ -73,10 +77,6 @@
     {
       "mode": "managed",
       "path": ".threadlabs.lock.json"
-    },
-    {
-      "mode": "managed",
-      "path": "CHANGELOG.md"
     },
     {
       "mode": "managed",
