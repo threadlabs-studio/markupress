@@ -88,7 +88,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | `footer` | Missing | No per-page footer toggle. |
 | `pageClass` | Missing | |
 | `isHome` | Not applicable | The home layout is chosen by `layout: home`. |
-| `prev`, `next` | Missing | The pager follows navigation order; plan row N5 says front matter can drop it, which is not built. |
+| `prev`, `next` | Has | `previous` and `next` front matter drop, relabel or retarget each pager link: `tests/site.test.ts` ("drops, relabels and retargets the pager links"). |
 | Accessing frontmatter in pages | Partial | Layouts receive `page` with the front matter: `website/docs/01.guide/06.theme/03.layouts.md`. A Markdown page's own content has no binding to it. |
 
 ## Routing
@@ -279,7 +279,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
 | From navigation order | Has | HTMLKit's `<hk-pager>`: browser proof. |
-| Front matter `prev`, `next`, `false` | Missing | Plan row N5 keeps the pager and says front matter can drop it. |
+| Front matter `prev`, `next`, `false` | Has | `previous` and `next`, as `false` or `{ label, href }`. |
 
 ## Edit link
 
