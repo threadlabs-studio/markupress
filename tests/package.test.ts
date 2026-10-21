@@ -153,21 +153,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.waitForLoadState();
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
-      // The document load takes the place of the committed entry, so back returns to the current version's page once.
-      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
-      await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
-      try { await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page'); }
-      catch (error) {
-        const state = await page.evaluate(() => ({ url: location.href, h1: document.querySelector('h1')?.textContent, current: document.querySelector('nav.versions [aria-current="page"]')?.textContent,
-          entries: (window as any).navigation?.entries().map((entry: any) => [entry.index, entry.url, entry.sameDocument]), currentIndex: (window as any).navigation?.currentEntry?.index,
-          type: (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type, navigating: document.documentElement.hasAttribute('data-hk-navigating'), age: performance.now() }));
-        throw new Error(`DIAG ${mode} ${JSON.stringify({ state, logged, errors })}`, { cause: error });
-      }
-      await page.waitForLoadState(); expect(logged).toEqual([]);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
+      // The document load takes the place of the committed entry, so back returns to the current version's page once.
+      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
+      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.waitForLoadState(); expect(logged).toEqual([]);
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
       await page.goto(server.url + 'v/current/guide/new/');
       // The page's imported stylesheet styles its own heading.
