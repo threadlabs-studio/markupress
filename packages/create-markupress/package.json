@@ -1,0 +1,27 @@
+{
+  "name": "create-markupress",
+  "version": "0.6.4",
+  "description": "Start a Markupress documentation site: npm create markupress@latest docs.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-markupress": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "template"
+  ],
+  "engines": {
+    "node": ">=22.22.2 <23 || >=24.15 <25"
+  },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/threadlabs-studio/markupress.git",
+    "directory": "packages/create-markupress"
+  },
+  "homepage": "https://threadlabs-studio.github.io/markupress/guide/getting-started/",
+  "bugs": {
+    "url": "https://github.com/threadlabs-studio/markupress/issues"
+  }
+}

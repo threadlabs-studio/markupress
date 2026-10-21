@@ -108,7 +108,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
-| D1 | `npm create markupress@latest`: a starter site with a home page, guide pages, a component and the config | Missing | **In** |
+| D1 | `npm create markupress@latest`: a starter site with a home page, guide pages, a component and the config | Done (`packages/create-markupress`) | **In** |
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Done | **In** |
 | D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
@@ -121,7 +121,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | # | Page | Today | 1.0 |
 |---|---|---|---|
 | G1 | A Markupress documentation site, built with Markupress and deployed by CI (dogfood). `examples/site` becomes a test fixture, built in CI. | Done (`website/`, built in CI with `examples/site`, deployed to GitHub Pages) | **In** |
-| G2 | Getting started: `create`, project structure, dev, build, preview | Partial (in the site; no `create`) | **In** |
+| G2 | Getting started: `create`, project structure, dev, build, preview | Done | **In** |
 | G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | Done | **In** |
 | G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done | **In** |
 | G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done | **In** |

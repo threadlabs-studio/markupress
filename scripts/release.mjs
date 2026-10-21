@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, encoding: 'utf8', shell: false });
@@ -38,6 +38,19 @@ for (const candidate of packages(root)) {
     const actual = JSON.parse(observed.stdout);
     if (actual !== expected) throw new Error('Immutable registry conflict for ' + id);
   } else if (missing(observed)) {
+    // Trusted publishing configures an existing package, so a name npm has never seen is published by hand first.
+    const known = run('npm', ['view', candidate.manifest.name, 'name', '--json'], candidate.root);
+    if (missing(known)) {
+      // The generated release workflow runs in the npm environment.
+      const workflow = (process.env.GITHUB_WORKFLOW_REF ?? '').split('@')[0].split('/').pop() || 'release.yml';
+      const repository = process.env.GITHUB_REPOSITORY ?? 'this repository';
+      console.log('Skipping ' + id + ': ' + candidate.manifest.name + ' is not on npm yet. Publish it once by hand from a clean checkout of '
+        + (process.env.GITHUB_SHA ?? 'this commit') + ' (npm publish --access public in ' + (relative(root, candidate.root) || '.')
+        + '), then add ' + repository + ' with workflow ' + workflow + ' and environment npm as its trusted publisher on npmjs.com. '
+        + 'The next release run publishes it here.');
+      continue;
+    }
+    if (known.status !== 0) throw new Error('Registry state is unknown for ' + candidate.manifest.name + ': ' + known.stderr);
     const published = run(
       'npm',
       ['publish', packageFile.filename, '--provenance', '--access', 'public'],
