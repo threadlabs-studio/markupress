@@ -473,6 +473,8 @@ it('resolves extensionless relative links as pages, whatever their number prefix
   } finally { await application.close(); }
   await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Gone](./gone)');
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/03\.setup\.md: missing document \.\/gone: no page \.\/gone beside it\./);
+}, 30_000);
+
 it('titles each page with the titleTemplate option, ":title | <site title>" by default, and the version home with the site title', async () => {
   const root = await fixture(); await linkDependencies(root);
   const title = async (options: Parameters<typeof siteOptions>[0], path: string) => {
