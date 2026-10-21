@@ -23,7 +23,8 @@ beforeAll(() => {
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
-  write('markupress.config.json', JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' }));
+  // A typed config, which the installed package's defineConfig types.
+  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
@@ -81,6 +82,7 @@ it('accepts maintained TypeScript controllers and rejects an invalid lifecycle c
   const compiler = join(root, 'node_modules/typescript/bin/tsc');
   const args = ['--ignoreConfig', '--noEmit', '--strict', '--skipLibCheck', '--target', 'ES2023', '--module', 'NodeNext', '--lib', 'ES2023,DOM', 'components/counter.ts'];
   run(process.execPath, [compiler, ...args]);
+  run(process.execPath, [compiler, ...args.slice(0, -1), 'markupress.config.ts']);
   write('components/invalid.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; export default function(host: ComponentHost) { host.on("connect", "invalid"); }');
   expect(() => run(process.execPath, [compiler, ...args.slice(0, -1), 'components/invalid.ts'])).toThrow();
 });
@@ -91,7 +93,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
   let server: ApplicationServer | undefined;
   try {
     for (const mode of ['preview', 'dev'] as const) {
-      server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...JSON.parse(readFileSync(join(workspace, 'markupress.config.json'), 'utf8')), root: workspace, port: 0 });
+      server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...await product.loadConfig(workspace), root: workspace, port: 0 });
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
       // Every Content Security Policy violation fails the proof.

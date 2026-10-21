@@ -38,7 +38,7 @@ A site needs no configuration. `docs/index.md` is a complete site, and `markupre
 | `htmlkit.config.ts` | HTMLKit options and plugins. |
 | `versions/<id>/` | A recorded version, written by `markupress snapshot` (see [Versions](#versions)). |
 
-Pages and their front matter come next, and `markupress.config.json` comes last: plain JSON data for the title, the base path and a few more settings (see [Configuration](#configuration)).
+Pages and their front matter come next, and the configuration comes last: `markupress.config.ts`, or plain JSON data in `markupress.config.json`, for the title, the base path and a few more settings (see [Configuration](#configuration)).
 
 The `markupress` command and these APIs also load the site's `htmlkit.config.ts` (or `.js`) with HTMLKit's `loadConfig`, and add `markupress()` after its plugins, so HTMLKit plugins and options compose with Markupress:
 
@@ -50,7 +50,7 @@ import { feed } from './plugins/feed.js';
 export default defineConfig({ plugins: [feed()], redirects: { '/start/': '/guide/install/' } });
 ```
 
-`base` and `outDir` from `markupress.config.json` or the command line win over the HTMLKit config's; without either, they are `/` and `site`. `markupress()` includes the `markdown()` plugin, so the HTMLKit config lists neither.
+`base` and `outDir` from the Markupress configuration or the command line win over the HTMLKit config's; without either, they are `/` and `site`. `markupress()` includes the `markdown()` plugin, so the HTMLKit config lists neither.
 
 The same pieces work as HTMLKit plugins. `markupress(options)` adds versioned documentation with this theme. `markdown()` alone makes any HTMLKit site's `.md` files into pages, with no versions or theme:
 
@@ -200,7 +200,7 @@ const d = 4;
 
 - `{1,3-4}` highlights lines 1, 3 and 4, with or without a space after the language (```` ```ts{1} ````).
 - A `// [!code highlight]` comment at the end of a line highlights that line, and the comment is removed. `#`, `--`, `/* */` and `<!-- -->` comments work too. `[!code highlight:3]` covers three lines, and a marker alone on its line applies to the lines after it.
-- `:line-numbers` numbers the lines. The `lineNumbers: true` option, in `markupress.config.json`, `markupress()` or `markdown()`, numbers every block, and `:no-line-numbers` opts a block out.
+- `:line-numbers` numbers the lines. The `lineNumbers: true` option, in the Markupress configuration, `markupress()` or `markdown()`, numbers every block, and `:no-line-numbers` opts a block out.
 - Line highlighting and numbers apply to languages Shiki highlights and to plain text (`text`, `txt`, `plain` or `plaintext`). A fence with an unknown language or no language stays escaped text, without its `[!code highlight]` comments.
 
 Every code block has Copy and Wrap buttons. Copy puts the code on the clipboard, without line numbers or highlight comments. Wrap toggles line wrapping. They are native buttons, reached with Tab, and a page with code loads a small controller (`markupress/controllers/code.js`) that handles them through one delegated listener. The buttons stay hidden until that controller runs, so without JavaScript a code block is only its code. The theme shows them while the block is hovered or holds focus, and always on touch screens.
@@ -412,18 +412,29 @@ Existing Markdown, HTML/CSS/Less/JavaScript/TypeScript examples, local assets, h
 
 ## Configuration
 
-`markupress.config.json` is plain JSON data, read by the `markupress` command. Every key is optional:
+The `markupress` command reads the site's configuration from `markupress.config.ts`, `markupress.config.js` or `markupress.config.json` in its root, one of the three. `defineConfig` types a TypeScript configuration, and every key is optional:
+
+```ts
+// markupress.config.ts
+import { defineConfig } from 'markupress';
+
+export default defineConfig({
+  title: 'Looma',
+  base: '/looma/',
+  nav: [
+    { label: 'HTML Next', href: 'https://nextwebwg.org/declarative-components/' },
+    { label: 'GitHub', href: 'https://github.com/threadlabs-studio/looma', icon: '/github.svg' },
+  ],
+});
+```
+
+The same options as JSON data:
 
 ```json
-{
-  "title": "Looma",
-  "base": "/looma/",
-  "nav": [
-    { "label": "HTML Next", "href": "https://nextwebwg.org/declarative-components/" },
-    { "label": "GitHub", "href": "https://github.com/threadlabs-studio/looma", "icon": "/github.svg" }
-  ]
-}
+{ "title": "Looma", "base": "/looma/" }
 ```
+
+A TypeScript or JavaScript configuration loads through Vite, as HTMLKit's `htmlkit.config.ts` does, so it imports its own TypeScript files by their `.js` names. `loadConfig(root)` returns the options the command reads.
 
 | Option | Default | Does |
 | --- | --- | --- |
