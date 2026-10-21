@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - The guide links a site's components from `app/components/` by their path from the project root, `@/app/components/counter.html`, as HTMLKit pages do, and `examples/site` keeps its component there. `@/` in a Markdown page's `<link rel="component">` resolves in development and builds, at the root and under `/v/<id>/`.
 - `npm create markupress@latest <folder>` starts a site from `create-markupress`, a package in `packages/create-markupress` that shares Markupress's version and releases with it: a home page, two guide pages, a component in `app/components/` linked with `@/`, a footer and `markupress.config.ts`. Its `package.json` depends on this Markupress release and the HTML Next and Looma releases Markupress pins, and a folder that already has files is refused. A test packs it, creates a site and builds it with the installed package.
 - `CHANGELOG.md` is a local path in `threadlabs.config.json`, and the Foundation release runner skips a package npm has never seen, with a message saying how to publish it once and add the trusted publisher.
+- The guide's Migrating page maps a Docusaurus or VitePress site's files and URLs, front matter, Markdown, configuration and versions onto Markupress's model, for a one-time conversion.
 
 ## 0.6.4
 

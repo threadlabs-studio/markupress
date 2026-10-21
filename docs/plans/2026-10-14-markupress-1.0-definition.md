@@ -128,7 +128,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done | **In** |
 | G7 | Search, SEO and deployment | Partial (SEO and deployment in the site; search missing) | **In** |
 | G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Done | **In** |
-| G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Missing | **In** |
+| G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Done | **In** |
 
 ### Docs corrections to land first (audit, 2026-10-14)
 
