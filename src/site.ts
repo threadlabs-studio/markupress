@@ -47,12 +47,10 @@ export interface MarkupressOptions {
    * `title`. `false` gives the page's title alone. A version's home page is titled with the site title alone.
    */
   readonly titleTemplate?: string | false;
-}
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate'];
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'lang'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
