@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - The installed consumer's `markupress.config.ts` adds a markdown-it plugin, and a unit test covers an added rule, a replaced rule and a transformer.
 - Six Markupress theme tokens size the layout and set its font: `--markupress-font`, `--markupress-page-width`, `--markupress-content-width`, `--markupress-sidebar-width`, `--markupress-outline-width` and `--markupress-home-width`, with the theme's sizes as their defaults. A site sets them, and Looma's `--ui-*` tokens, in its own stylesheet from HTMLKit's `css` option. The README lists both token sets.
 - The browser proof sizes the sidebar from a site stylesheet's `--markupress-sidebar-width`.
+- The Markupress documentation site is in `website/`, built by Markupress itself and published at https://threadlabs-studio.github.io/markupress/: a guide (getting started, project structure, writing, navigation, versions, theme, the Content Security Policy and SEO) and a reference (configuration, the command line and the API). The README introduces Markupress and links to it.
+- `pnpm build:sites` builds the documentation site and `examples/site`, and `verify:pr` runs it, so CI builds both and checks their links. A push to `main` deploys the documentation site to GitHub Pages.
 
 ## 0.6.4
 

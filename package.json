@@ -33,7 +33,8 @@
     "test": "pnpm build && vitest run --exclude tests/package.test.ts",
     "test:package": "vitest run tests/package.test.ts",
     "verify:inner": "pnpm lint && pnpm typecheck && pnpm test",
-    "verify:pr": "pnpm verify:inner && pnpm build && pnpm test:package",
+    "verify:pr": "pnpm verify:inner && pnpm build && pnpm test:package && pnpm build:sites",
+    "build:sites": "node dist/cli.js build --root website && node dist/cli.js build --root examples/site",
     "verify:extended": "pnpm verify:pr",
     "verify:release": "pnpm verify:pr && pnpm pack --dry-run",
     "prepack": "pnpm build"
