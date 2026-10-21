@@ -73,6 +73,7 @@ it('maps front matter onto HTMLKit page metadata and head, and keeps the rest as
   const compiled = await compileMarkdown(`---
 title: Guide
 layout: wide
+redirectFrom: [/start/, /old/guide/]
 outline: [2, 4]
 editLink: https://example.com/edit/guide.md
 head:
@@ -91,6 +92,7 @@ head:
 ##### Deep
 `, { file: '/docs/guide.md', pageName: 'page-guide' });
   expect(compiled.resource).toContain('<meta name="hk:layout" content="wide">');
+  expect(compiled.resource).toContain('<meta name="hk:redirect-from" content="/start/"><meta name="hk:redirect-from" content="/old/guide/">');
   expect(compiled.resource).toContain('<meta name="keywords" content="docs, html">');
   expect(compiled.resource).toContain('<meta property="og:image" content="https://example.com/social.png"><meta property="og:image:width" content="1200">');
   expect(compiled.resource).toContain('<link rel="canonical" href="https://example.com/guide/">');
@@ -105,7 +107,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, id, aliases, layout, outline, head, editLink, lang, previous, next.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');

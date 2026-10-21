@@ -532,3 +532,18 @@ it('writes each version\'s search index, and the default version\'s at the root,
   // Generated files are no pages: the sitemap and navigation leave them out.
   expect(result.routes.some(route => route.includes('_search'))).toBe(false);
 }, 60_000);
+
+it('redirects a page\'s redirectFrom paths to it in each version, with redirect pages in the build', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\nredirectFrom: [/setup/, /old/install/]\n---\n# Install');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    for (const [from, to] of [['/setup/', '/guide/install/'], ['/v/current/old/install/', '/v/current/guide/install/']]) {
+      const response = await application.fetch(new Request(`http://localhost${from}`));
+      expect([response.status, response.headers.get('location')]).toEqual([308, to]);
+    }
+  } finally { await application.close(); }
+  const result = await buildSite({ root });
+  expect(await readFile(join(result.outDir, 'setup/index.html'), 'utf8')).toContain('/guide/install/');
+  expect(await readFile(join(result.outDir, 'v/current/old/install/index.html'), 'utf8')).toContain('/v/current/guide/install/');
+}, 60_000);

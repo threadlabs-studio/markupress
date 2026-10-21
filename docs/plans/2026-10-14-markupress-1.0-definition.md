@@ -100,7 +100,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | S4 | Sitemap (HTMLKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Done (`sitemap.xml` with `origin`; front matter `head`, `description` and canonical) | **In** |
 | S5 | Base path and clean URLs | Present | Keep |
 | S6 | Broken-link and anchor check at build (HTMLKit V8, plus Markdown `.md` targets) | Done | **In** |
-| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (HTMLKit R9). `aliases` keep serving the same content, with a canonical link. | Partial (HTMLKit `redirects` in `htmlkit.config.ts` writes redirect pages; front matter `redirectFrom` missing) | **In**: Looma's old flat URLs need it |
+| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (HTMLKit R9). `aliases` keep serving the same content, with a canonical link. | Done | **In**: Looma's old flat URLs need it |
 | S8 | i18n: locale folders, a locale switcher, RTL | Missing | Out: 1.1. Neither the Looma docs nor nextwebwg.org need it. |
 | S9 | Blog and RSS | Missing | Out |
 

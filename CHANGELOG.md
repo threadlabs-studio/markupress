@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - `previous` and `next` front matter change a page's pager links: `false` drops the link, and `{ label, href }` relabels or retargets it, with `href` resolved as a link in the page's Markdown, such as `../install.md`. A layout's `previous` and `next` props follow them.
 - Local search. The Search button in the top navigation, `/`, Ctrl+K and Cmd+K open Looma's search dialog (`ui-search-shell`, a native modal `<dialog>`), which searches the pages of the version being read, by heading, with arrow keys between results, Enter to open one and Escape to close. A query matches a section holding every one of its words, whatever their case or accents, headings first. HTMLKit's `generate` hook writes each version's index, `/v/<id>/_search.json`, and the default version's at the root, from the compiled pages, in builds and after each edit in development. A replacement layout receives the index URL as its `search` prop.
 - The browser proof searches from the keyboard, opens a result on another page, checks that each version's results are its own pages, and audits the dialog with axe; a site test checks the written indexes.
+- `redirectFrom` front matter lists a page's old URLs, relative to its version, such as `[/setup/]`. Each is HTMLKit's `hk:redirect-from`: the old URL answers 308 to the page in `dev` and `preview`, in the root and under `/v/<id>/`, and a build writes a redirect page there and lists it in the manifest.
 
 ## 0.6.4
 
