@@ -47,8 +47,10 @@ export interface MarkupressOptions {
    * `title`. `false` gives the page's title alone. A version's home page is titled with the site title alone.
    */
   readonly titleTemplate?: string | false;
+  /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
+  readonly lang?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -159,7 +161,10 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
-    return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data } };
+    // The page's language, else the site's, is the document's <html lang>.
+    const lang = page?.page.lang ?? options.lang;
+    return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data },
+      ...(lang === undefined ? {} : { head: { lang } }) };
   }
   /** The shell around the page: the sections and links of the top navigation, logo, badge, the section's sidebar and the footer. */
   async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], selected: string, current: string, base: string) {
@@ -195,6 +200,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   // Config is plain data, so an option from another tool, or a removed one, fails rather than doing nothing.
   for (const name of Object.keys(options)) if (!optionNames.includes(name)) throw new Error(`Unknown Markupress option ${name}. Options are ${optionNames.join(', ')}.`);
   if (typeof options.titleTemplate === 'string' && !options.titleTemplate.includes(':title')) throw new Error(`The titleTemplate option places each page's title with :title: ${options.titleTemplate}.`);
+  if (options.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(options.lang)) throw new Error(`The lang option is a language tag such as fr or pt-BR: ${options.lang}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
   return { ...pages, name: 'markupress', async config(htmlkit) {
     root = resolve(htmlkit.root ?? root); siteBase = htmlkit.base ?? '/';
