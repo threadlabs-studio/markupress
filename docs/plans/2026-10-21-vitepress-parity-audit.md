@@ -75,7 +75,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
 | `title` | Has | `website/docs/01.guide/03.writing/02.front-matter.md`. |
-| `titleTemplate` | Missing | The document title is the page title alone (scratch); VitePress and Docusaurus both write "Page \| Site". |
+| `titleTemplate` | Has | `titleTemplate`, `":title \| <title>"` by default: `tests/site.test.ts` ("titles each page with the titleTemplate option"). |
 | `description` | Has | `<meta name="description">`. |
 | `head` | Has | `head.meta`, `head.og`, `head.canonical`, and `<title>`, `<meta>` and `<link>` in Markdown as head declarations: `tests/site.test.ts`. |
 | `dir` | Missing | With i18n, 1.1. |
@@ -159,7 +159,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
 | `title` | Has | |
-| `titleTemplate` | Missing | See Frontmatter. |
+| `titleTemplate` | Has | See Frontmatter. |
 | `description` (site-wide) | Missing | Per page only. |
 | `head` (site-wide) | Has | A site layout's `<defs>` and HTMLKit's `app/head.js`: `website/docs/01.guide/07.security.md`. |
 | `lang`, `dir` | Missing | See Internationalization. |

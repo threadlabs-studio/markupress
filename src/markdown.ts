@@ -18,6 +18,8 @@ export interface MarkdownPluginOptions {
   readonly frontmatter?: (file: string) => FrontMatter | undefined;
   /** The URL a page's root-relative links (`/guide/`) start from, such as its version's home; the site's base by default. */
   readonly home?: (file: string) => string;
+  /** A page's document `<title>` from its title, such as `Install | My site`; the page title by default. */
+  readonly documentTitle?: (file: string, title: string) => string;
 }
 
 /**
@@ -34,7 +36,8 @@ export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     const frontmatter = options.frontmatter?.(page.file);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}),
+      ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
     options.onPage?.({ ...compiled, file: page.file, href });
     return compiled.resource;
   } } };

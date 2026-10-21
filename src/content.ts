@@ -19,6 +19,8 @@ export interface MarkdownOptions {
   readonly lineNumbers?: boolean;
   /** Front matter the page's own fields override, such as a site-wide default. */
   readonly frontmatter?: FrontMatter;
+  /** The document `<title>` for the page's title, such as `Install | My site`; the page title by default. */
+  readonly documentTitle?: (title: string) => string;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
@@ -307,7 +309,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   // order, visibility, alias routes, the layout choice, and the document head, where the page's entries win over its layout's.
   const { meta = {}, og = {}, canonical } = fields.head ?? {};
   // An authored <title> takes the place of the generated one, since a definition declares one title.
-  const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
+  const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(options.documentTitle?.(title) ?? title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
     `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
     (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
     aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +

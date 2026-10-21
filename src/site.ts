@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type NavigationItem, type NavigationNode, type ServerOptions } from '@nextwebwg/htmlkit';
@@ -42,8 +42,13 @@ export interface MarkupressOptions {
   readonly nav?: readonly NavItem[];
   /** Every page's "Edit this page" link: this URL, ending in `/`, followed by the page file's path in the project. */
   readonly editLink?: string;
+  /**
+   * Each page's document `<title>`, where `:title` is the page's title: `":title | <title>"` by default, with the site
+   * `title`. `false` gives the page's title alone. A version's home page is titled with the site title alone.
+   */
+  readonly titleTemplate?: string | false;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -102,6 +107,13 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
+    documentTitle(file, title) {
+      const site = options.title ?? 'Documentation', edition = editionOf(file);
+      // A version's home page is the site's own page.
+      if (edition && isIndex(file) && dirname(file) === resolve(root, edition.directory)) return site;
+      const template = options.titleTemplate ?? `:title | ${site}`;
+      return template === false ? title : template.replaceAll(':title', title);
+    },
     // A root-relative link is a page of the version the file belongs to.
     home: file => { const edition = editionOf(file); return edition ? `${siteBase}v/${edition.id}/` : siteBase; },
     onPage(page) {
@@ -182,6 +194,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   }
   // Config is plain data, so an option from another tool, or a removed one, fails rather than doing nothing.
   for (const name of Object.keys(options)) if (!optionNames.includes(name)) throw new Error(`Unknown Markupress option ${name}. Options are ${optionNames.join(', ')}.`);
+  if (typeof options.titleTemplate === 'string' && !options.titleTemplate.includes(':title')) throw new Error(`The titleTemplate option places each page's title with :title: ${options.titleTemplate}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
   return { ...pages, name: 'markupress', async config(htmlkit) {
     root = resolve(htmlkit.root ?? root); siteBase = htmlkit.base ?? '/';
