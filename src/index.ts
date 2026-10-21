@@ -1,7 +1,7 @@
 // Public exports are introduced with implemented, verified product behavior.
 export { defineConfig, loadConfig } from './config.js';
 export { compileMarkdown } from './content.js';
-export type { CompiledMarkdown, FrontMatter, MarkdownOptions, OutlineItem } from './content.js';
+export type { CompiledMarkdown, FrontMatter, MarkdownExtensions, MarkdownOptions, MarkdownPlugin, OutlineItem } from './content.js';
 export { markdown } from './markdown.js';
 export type { MarkdownPluginOptions } from './markdown.js';
 export type { Link, NavItem, SidebarNode } from './navigation.js';

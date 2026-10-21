@@ -207,6 +207,32 @@ Every code block has Copy and Wrap buttons. Copy puts the code on the clipboard,
 
 Highlighting uses the `github-light-default` and `github-dark-default` themes. Each token's color is `light-dark(light, dark)`, so it follows the page's `color-scheme`. The Markupress theme sets the color scheme from its dark-theme button or the reader's system preference through Looma's `[data-theme]` themes, so code switches with the rest of the page. On another HTMLKit site, set `color-scheme: light dark` to follow the system, or set `color-scheme` on `[data-theme]` as Looma does. Each token also carries `--shiki-light` and `--shiki-dark`, so a site can switch with any selector instead, for example `.dark .shiki span { color: var(--shiki-dark) !important; }`. Browsers without `light-dark()` show unhighlighted text. The site's stylesheet owns the code block's background; the Markupress theme uses Looma's sunken surface (`--ui-surface-sunken`). There, comments measure 3.98:1 in the light theme and 4.42:1 in the dark theme, and light-theme function names 4.42:1, below the 4.5:1 the other token colors reach.
 
+### Markdown extensions
+
+The `markdown` option, in `markupress.config.ts` or `.js`, extends every page's Markdown with markdown-it plugins and Shiki transformers:
+
+```ts
+// markupress.config.ts
+import { defineConfig } from 'markupress';
+import { transformerNotationDiff } from '@shikijs/transformers';
+import abbr from 'markdown-it-abbr';
+import attrs from 'markdown-it-attrs';
+
+export default defineConfig({
+  markdown: {
+    plugins: [abbr, md => md.use(attrs, { allowedAttributes: ['id', 'class'] })],
+    transformers: [transformerNotationDiff()],
+  },
+});
+```
+
+- **`plugins`** are functions that take the markdown-it instance. A plugin with no options is one already, and `md => md.use(plugin, options)` passes a plugin its options. They run in order, after Looma Markdown and Markupress's own rules, so a rule a plugin replaces is the plugin's.
+- **Text in a plugin's own rules** renders literally, as Markdown text does, so `{` in it stays text. HTML from a plugin that replaces one of Markupress's rules is raw HTML, as raw HTML in Markdown is.
+- **`transformers`** are Shiki transformers. They run on every highlighted code block, before Markupress's own, which escape the code and write its line classes.
+- markdown-it's types come from `@types/markdown-it`.
+
+`markdown({ markdown })` and `compileMarkdown`'s `markdown` option take the same extensions.
+
 ## TypeScript controllers
 
 Maintain controllers in strict ESM TypeScript, with `.js` references in HTML:
@@ -450,6 +476,7 @@ A TypeScript or JavaScript configuration loads through Vite, as HTMLKit's `htmlk
 | `logo` | `public/logo.svg` and `public/logo-dark.svg` | One image path, or `{ "light", "dark" }`, in place of the logo files. |
 | `favicon` | `public/favicon.svg` | The site icon's path, in place of the icon file. |
 | `editLink` | none | A URL ending in `/`, which each page's file path follows to make its "Edit this page" link (see [Edit link and last updated](#edit-link-and-last-updated)). |
+| `markdown` | none | markdown-it `plugins` and Shiki `transformers` for every page, in a TypeScript or JavaScript configuration (see [Markdown extensions](#markdown-extensions)). |
 
 Image paths starting with `/` are files in `public/`. `base`, `origin`, `robots` and `outDir` set the HTMLKit options of the same names, in place of the HTMLKit config's. An unknown key fails with the list of options.
 

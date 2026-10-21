@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type NavigationItem, type NavigationNode, type ServerOptions } from '@nextwebwg/htmlkit';
-import { isIndex, type FrontMatter, type OutlineItem } from './content.js';
+import { isIndex, type FrontMatter, type MarkdownExtensions, type OutlineItem } from './content.js';
 import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
@@ -42,8 +42,10 @@ export interface MarkupressOptions {
   readonly nav?: readonly NavItem[];
   /** Every page's "Edit this page" link: this URL, ending in `/`, followed by the page file's path in the project. */
   readonly editLink?: string;
+  /** markdown-it plugins and Shiki transformers for every page, in a TypeScript or JavaScript configuration. */
+  readonly markdown?: MarkdownExtensions;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'markdown'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -101,6 +103,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
+    ...(options.markdown === undefined ? {} : { markdown: options.markdown }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
     // A root-relative link is a page of the version the file belongs to.
     home: file => { const edition = editionOf(file); return edition ? `${siteBase}v/${edition.id}/` : siteBase; },
