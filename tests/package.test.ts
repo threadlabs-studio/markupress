@@ -149,6 +149,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
+      // On a wide screen the sidebar is in the page, and the shell's style hides the drawer's Navigation button it projects into the header.
+      expect(await page.getByRole('button', { name: 'Navigation', exact: true }).isVisible()).toBe(false);
       // The site's stylesheet sizes the sidebar through --markupress-sidebar-width.
       expect(await page.locator('#documentation-navigation').evaluate(element => element.getBoundingClientRect().width)).toBe(272);
       // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
