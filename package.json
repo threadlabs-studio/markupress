@@ -46,7 +46,7 @@
     "playwright": "1.64.0",
     "@axe-core/playwright": "4.13.0",
     "@nextwebwg/html-next": "1.0.0-alpha.67",
-    "@threadlabs/looma": "0.30.7",
+    "@threadlabs/looma": "0.30.8",
     "@types/markdown-it": "14.2.0",
     "jsdom": "30.1.2"
   },
@@ -69,7 +69,7 @@
   },
   "peerDependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.67",
-    "@threadlabs/looma": "0.30.7"
+    "@threadlabs/looma": "0.30.8"
   },
   "bin": {
     "markupress": "./dist/cli.js"

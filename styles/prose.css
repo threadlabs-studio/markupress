@@ -43,3 +43,9 @@ img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
 .hero p { margin: 0 0 1rem; font-size: 1.25rem; color: var(--ui-text-secondary, inherit); }
 .hero .actions { margin-top: 1.5rem; }
 .hero-image img { display: block; margin-inline: auto; max-block-size: min(18rem, 40vh); }
+/* Footnotes: GFM's notes section, below a rule, with its heading for assistive technology only. */
+.footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--ui-border, #8885); font-size: .9rem; color: var(--ui-text-secondary, inherit); }
+.footnotes .sr-only { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+.footnotes li:target { background: var(--ui-accent-soft); }
+[data-footnote-ref] { text-decoration: none; }
+:is([id^="fn:"], [id^="fnref:"]) { scroll-margin-top: 5rem; }

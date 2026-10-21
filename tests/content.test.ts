@@ -317,6 +317,14 @@ it('renders chips, mentions, task lists, figures and image placement, with liter
   expect(resource).not.toContain('<link rel="component"');
 });
 
+it('renders footnotes as Looma Markdown\'s notes section, with literal text and no outline entry', async () => {
+  const compiled = await compileMarkdown('# Notes\n\nText[^1] and again[^1].\n\n[^1]: A note with {braces}.\n', { file: 'notes.md', pageName: 'page-notes' });
+  expect(compiled.resource).toContain('<sup><a href="#fn:1" id="fnref:1" data-footnote-ref="" aria-describedby="footnote:label">1</a></sup>');
+  expect(compiled.resource).toContain('<section data-footnotes="" class="footnotes">\n<h2 id="footnote:label" class="sr-only">Footnotes</h2>');
+  expect(compiled.resource).toContain('<li id="fn:1">\n<p>A note with \\{braces}. <a href="#fnref:1" data-footnote-backref="" aria-label="Back to reference 1">');
+  expect(compiled.outline).toEqual([]);
+});
+
 it('links ::toc entries to the anchors the outline lists', async () => {
   const compiled = await compileMarkdown('::toc{depth=2 format=numbered}\n\n# Guide {#start}\n\n## Über uns\n\n### Deep\n\n## Über uns', { file: '/docs/index.md', pageName: 'page-index' });
   const toc = /<nav data-looma-toc.*?<\/nav>/s.exec(compiled.resource)![0];
