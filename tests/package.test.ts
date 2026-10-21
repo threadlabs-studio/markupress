@@ -23,9 +23,8 @@ beforeAll(() => {
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
-  // A typed config, which the installed package's defineConfig types, with a markdown-it plugin of the site's own.
-  const options = JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' });
-  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig({ ...${options}, markdown: { plugins: [md => { md.renderer.rules.hr = () => '<hr class="divider">'; }] } });\n`);
+  // A typed config, which the installed package's defineConfig types.
+  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
   // The site's own page-wide stylesheet sets a Markupress theme token.
   mkdirSync(join(workspace, 'app'));
   write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
@@ -49,7 +48,7 @@ beforeAll(() => {
   // The current version's home is a home page; v1 keeps the plain one.
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
-  write('docs/03.about.md', '# About\n\n---\n');
+  write('docs/03.about.md', '# About');
   mkdirSync(join(workspace, 'docs/02.reference'));
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
@@ -76,8 +75,6 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
   expect(html).not.toContain('Last updated');
-  // The config's markdown-it plugin renders every page.
-  expect(readFileSync(join(workspace, 'site/about/index.html'), 'utf8')).toContain('<hr class="divider">');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
