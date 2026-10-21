@@ -112,7 +112,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Done | **In** |
 | D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
-| D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Missing | **In** |
+| D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Done | **In** |
 | D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, HTMLKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
 | D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Missing | **In** |
 

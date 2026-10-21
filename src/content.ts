@@ -2,12 +2,22 @@ import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { applyLoomaCodeNotation, parseLoomaFenceInfo, splitLoomaFrontmatter, type LoomaFenceInfo } from '@threadlabs/looma/markdown';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
+import type MarkdownIt from 'markdown-it';
 import type { StateBlock, Token } from 'markdown-it';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
 import { stylesheet } from './styles.js';
 
+/** A markdown-it plugin, given the instance to extend: `md => md.use(plugin, options)` passes a plugin its options. */
+export type MarkdownPlugin = (md: MarkdownIt) => void;
+/** A site's Markdown extensions. */
+export interface MarkdownExtensions {
+  /** markdown-it plugins, applied in order after Looma Markdown and Markupress's own rules. */
+  readonly plugins?: readonly MarkdownPlugin[];
+  /** Shiki transformers for every highlighted code block, run before Markupress's own. */
+  readonly transformers?: readonly ShikiTransformer[];
+}
 export interface MarkdownOptions {
   readonly file: string;
   readonly pageName: string;
@@ -19,6 +29,8 @@ export interface MarkdownOptions {
   readonly lineNumbers?: boolean;
   /** Front matter the page's own fields override, such as a site-wide default. */
   readonly frontmatter?: FrontMatter;
+  /** markdown-it plugins and Shiki transformers. */
+  readonly markdown?: MarkdownExtensions;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
@@ -90,11 +102,11 @@ const shikiOutput: ShikiTransformer = {
 };
 // Plain text needs no grammar, yet takes line highlighting and numbers like any highlighted language.
 const plain = new Set(['text', 'plaintext', 'txt', 'plain']);
-async function highlight(code: string, lang: string, lines: ShikiTransformer): Promise<string> {
+async function highlight(code: string, lang: string, lines: ShikiTransformer, transformers: readonly ShikiTransformer[]): Promise<string> {
   // One highlighter serves every page; a grammar loads the first time a fence uses its language.
   const shiki = await (highlighter ??= createHighlighter({ themes: Object.values(themes), langs: [] }));
   if (!plain.has(lang)) await shiki.loadLanguage(lang as BundledLanguage);
-  return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [shikiOutput, lines] });
+  return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [...transformers, shikiOutput, lines] });
 }
 // Line highlighting and numbers are classes written at build time; the theme's stylesheet draws them. The fence
 // meta stays on <code> as Looma Markdown's canonical HTML writes it.
@@ -117,55 +129,76 @@ interface RenderEnv { readonly highlighted: ReadonlyMap<Token, string> }
 
 // Looma Markdown: Looma's markdown-it plugin parses every form and renders the standard's canonical HTML. Markupress adds its presentation on top: Shiki code figures, heading self-links, literal text,
 // and native component carriers.
-const md = createLoomaMarkdownIt();
-const { escapeHtml } = md.utils;
-const rules = md.renderer.rules;
-// Markdown text is literal: braces are escaped so HTML Next never interpolates them. Attributes are always literal
-// in HTML Next, and raw HTML keeps its expressions. Plugin rules escape their text and attributes alike, so their
-// text segments (between tags, where escaped HTML holds no `>`) gain the same escape.
-const literalText = (html: string) => html.replace(/>([^<]+)</g, (_, text: string) => `>${literal(text)}<`);
-for (const name of ['looma_container_open', 'looma_chip', 'looma_mention', 'looma_toc']) {
-  const rule = rules[name]!;
-  rules[name] = (...args) => literalText(rule(...args));
-}
-rules.text = (tokens, index) => literal(escapeHtml(tokens[index]!.content));
-rules.code_inline = (tokens, index, _options, _env, self) => `<code${self.renderAttrs(tokens[index]!)}>${literal(escapeHtml(tokens[index]!.content))}</code>`;
-// Each heading links to its own anchor, which the plugin assigned.
-rules.heading_open = (tokens, index, options, _env, self) => `${self.renderToken(tokens, index, options)}<a href="#${escapeHtml(tokens[index]!.attrGet('id') ?? '')}">`;
-rules.heading_close = (tokens, index, options, _env, self) => `</a>${self.renderToken(tokens, index, options)}`;
-// Code reads as Looma's code notation leaves it: `[!code highlight]` comments are removed from every fence.
-const plainCode = (code: string, { language, meta }: Pick<LoomaFenceInfo, 'language' | 'meta'>) =>
-  `<pre><code${language ? ` class="language-${escapeHtml(language)}"` : ''}${meta ? ` data-meta="${escapeHtml(meta)}"` : ''}>${literal(escapeHtml(applyLoomaCodeNotation(code.replace(/\n$/, '')).code))}</code></pre>`;
-const codeFigure = (pre: string, title?: string) =>
-  `<figure class="code">${title ? `<figcaption>${literal(escapeHtml(title))}</figcaption>` : ''}${codeActions}${pre}</figure>\n`;
-rules.fence = (tokens, index, _options, env: RenderEnv) => {
-  const token = tokens[index]!, info = parseLoomaFenceInfo(token.info), tab = tokens[index - 1];
-  // A code group's tab already shows the fence title that labels it.
-  const title = tab?.type === 'looma_tab_open' && (tab.meta as { label: string }).label === info.title ? undefined : info.title;
-  return codeFigure(env.highlighted.get(token) ?? plainCode(token.content, info), title);
-};
-rules.code_block = (tokens, index) => codeFigure(plainCode(tokens[index]!.content, { meta: '' }));
+function createMarkdown(plugins: readonly MarkdownPlugin[]): MarkdownIt {
+  const md = createLoomaMarkdownIt();
+  const { escapeHtml } = md.utils;
+  const rules = md.renderer.rules;
+  // Markdown text is literal: braces are escaped so HTML Next never interpolates them. Attributes are always literal
+  // in HTML Next, and raw HTML keeps its expressions. Plugin rules escape their text and attributes alike, so their
+  // text segments (between tags, where escaped HTML holds no `>`) gain the same escape.
+  const literalText = (html: string) => html.replace(/>([^<]+)</g, (_, text: string) => `>${literal(text)}<`);
+  for (const name of ['looma_container_open', 'looma_chip', 'looma_mention', 'looma_toc']) {
+    const rule = rules[name]!;
+    rules[name] = (...args) => literalText(rule(...args));
+  }
+  rules.text = (tokens, index) => literal(escapeHtml(tokens[index]!.content));
+  rules.code_inline = (tokens, index, _options, _env, self) => `<code${self.renderAttrs(tokens[index]!)}>${literal(escapeHtml(tokens[index]!.content))}</code>`;
+  // Each heading links to its own anchor, which the plugin assigned.
+  rules.heading_open = (tokens, index, options, _env, self) => `${self.renderToken(tokens, index, options)}<a href="#${escapeHtml(tokens[index]!.attrGet('id') ?? '')}">`;
+  rules.heading_close = (tokens, index, options, _env, self) => `</a>${self.renderToken(tokens, index, options)}`;
+  // Code reads as Looma's code notation leaves it: `[!code highlight]` comments are removed from every fence.
+  const plainCode = (code: string, { language, meta }: Pick<LoomaFenceInfo, 'language' | 'meta'>) =>
+    `<pre><code${language ? ` class="language-${escapeHtml(language)}"` : ''}${meta ? ` data-meta="${escapeHtml(meta)}"` : ''}>${literal(escapeHtml(applyLoomaCodeNotation(code.replace(/\n$/, '')).code))}</code></pre>`;
+  const codeFigure = (pre: string, title?: string) =>
+    `<figure class="code">${title ? `<figcaption>${literal(escapeHtml(title))}</figcaption>` : ''}${codeActions}${pre}</figure>\n`;
+  rules.fence = (tokens, index, _options, env: RenderEnv) => {
+    const token = tokens[index]!, info = parseLoomaFenceInfo(token.info), tab = tokens[index - 1];
+    // A code group's tab already shows the fence title that labels it.
+    const title = tab?.type === 'looma_tab_open' && (tab.meta as { label: string }).label === info.title ? undefined : info.title;
+    return codeFigure(env.highlighted.get(token) ?? plainCode(token.content, info), title);
+  };
+  rules.code_block = (tokens, index) => codeFigure(plainCode(tokens[index]!.content, { meta: '' }));
 
-// A native component carrier, `<template component>` at the start of a block, is raw HTML through its closing tag,
-// blank lines included. Native fragment parsing finds the boundary, nested templates too, so Markdown never
-// interprets a component's CSS, expressions or internal markup.
-md.block.ruler.before('html_block', 'native_component', (state: StateBlock, startLine, endLine, silent) => {
-  const start = state.bMarks[startLine]! + state.tShift[startLine]!;
-  if (state.sCount[startLine]! - state.blkIndent >= 4 || !/^<template(?:\s|>)/i.test(state.src.slice(start, start + 10))) return false;
-  const carrier = parseFragment(state.src.slice(start), { sourceCodeLocationInfo: true }).childNodes.find(node => 'tagName' in node);
-  if (!carrier || !('tagName' in carrier) || carrier.tagName !== 'template' || !carrier.attrs.some(attr => attr.name === 'component')) return false;
-  const end = carrier.sourceCodeLocation?.endTag?.endOffset;
-  if (end === undefined) throw new Error(`${(state.env as { file: string }).file}: unclosed native component template.`);
-  let line = startLine;
-  while (line < endLine && state.eMarks[line]! < start + end) line++;
-  if (line >= endLine) return false;
-  if (silent) return true;
-  const token = state.push('html_block', '', 0);
-  token.content = state.src.slice(start, state.eMarks[line]) + '\n';
-  token.map = [startLine, line + 1];
-  state.line = line + 1;
-  return true;
-}, { alt: ['paragraph', 'reference', 'blockquote'] });
+  // A native component carrier, `<template component>` at the start of a block, is raw HTML through its closing tag,
+  // blank lines included. Native fragment parsing finds the boundary, nested templates too, so Markdown never
+  // interprets a component's CSS, expressions or internal markup.
+  md.block.ruler.before('html_block', 'native_component', (state: StateBlock, startLine, endLine, silent) => {
+    const start = state.bMarks[startLine]! + state.tShift[startLine]!;
+    if (state.sCount[startLine]! - state.blkIndent >= 4 || !/^<template(?:\s|>)/i.test(state.src.slice(start, start + 10))) return false;
+    const carrier = parseFragment(state.src.slice(start), { sourceCodeLocationInfo: true }).childNodes.find(node => 'tagName' in node);
+    if (!carrier || !('tagName' in carrier) || carrier.tagName !== 'template' || !carrier.attrs.some(attr => attr.name === 'component')) return false;
+    const end = carrier.sourceCodeLocation?.endTag?.endOffset;
+    if (end === undefined) throw new Error(`${(state.env as { file: string }).file}: unclosed native component template.`);
+    let line = startLine;
+    while (line < endLine && state.eMarks[line]! < start + end) line++;
+    if (line >= endLine) return false;
+    if (silent) return true;
+    const token = state.push('html_block', '', 0);
+    token.content = state.src.slice(start, state.eMarks[line]) + '\n';
+    token.map = [startLine, line + 1];
+    state.line = line + 1;
+    return true;
+  }, { alt: ['paragraph', 'reference', 'blockquote'] });
+  // A site's plugins come last, so a rule they replace is theirs. A rule they add renders its text segments literally,
+  // as the Looma rules above do; a Markupress rule they replace renders its HTML as raw HTML in Markdown does.
+  const before = new Set(Object.keys(rules));
+  for (const plugin of plugins) plugin(md);
+  for (const name of Object.keys(rules)) {
+    const rule = rules[name];
+    if (before.has(name) || rule === undefined) continue;
+    rules[name] = (...args) => literalText(rule(...args));
+  }
+  return md;
+}
+const standard = createMarkdown([]);
+const extended = new WeakMap<MarkdownExtensions, MarkdownIt>();
+/** The markdown-it instance for a site's extensions, made once per extensions object. */
+function markdownIt(extensions: MarkdownExtensions | undefined): MarkdownIt {
+  if (!extensions?.plugins?.length) return standard;
+  let md = extended.get(extensions);
+  if (md === undefined) extended.set(extensions, md = createMarkdown(extensions.plugins));
+  return md;
+}
 
 function frontmatter(source: string, file: string) {
   const split = splitLoomaFrontmatter(source);
@@ -229,8 +262,9 @@ export interface RenderedMarkdown {
  * The Looma Markdown layer: splits the front matter, parses with Looma's plugin and renders with Markupress's
  * presentation. Front matter fields are left to the host; compileMarkdown validates Markupress's.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdown'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
+  const md = markdownIt(options.markdown);
   const tokens = md.parse(source, { file: options.file });
   const highlighted = new Map<Token, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
   let hasCode = false;
@@ -251,7 +285,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     // Highlighted lines are the fence's `{1,3-5}` and the lines its `[!code highlight]` comments mark.
     const { code, lines: noted } = applyLoomaCodeNotation(token.content.replace(/\n$/, ''));
     const marked = new Set([...lines, ...noted]);
-    highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta)));
+    highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta), options.markdown?.transformers ?? []));
   }
   return { html: md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv), frontmatter: fields, body, headings, hasCode, components };
 }

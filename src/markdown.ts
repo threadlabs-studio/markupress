@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import type { HtmlKitPlugin, PageContext } from '@nextwebwg/htmlkit';
-import { compileMarkdown, type CompiledMarkdown, type FrontMatter } from './content.js';
+import { compileMarkdown, type CompiledMarkdown, type FrontMatter, type MarkdownExtensions } from './content.js';
 import { siteLink } from './navigation.js';
 
 export interface MarkdownPluginOptions {
@@ -17,6 +17,8 @@ export interface MarkdownPluginOptions {
   readonly frontmatter?: (file: string) => FrontMatter | undefined;
   /** The URL a page's root-relative links (`/guide/`) start from, such as its version's home; the site's base by default. */
   readonly home?: (file: string) => string;
+  /** markdown-it plugins and Shiki transformers for every page. */
+  readonly markdown?: MarkdownExtensions;
 }
 
 /**
@@ -33,7 +35,7 @@ export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     const frontmatter = options.frontmatter?.(page.file);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}), ...(options.markdown ? { markdown: options.markdown } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
     options.onPage?.({ ...compiled, file: page.file, href });
     return compiled.resource;
   } } };

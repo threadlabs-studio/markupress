@@ -1,6 +1,7 @@
 import { parseFragment, type DefaultTreeAdapterMap } from 'parse5';
 import { expect, it } from 'vitest';
-import { compileMarkdown } from '../src/content.js';
+import type { ShikiTransformer } from 'shiki';
+import { compileMarkdown, type MarkdownPlugin } from '../src/content.js';
 
 /** Text as a reader sees it, through template contents and highlighting spans. */
 const text = (node: DefaultTreeAdapterMap['node']): string => 'value' in node ? node.value
@@ -323,6 +324,27 @@ it('renders footnotes as Looma Markdown\'s notes section, with literal text and 
   expect(compiled.resource).toContain('<section data-footnotes="" class="footnotes">\n<h2 id="footnote:label" class="sr-only">Footnotes</h2>');
   expect(compiled.resource).toContain('<li id="fn:1">\n<p>A note with \\{braces}. <a href="#fnref:1" data-footnote-backref="" aria-label="Back to reference 1">');
   expect(compiled.outline).toEqual([]);
+});
+
+it('applies a site\'s markdown-it plugins and Shiki transformers, rendering an added rule\'s text literally', async () => {
+  const markdown = { plugins: [(md: Parameters<MarkdownPlugin>[0]) => {
+    // An inline rule for :key[text], rendered by a rule of its own.
+    md.inline.ruler.push('key', (state, silent) => {
+      const match = /^:key\[([^\]]*)\]/.exec(state.src.slice(state.pos));
+      if (!match) return false;
+      if (!silent) state.push('key', 'kbd', 0).content = match[1]!;
+      state.pos += match[0].length;
+      return true;
+    });
+    md.renderer.rules.key = (tokens, index) => `<kbd>${tokens[index]!.content}</kbd>`;
+    md.renderer.rules.hr = () => '<hr class="divider">';
+  }], transformers: [{ pre(node) { this.addClassToHast(node, 'custom'); } } satisfies ShikiTransformer] };
+  const { resource } = await compileMarkdown('Press :key[{Ctrl}] now.\n\n---\n\n```ts\nconst a = 1;\n```\n', { file: 'keys.md', pageName: 'page-keys', markdown });
+  expect(resource).toContain('<p>Press <kbd>\\{Ctrl}</kbd> now.</p>');
+  expect(resource).toContain('<hr class="divider">');
+  expect(resource).toMatch(/<pre class="shiki[^"]* custom"/);
+  // Pages without extensions render as before.
+  expect((await compileMarkdown('---', { file: 'plain.md', pageName: 'page-plain' })).resource).toContain('<hr>');
 });
 
 it('links ::toc entries to the anchors the outline lists', async () => {
