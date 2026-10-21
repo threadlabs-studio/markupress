@@ -55,7 +55,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   await write(root, 'docs/01.guide/03.hidden.md', '---\nnavigation: hidden\n---\n# Hidden document');
   const result = await buildSite({ root, base: '/manual/' });
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
-  expect(page).toContain('<title data-component-head="">Installation</title>');
+  expect(page).toContain('<title data-component-head="">Installation | Documentation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
   expect(page).toMatch(/<nav aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
@@ -244,7 +244,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -262,7 +262,7 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
     const missing = await application.render('/nowhere/');
     expect(missing.status).toBe(404);
     expect(missing.html).toContain('data-component="markupress-shell"');
-    expect(missing.html).toContain('<title data-component-head="">Page not found</title>');
+    expect(missing.html).toContain('<title data-component-head="">Page not found | Documentation</title>');
     expect(missing.html).toContain('href="/v/current/guide/install/"');
     // The not-found page is no page of its version, so it stays out of navigation and /v/current/404/ is missing too.
     expect(application.routes.map(route => route.pattern)).not.toContain('/v/current/404/');
@@ -473,4 +473,17 @@ it('resolves extensionless relative links as pages, whatever their number prefix
   } finally { await application.close(); }
   await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Gone](./gone)');
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/03\.setup\.md: missing document \.\/gone: no page \.\/gone beside it\./);
+}, 30_000);
+
+it('titles each page with the titleTemplate option, ":title | <site title>" by default, and the version home with the site title', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const title = async (options: Parameters<typeof siteOptions>[0], path: string) => {
+    const application = await createApplication(siteOptions({ root, ...options }));
+    try { return /<title[^>]*>([^<]*)<\/title>/.exec((await application.render(path)).html)?.[1]; } finally { await application.close(); }
+  };
+  expect(await title({ title: 'Docs' }, '/guide/install/')).toBe('Installation | Docs');
+  expect(await title({ title: 'Docs' }, '/v/current/')).toBe('Docs');
+  expect(await title({ title: 'Docs', titleTemplate: ':title · Docs' }, '/guide/install/')).toBe('Installation · Docs');
+  expect(await title({ titleTemplate: false }, '/guide/install/')).toBe('Installation');
+  expect(() => siteOptions({ root, titleTemplate: 'Docs' })).toThrow('The titleTemplate option places each page\'s title with :title: Docs.');
 }, 30_000);

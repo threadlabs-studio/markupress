@@ -62,7 +62,7 @@ afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
-  expect(html).toContain('<title data-component-head="">Installation</title>'); expect(html).toContain('id="install-1"');
+  expect(html).toContain('<title data-component-head="">Installation | Example docs</title>'); expect(html).toContain('id="install-1"');
   // HTMLKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
@@ -75,7 +75,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
   expect(html).not.toContain('Last updated');
-  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation</title>');
+  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
     .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
