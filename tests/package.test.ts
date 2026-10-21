@@ -153,13 +153,16 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.waitForLoadState();
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      // The document load takes the place of the committed entry, so back returns to the current version's page once,
+      // and forward shows v1's page again under its URL, as soon as each document starts.
+      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
+      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.waitForLoadState(); expect(page.url()).toBe(server.url + 'v/v1/guide/install/'); expect(logged).toEqual([]);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
-      // The document load takes the place of the committed entry, so back returns to the current version's page once.
-      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
-      await page.waitForLoadState(); expect(logged).toEqual([]);
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
       await page.goto(server.url + 'v/current/guide/new/');
       // The page's imported stylesheet styles its own heading.

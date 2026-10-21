@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.4
+
+- Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.67, and its Looma peer is exactly 0.30.7, the Looma release built with HTML Next 1.0.0-alpha.67. A site's own Looma dependency moves to exactly 0.30.7.
+- After following a link to another version's page that loads as a document, back and then forward show that version's page under its URL, even when forward comes as the previous page is still starting. HTMLKit renders the page of the history entry a document starts on.
+- The browser proof follows the version link, goes back and then forward, and checks that each page is on screen under its own URL with no console error or warning.
+
 ## 0.6.3
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.66, and its Looma peer is exactly 0.30.6, the Looma release built with HTML Next 1.0.0-alpha.66. A site's own Looma dependency moves to exactly 0.30.6.
