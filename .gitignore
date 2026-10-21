@@ -11,3 +11,4 @@ coverage/
 .markupress-build-*/
 
 /examples/site/site/
+/website/site/

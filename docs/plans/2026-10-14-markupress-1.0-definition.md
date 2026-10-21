@@ -120,14 +120,14 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 
 | # | Page | Today | 1.0 |
 |---|---|---|---|
-| G1 | A Markupress documentation site, built with Markupress and deployed by CI (dogfood). `examples/site` becomes a test fixture, built in CI. | Missing (no documentation site; `examples/site` is not built in CI) | **In** |
-| G2 | Getting started: `create`, project structure, dev, build, preview | Partial (in the README; no `create`) | **In** |
-| G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | Done (in the README) | **In** |
-| G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done (in the README) | **In** |
-| G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done (in the README) | **In** |
-| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done (in the README) | **In** |
-| G7 | Search, SEO and deployment | Partial (SEO in the README; search and deployment missing) | **In** |
-| G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Partial (config options in the README; CLI flags and the programmatic API incomplete) | **In** |
+| G1 | A Markupress documentation site, built with Markupress and deployed by CI (dogfood). `examples/site` becomes a test fixture, built in CI. | Done (`website/`, built in CI with `examples/site`, deployed to GitHub Pages) | **In** |
+| G2 | Getting started: `create`, project structure, dev, build, preview | Partial (in the site; no `create`) | **In** |
+| G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | Done | **In** |
+| G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done | **In** |
+| G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done | **In** |
+| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done | **In** |
+| G7 | Search, SEO and deployment | Partial (SEO in the site; search and deployment missing) | **In** |
+| G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Done | **In** |
 | G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Missing | **In** |
 
 ### Docs corrections to land first (audit, 2026-10-14)
