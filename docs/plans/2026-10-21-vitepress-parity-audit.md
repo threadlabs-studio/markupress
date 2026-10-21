@@ -310,6 +310,8 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 VitePress and Docusaurus both ship these by default, and a typical site needs them.
 
+All six are in 0.7.0.
+
 1. **S1 local search.** Built on `feat/search`; it merges with 0.7.0 once Looma pins HTML Next 1.0.0-alpha.69.
 2. **S7 `redirectFrom` front matter.** Built on `feat/redirect-from`; it merges with 0.7.0.
 3. **Extensionless relative links.** `[x](./getting-started)` fails the build with "Missing asset", because `link()` in `src/markdown.ts` reads the `./` prefix as a file extension. Both tools write relative links without `.md`, and migrated content has them.
