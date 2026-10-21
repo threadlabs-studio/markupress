@@ -38,20 +38,25 @@ model once.
 A feature is in 1.0 when VitePress 1.6 and Docusaurus 3.10 both ship it by default
 or in their main guide, and a typical open-source documentation site needs it.
 Local search is also in, because VitePress, Starlight and Nextra all ship it.
-"Today" describes `origin/main` (`5b2656a`, package 0.0.2, which depends on HTMLKit
-alpha.41).
+"Today" first described `origin/main` at `5b2656a` (package 0.0.2, HTMLKit alpha.41).
+
+**Audited 2026-10-20** against `origin/main` at `723e3c8` (package 0.6.4, HTMLKit and
+HTML Next 1.0.0-alpha.67, Looma 0.30.7): each **In** row's "Today" is Done, Partial
+(with what is missing) or Missing, checked in the source, theme, tests and README. Rows
+marked Keep or Out keep their 2026-10-14 status. The remaining **In** gaps are C1
+footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 
 ### Content
 
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
-| C1 | GFM: tables, task lists, strikethrough, autolinks, footnotes | Partial (no footnotes; task lists unverified) | **In** |
-| C2 | Front matter: `title`, `description`, `order`, `navigation` (`hidden`, or `collapsed` on a folder's index page), `id`, `aliases`, `layout`, `outline` (false or a heading range), `head` (meta, og, canonical), `editLink` | Partial | **In** |
+| C1 | GFM: tables, task lists, strikethrough, autolinks, footnotes | Partial (footnotes missing: Looma Markdown has none; tables, task lists, strikethrough and autolinks done, task lists unit- and browser-tested) | **In** |
+| C2 | Front matter: `title`, `description`, `order`, `navigation` (`hidden`, or `collapsed` on a folder's index page), `id`, `aliases`, `layout`, `outline` (false or a heading range), `head` (meta, og, canonical), `editLink` | Done | **In** |
 | C3 | Heading anchors and `{#id}` | Present | Keep; add a visible anchor link on hover and focus |
-| C4 | Callouts: note, tip, info, important, warning, danger (`caution` is an alias), with a custom title. `::: tip Title … :::` and GitHub `> [!NOTE]` alerts render the shared Looma blocks (see "Shared block vocabulary"). | Partial (an unstyled `<div>`) | **In** |
-| C5 | Collapsible details (`::: details Title`) | Missing | **In** (shared vocabulary) |
-| C6 | Tabs and code groups (`::: tabs`, `::: code-group`), with selection synced across the page and remembered | Missing | **In**: Looma's Examples/API tabs and install tabs need it |
-| C7 | Code blocks: Shiki (dual theme), titles, line highlighting `{1,3-5}` and `// [!code highlight]`, line numbers, a copy button, word wrap | Partial (Shiki and titles only) | **In** |
+| C4 | Callouts: note, tip, info, important, warning, danger (`caution` is an alias), with a custom title. `::: tip Title … :::` and GitHub `> [!NOTE]` alerts render the shared Looma blocks (see "Shared block vocabulary"). | Done (the LoomaEditor export in AE1 is Looma work) | **In** |
+| C5 | Collapsible details (`::: details Title`) | Done | **In** (shared vocabulary) |
+| C6 | Tabs and code groups (`::: tabs`, `::: code-group`), with selection synced across the page and remembered | Done (sync across the page and memory, browser-tested) | **In**: Looma's Examples/API tabs and install tabs need it |
+| C7 | Code blocks: Shiki (dual theme), titles, line highlighting `{1,3-5}` and `// [!code highlight]`, line numbers, a copy button, word wrap | Done | **In** |
 | C8 | Diff and focus markers, and code imports (`<<< ./file{lines}`) | Missing | Out: 1.1 |
 | C9 | Native HTML Next components in Markdown, with TypeScript controllers | Present | Keep (headline feature) |
 | C10 | Images and assets (relative paths, `public/`, hashed) | Present | Keep; fix root-relative links ignoring `base` |
@@ -62,15 +67,15 @@ alpha.41).
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
 | N1 | Sidebar generated from the file tree, ordered by `01.` | Present (flat) | Keep |
-| N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by HTMLKit route groups. An index page with an empty body generates the folder's list of pages. | Missing | **In** |
-| N3 | One sidebar per section (`/components/`, `/editor/`), generated from the section's folder | Missing | **In** |
-| N4 | Top navigation: logo, title, a link per section folder, extra links with optional icons, version badge | Missing | **In** |
+| N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by HTMLKit route groups. An index page with an empty body generates the folder's list of pages. | Done | **In** |
+| N3 | One sidebar per section (`/components/`, `/editor/`), generated from the section's folder | Done (stage 3 also needs sidebar data inside a page) | **In** |
+| N4 | Top navigation: logo, title, a link per section folder, extra links with optional icons, version badge | Done | **In** |
 | N5 | Breadcrumbs and the previous/next pager | Present (HTMLKit) | Keep; front matter can drop the pager |
-| N6 | Right-hand "on this page" outline, with the active heading tracked | Missing | **In** |
-| N7 | Mobile navigation drawer | Partial (an inline toggle, open by default) | **In** |
-| N8 | "Edit this page" link | Missing | **In** |
-| N9 | Last-updated date from git | Missing | **In** |
-| N10 | Themed 404, rendered in the site shell (HTMLKit R7) | Partial (bare HTML) | **In** |
+| N6 | Right-hand "on this page" outline, with the active heading tracked | Done | **In** |
+| N7 | Mobile navigation drawer | Done | **In** |
+| N8 | "Edit this page" link | Done | **In** |
+| N9 | Last-updated date from git | Done | **In** |
+| N10 | Themed 404, rendered in the site shell (HTMLKit R7) | Done | **In** |
 
 ### Theme
 
@@ -78,11 +83,11 @@ alpha.41).
 |---|---|---|---|
 | T1 | Default Looma theme: accessible landmarks, skip link, responsive, light and dark | Present (sparse) | Polish: inline code, blockquotes, tables, prose rhythm |
 | T2 | Dark mode with no flash | Present | Keep |
-| T3 | Customization through Looma `--ui-*` tokens and a documented Markupress token set | Partial (undocumented) | **In** |
-| T4 | A layout override: a site's `app/layouts/default.html` can replace the shell and still receive Markupress's loader data (navigation, crumbs, pager, outline, page metadata) | Missing | **In**: nextwebwg.org needs its own design |
-| T5 | Home layout (`layout: home`): hero (title, tagline, image, actions) and feature cards | Missing | **In** |
-| T6 | Footer from `_footer.md`: links in columns, plus copyright | Missing | **In** |
-| T7 | Logo (light and dark) and favicon from `public/`, with config overrides | Missing | **In** |
+| T3 | Customization through Looma `--ui-*` tokens and a documented Markupress token set | Partial (the theme uses Looma `--ui-*` tokens; no documented customization or Markupress token set) | **In** |
+| T4 | A layout override: a site's `app/layouts/default.html` can replace the shell and still receive Markupress's loader data (navigation, crumbs, pager, outline, page metadata) | Done | **In**: nextwebwg.org needs its own design |
+| T5 | Home layout (`layout: home`): hero (title, tagline, image, actions) and feature cards | Done | **In** |
+| T6 | Footer from `_footer.md`: links in columns, plus copyright | Done | **In** |
+| T7 | Logo (light and dark) and favicon from `public/`, with config overrides | Done | **In** |
 | T8 | Announcement bar | Missing | Out |
 
 ### Search and site
@@ -92,10 +97,10 @@ alpha.41).
 | S1 | Local full-text search: a build-time index plus a search dialog with keyboard shortcut and per-version filtering | Missing | **In** |
 | S2 | Algolia DocSearch | Missing | Out: 1.1 config option |
 | S3 | Versioning: snapshots, a switcher, document identity | Present | Keep (headline feature) |
-| S4 | Sitemap (HTMLKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Missing | **In** |
+| S4 | Sitemap (HTMLKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Done (`sitemap.xml` with `origin`; front matter `head`, `description` and canonical) | **In** |
 | S5 | Base path and clean URLs | Present | Keep |
-| S6 | Broken-link and anchor check at build (HTMLKit V8, plus Markdown `.md` targets) | Partial (`.md` targets only) | **In** |
-| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (HTMLKit R9). `aliases` keep serving the same content, with a canonical link. | Partial (`aliases` only) | **In**: Looma's old flat URLs need it |
+| S6 | Broken-link and anchor check at build (HTMLKit V8, plus Markdown `.md` targets) | Done | **In** |
+| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (HTMLKit R9). `aliases` keep serving the same content, with a canonical link. | Partial (HTMLKit `redirects` in `htmlkit.config.ts` writes redirect pages; front matter `redirectFrom` missing) | **In**: Looma's old flat URLs need it |
 | S8 | i18n: locale folders, a locale switcher, RTL | Missing | Out: 1.1. Neither the Looma docs nor nextwebwg.org need it. |
 | S9 | Blog and RSS | Missing | Out |
 
@@ -106,24 +111,24 @@ alpha.41).
 | D1 | `npm create markupress@latest`: a starter site with a home page, guide pages, a component and the config | Missing | **In** |
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Missing (JSON only) | **In** |
-| D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Missing | **In** |
+| D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
 | D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Missing | **In** |
-| D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Missing (0.0.2 predates #7) | **In** |
+| D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, HTMLKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
 | D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Missing | **In** |
 
 ### Documentation
 
-| # | Page | 1.0 |
-|---|---|---|
-| G1 | A Markupress documentation site, built with Markupress and deployed by CI (dogfood). `examples/site` becomes a test fixture, built in CI. | **In** |
-| G2 | Getting started: `create`, project structure, dev, build, preview | **In** |
-| G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | **In** |
-| G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | **In** |
-| G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | **In** |
-| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | **In** |
-| G7 | Search, SEO and deployment | **In** |
-| G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | **In** |
-| G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | **In** |
+| # | Page | Today | 1.0 |
+|---|---|---|---|
+| G1 | A Markupress documentation site, built with Markupress and deployed by CI (dogfood). `examples/site` becomes a test fixture, built in CI. | Missing (no documentation site; `examples/site` is not built in CI) | **In** |
+| G2 | Getting started: `create`, project structure, dev, build, preview | Partial (in the README; no `create`) | **In** |
+| G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | Done (in the README) | **In** |
+| G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done (in the README) | **In** |
+| G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done (in the README) | **In** |
+| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Partial (in the README; no token reference) | **In** |
+| G7 | Search, SEO and deployment | Partial (SEO in the README; search and deployment missing) | **In** |
+| G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Partial (config options in the README; CLI flags and the programmatic API incomplete) | **In** |
+| G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Missing | **In** |
 
 ### Docs corrections to land first (audit, 2026-10-14)
 
