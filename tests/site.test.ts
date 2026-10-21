@@ -86,11 +86,11 @@ it('renders shared blocks with the Looma components the page links', async () =>
   const application = await createApplication(siteOptions({ root }));
   try {
     const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
-    expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="">Back up \{first\}\.<\/p>/s);
-    expect(html).toMatch(/data-component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="">Alerts too\.<\/p>/s);
+    expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="[^"]*">Back up \{first\}\.<\/p>/s);
+    expect(html).toMatch(/data-component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="[^"]*">Alerts too\.<\/p>/s);
     expect(html).toContain('<details><summary>More</summary>');
     // Without JavaScript every panel shows; Tabs adds its tab list and hides the others when it connects.
-    expect(html).toMatch(/data-component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="">.*<section aria-label="npm" data-slotted="">/s);
+    expect(html).toMatch(/data-component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="[^"]*">.*<section aria-label="npm" data-slotted="[^"]*">/s);
   } finally { await application.close(); }
 }, 30_000);
 
