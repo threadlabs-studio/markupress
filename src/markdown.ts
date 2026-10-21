@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { dirname, resolve } from 'node:path';
+import { readdirSync, type Dirent } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import type { HtmlKitPlugin, PageContext } from '@nextwebwg/htmlkit';
-import { compileMarkdown, type CompiledMarkdown, type FrontMatter } from './content.js';
+import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter } from './content.js';
 import { siteLink } from './navigation.js';
 
 export interface MarkdownPluginOptions {
@@ -56,6 +57,42 @@ function link(href: string, kind: 'link' | 'asset', page: PageContext, options: 
     if (url === undefined) throw new Error(`${page.file}: missing document ${href}.`);
     return url + suffix;
   }
-  if (kind === 'asset' || path.includes('.')) return page.asset(target) + suffix;
-  return href;
+  // A name with an extension (./report.pdf) is a file; a relative path without one (./install, ../guide/) is a page.
+  if (kind === 'asset' || /\.[^/.]+$/.test(path)) return page.asset(target) + suffix;
+  if (path === '' || path.startsWith('/')) return href;
+  const file = pageFile(dirname(page.file), path);
+  const url = file === undefined ? undefined : page.href(file);
+  if (url === undefined) throw new Error(`${page.file}: missing document ${href}: no page ${path} beside it.`);
+  return url + suffix;
+}
+
+/**
+ * The Markdown file a relative page path names, as its URL does: `install` is `install.md` or `02.install.md`, and
+ * `guide` or `guide/` is that page, else that folder's index page, whatever number prefixes the folders and files carry,
+ * as the page's URL ends in a slash either way.
+ */
+function pageFile(from: string, path: string): string | undefined {
+  const entries = (directory: string): Dirent[] => { try { return readdirSync(directory, { withFileTypes: true }); } catch { return []; } };
+  const named = (entry: string, name: string) => entry === name || entry.replace(/^\d+\./, '') === name;
+  const segments = decodeURIComponent(path).split('/');
+  const folder = segments.at(-1) === '';
+  const last = folder ? segments.at(-2) ?? '.' : segments.at(-1)!;
+  let directory = from;
+  for (const segment of segments.slice(0, folder ? -2 : -1)) {
+    if (segment === '.' || segment === '') continue;
+    if (segment === '..') { directory = dirname(directory); continue; }
+    const next = entries(directory).find(entry => entry.isDirectory() && named(entry.name, segment));
+    if (!next) return undefined;
+    directory = join(directory, next.name);
+  }
+  if (last === '..') directory = dirname(directory);
+  else if (last !== '.') {
+    const own = entries(directory).find(entry => entry.isFile() && named(entry.name, `${last}.md`));
+    if (own) return join(directory, own.name);
+    const sub = entries(directory).find(entry => entry.isDirectory() && named(entry.name, last));
+    if (!sub) return undefined;
+    directory = join(directory, sub.name);
+  }
+  const index = entries(directory).find(entry => entry.isFile() && isIndex(entry.name));
+  return index === undefined ? undefined : join(directory, index.name);
 }

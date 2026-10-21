@@ -27,7 +27,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | Header anchors | Has | Every heading links to its anchor: `src/content.ts` (`heading_open`), `tests/content.test.ts`. |
 | Custom anchors `{#id}` | Has (Expressive Markdown) | `## Title {#id}`, an attribute on the heading. `tests/content.test.ts` ("takes a heading id from a trailing {#id} marker"). |
 | Links between pages | Has | Relative `.md` links resolve to the target page in the same version and fail the build when missing: `src/markdown.ts` `link()`, `tests/site.test.ts`. |
-| Extensionless relative links (`./getting-started`) | Partial | A relative link with no extension fails the build with "Missing asset" (scratch): `link()` treats any path containing a `.`, including the `./` prefix, as a file. `.md` links and root-relative page paths work. |
+| Extensionless relative links (`./getting-started`) | Has | A relative path with no extension names a page from the file's folder, number prefixes optional: `tests/site.test.ts` ("resolves extensionless relative links"). |
 | Links to a heading on another page | Has | `[x](./page.md#heading)` keeps the fragment, and the link check verifies it (HTMLKit V8). |
 | External links get `target="_blank"` and `rel` | Missing | Links stay as written (scratch). |
 | Frontmatter | Has (Expressive Markdown) | YAML front matter, validated per field: `src/content.ts` `validFrontMatter`. |

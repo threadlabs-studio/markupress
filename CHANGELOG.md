@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - A snapshot freezes its `@/` links. `markupress snapshot <id>` rewrites a `@/` path in an `href`, `src` or `controller`, an `@import` or a module import, in each Markdown, HTML, CSS, TypeScript or JavaScript file it copies, to `@/versions/<id>/…` when the snapshot holds that file, so the version reads its frozen copy. Markdown code stays as written, and a `@/` path to a file outside the snapshot keeps naming the project's file, with a warning naming the file.
 - A `@/` path in a Markdown page's stylesheet, an `@import` or `url()`, stays for HTMLKit to resolve from the project root, in place of resolving beside the Markdown file.
 - The snapshot and installed-consumer tests link their components with `@/`, and a test changes the live component after a snapshot and checks that the snapshot renders its frozen copy.
+- A relative Markdown link with no extension is a page path from the Markdown file's folder: `[Install](./install)`, `./install/`, `../reference/` and `../reference/options/` link those pages in the same version, with or without the number prefixes of their files and folders. A path naming no page fails the build with the Markdown file and the link. A relative link whose last segment has an extension stays a file.
 
 ## 0.6.4
 
