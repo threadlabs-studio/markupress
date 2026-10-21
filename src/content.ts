@@ -51,7 +51,13 @@ export interface FrontMatter {
   readonly editLink?: string | false;
   /** This page's language, a BCP 47 tag such as `fr`, in place of the site's `lang`. */
   readonly lang?: string;
+  /** The pager's link to the page before this one: false for none, or a `label` and `href` in place of its own. */
+  readonly previous?: PagerLink;
+  /** The pager's link to the page after this one: false for none, or a `label` and `href` in place of its own. */
+  readonly next?: PagerLink;
 }
+/** A pager link as front matter sets it. `href` is a link as in the page's Markdown, such as `../install.md`. */
+export type PagerLink = false | { readonly label?: string; readonly href?: string };
 /** A heading the page's outline lists. */
 export interface OutlineItem {
   readonly id: string;
@@ -185,6 +191,12 @@ const text = (value: unknown) => typeof value === 'string' && value !== '';
 const strings = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   Object.values(value).every(item => typeof item === 'string' || typeof item === 'number');
 const level = (value: unknown) => Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 6;
+function pagerLink(value: unknown): boolean {
+  if (value === false) return true;
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const entries = Object.entries(value);
+  return entries.length > 0 && entries.every(([key, item]) => (key === 'label' || key === 'href') && text(item));
+}
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
@@ -197,6 +209,8 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
   lang: [value => text(value) && /^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(value as string), 'a language tag such as fr or pt-BR'],
+  previous: [pagerLink, 'false, or a mapping of label and href'],
+  next: [pagerLink, 'false, or a mapping of label and href'],
 };
 function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: string): FrontMatter {
   for (const [name, value] of Object.entries(fields)) {
@@ -263,7 +277,10 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
 
 export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
   const { html, frontmatter: raw, body, headings, hasCode, components } = await renderMarkdown(source, options);
-  const fields = { ...options.frontmatter, ...validFrontMatter(raw, options.file) };
+  const own = validFrontMatter(raw, options.file);
+  // A pager link's href resolves as a link in the page's Markdown does.
+  const pager = (link: PagerLink): PagerLink => link && link.href !== undefined && options.resolveLink ? { ...link, href: options.resolveLink(link.href, 'link') } : link;
+  const fields = { ...options.frontmatter, ...own, ...(own.previous === undefined ? {} : { previous: pager(own.previous) }), ...(own.next === undefined ? {} : { next: pager(own.next) }) };
   const aliases = fields.aliases ?? [];
   const fragment = parseFragment(html);
   const declarations: string[] = [];

@@ -3,8 +3,8 @@ import { readdir } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
-  type LoadContext, type NavigationItem, type NavigationNode, type ServerOptions } from '@nextwebwg/htmlkit';
-import { isIndex, type FrontMatter, type OutlineItem } from './content.js';
+  type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@nextwebwg/htmlkit';
+import { isIndex, type FrontMatter, type OutlineItem, type PagerLink } from './content.js';
 import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
@@ -157,7 +157,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
-      crumbs: await breadcrumbs(within), ...await pager(within), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
+      crumbs: await breadcrumbs(within), ...pagerLinks(await pager(within), page?.page), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
       contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
     // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
@@ -235,6 +235,20 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout,
         ...(same(edition, home) || editions.slice(0, index).some(earlier => same(earlier, edition)) ? { alias: true } : {}) })), { dir: home.directory, layout }] };
   } };
+}
+
+/**
+ * The pager's links, which a page's `previous` and `next` front matter drop (`false`) or relabel and retarget. A link
+ * the pager has none for needs an `href`.
+ */
+function pagerLinks(links: PagerLinks, page: FrontMatter | undefined): { previous?: NavigationItem; next?: NavigationItem } {
+  const link = (own: PagerLink | undefined, computed: NavigationItem | undefined) => {
+    if (own === undefined) return computed;
+    if (own === false || (computed === undefined && own.href === undefined)) return undefined;
+    return { ...computed ?? { current: 'false' as const, depth: 0, pageName: '' }, label: own.label ?? computed?.label ?? own.href!, href: own.href ?? computed!.href };
+  };
+  const previous = link(page?.previous, links.previous), next = link(page?.next, links.next);
+  return { ...(previous ? { previous } : {}), ...(next ? { next } : {}) };
 }
 
 /**

@@ -70,7 +70,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by HTMLKit route groups. An index page with an empty body generates the folder's list of pages. | Done | **In** |
 | N3 | One sidebar per section (`/components/`, `/editor/`), generated from the section's folder | Done (stage 3 also needs sidebar data inside a page) | **In** |
 | N4 | Top navigation: logo, title, a link per section folder, extra links with optional icons, version badge | Done | **In** |
-| N5 | Breadcrumbs and the previous/next pager | Present (HTMLKit) | Keep; front matter can drop the pager |
+| N5 | Breadcrumbs and the previous/next pager | Done | Keep; front matter `previous` and `next` drop or change each pager link |
 | N6 | Right-hand "on this page" outline, with the active heading tracked | Done | **In** |
 | N7 | Mobile navigation drawer | Done | **In** |
 | N8 | "Edit this page" link | Done | **In** |

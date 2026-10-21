@@ -105,7 +105,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, id, aliases, layout, outline, head, editLink, lang.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, id, aliases, layout, outline, head, editLink, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');

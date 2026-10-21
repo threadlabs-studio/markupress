@@ -500,3 +500,20 @@ it('sets <html lang> from the lang option on every page and version, and from a 
   } finally { await application.close(); }
   expect(() => siteOptions({ root, lang: 'French!' })).toThrow('The lang option is a language tag such as fr or pt-BR: French!.');
 }, 30_000);
+
+it('drops, relabels and retargets the pager links from previous and next front matter', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/03.setup.md', '---\nprevious: { label: Back to installing }\nnext: false\n---\n# Setup');
+  await write(root, 'docs/01.guide/04.last.md', '---\nprevious: false\nnext: { label: Home, href: ../01.index.md }\n---\n# Last');
+  const application = await createApplication(siteOptions({ root }));
+  const pager = async (path: string) => {
+    const html = (await application.render(path)).html;
+    return [...html.matchAll(/<a [^>]*rel="(prev|next)"[^>]*>[\s\S]*?<\/a>/g)].map(match => [match[1], /href="([^"]*)"/.exec(match[0])![1], match[0].replace(/<[^>]*>/g, '').trim()]);
+  };
+  try {
+    expect(await pager('/v/current/guide/setup/')).toEqual([['prev', '/v/current/guide/install/', expect.stringContaining('Back to installing')]]);
+    expect(await pager('/v/current/guide/last/')).toEqual([['next', '/v/current/', expect.stringContaining('Home')]]);
+  } finally { await application.close(); }
+  await write(root, 'docs/01.guide/04.last.md', '---\nnext: { label: "" }\n---\n# Last');
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow('04.last.md: front matter next must be false, or a mapping of label and href.');
+}, 30_000);
