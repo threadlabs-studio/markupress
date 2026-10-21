@@ -83,7 +83,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 |---|---|---|---|
 | T1 | Default Looma theme: accessible landmarks, skip link, responsive, light and dark | Present (sparse) | Polish: inline code, blockquotes, tables, prose rhythm |
 | T2 | Dark mode with no flash | Present | Keep |
-| T3 | Customization through Looma `--ui-*` tokens and a documented Markupress token set | Partial (the theme uses Looma `--ui-*` tokens; no documented customization or Markupress token set) | **In** |
+| T3 | Customization through Looma `--ui-*` tokens and a documented Markupress token set | Done | **In** |
 | T4 | A layout override: a site's `app/layouts/default.html` can replace the shell and still receive Markupress's loader data (navigation, crumbs, pager, outline, page metadata) | Done | **In**: nextwebwg.org needs its own design |
 | T5 | Home layout (`layout: home`): hero (title, tagline, image, actions) and feature cards | Done | **In** |
 | T6 | Footer from `_footer.md`: links in columns, plus copyright | Done | **In** |
@@ -125,7 +125,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | G3 | Writing: front matter reference, Markdown syntax, callouts and blocks, code blocks, components in Markdown, links and assets | Done (in the README) | **In** |
 | G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done (in the README) | **In** |
 | G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done (in the README) | **In** |
-| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Partial (in the README; no token reference) | **In** |
+| G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done (in the README) | **In** |
 | G7 | Search, SEO and deployment | Partial (SEO in the README; search and deployment missing) | **In** |
 | G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Partial (config options in the README; CLI flags and the programmatic API incomplete) | **In** |
 | G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Missing | **In** |

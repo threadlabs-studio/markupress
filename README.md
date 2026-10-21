@@ -295,6 +295,47 @@ The default theme imports Looma's button and badge resources and CSS exports sel
 
 Styles follow the component boundaries. Looma's tokens, its light and dark themes and the document defaults (`styles/base.css`) are page-wide, delivered through HTMLKit's `css` option. Each Markdown page component imports the documentation typography (`styles/prose.css`), so it styles that page and stops at any component the page embeds. The shell's own `<style>` styles the header, sidebar, columns and footer. `theme/theme.css` is page-wide too, because HTMLKit's built-in breadcrumbs and pager have no styles of their own and no component's scoped style reaches them; it also picks the logo for the theme in use, and draws an accent bar along the top of the window while HTMLKit renders a page in place, when `<html>` has `data-hk-navigating`. With `markdown()` alone, `markdown({ styles: [file] })` makes every Markdown page component import the given stylesheet files.
 
+### Theme tokens
+
+The theme draws with [Looma's design tokens](https://github.com/threadlabs-studio/looma/blob/main/apps/docs/docs/tokens.md) for color, borders and radii, and sizes its layout with Markupress's own tokens. A site sets either in its own page-wide stylesheet, listed in HTMLKit's `css` option:
+
+```ts
+// htmlkit.config.ts
+import { defineConfig } from '@nextwebwg/htmlkit';
+
+export default defineConfig({ css: ['app/site.css'] });
+```
+
+```css
+/* app/site.css */
+:root {
+  --ui-accent: #0b7a75;
+  --markupress-font: "Inter", system-ui, sans-serif;
+  --markupress-sidebar-width: 17rem;
+}
+[data-theme="dark"] { --ui-accent: #5cc8c2; }
+```
+
+Looma's tokens and themes are in the `base` cascade layer, so a site's rules take their place in both themes, and a `[data-theme="dark"]` rule sets the dark theme's value. The theme reads these Looma tokens:
+
+| Token | Draws |
+| --- | --- |
+| `--ui-surface` | The page, header, drawer and code buttons. |
+| `--ui-surface-sunken` | Code blocks. |
+| `--ui-text`, `--ui-text-secondary`, `--ui-text-muted` | Body text, the hero tagline and footnotes, and secondary text such as the outline, footer and page dates. |
+| `--ui-accent` | Links, the current page, focus rings, the outline's current heading and the navigation progress bar. |
+| `--ui-border` | Header and footer rules, table cells, the outline and index entries. |
+| `--ui-radius-sm`, `--ui-radius-md` | Code buttons and index entries. |
+
+| Markupress token | Default | Sets |
+| --- | --- | --- |
+| `--markupress-font` | `system-ui, sans-serif` | The text font of the shell, the home layout and the code buttons. |
+| `--markupress-page-width` | `90rem` | The widest the header, columns and footer grow. |
+| `--markupress-content-width` | `65ch` | The widest a page's text grows. |
+| `--markupress-sidebar-width` | `15rem` | The sidebar on wide screens. |
+| `--markupress-outline-width` | `13rem` | The "On this page" outline. |
+| `--markupress-home-width` | `75rem` | The widest a home page grows. |
+
 ### Navigation, logo and footer
 
 The shell around the pages comes from the content. **Top navigation.** Each top-level folder with an index page is a section, linked from the top navigation by its index page's `title`, in navigation order. The `nav` option adds links after the sections. A link to the page being read, or to a section holding it, is marked current. **Logo and icon.** `public/logo.svg` is the logo, `public/logo-dark.svg` replaces it in the dark theme, and `public/favicon.svg` is the site icon. **Badge.** A site with several versions shows the selected version's label beside the title. **Footer.** `_footer.md` in a version's content directory is that version's footer. HTMLKit routes no file whose name starts with `_`, so the footer has no URL of its own:

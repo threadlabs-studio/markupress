@@ -26,6 +26,10 @@ beforeAll(() => {
   // A typed config, which the installed package's defineConfig types, with a markdown-it plugin of the site's own.
   const options = JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' });
   write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig({ ...${options}, markdown: { plugins: [md => { md.renderer.rules.hr = () => '<hr class="divider">'; }] } });\n`);
+  // The site's own page-wide stylesheet sets a Markupress theme token.
+  mkdirSync(join(workspace, 'app'));
+  write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
+  write('htmlkit.config.js', 'export default { css: ["app/site.css"] };');
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
@@ -122,6 +126,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
+      // The site's stylesheet sizes the sidebar through --markupress-sidebar-width.
+      expect(await page.locator('#documentation-navigation').evaluate(element => element.getBoundingClientRect().width)).toBe(272);
       // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
       const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
