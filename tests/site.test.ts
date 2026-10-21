@@ -458,3 +458,19 @@ it('resolves a Markdown page\'s @/ component link from the project root, at the 
   const result = await buildSite({ root });
   for (const page of ['guide/card/index.html', 'v/current/guide/card/index.html']) expect(await readFile(join(result.outDir, page), 'utf8')).toContain('Card from the root');
 }, 60_000);
+
+it('resolves extensionless relative links as pages, whatever their number prefixes, and rejects a missing one', async () => {
+  const root = await fixture();
+  await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Install](./install) [Install by file](./02.install.md#install) [Guide](../01.guide/) [Home](../) [Reference](../reference) [Options](../reference/options/)');
+  await write(root, 'docs/02.reference/index.md', '---\ntitle: Reference\n---\n');
+  await write(root, 'docs/01.guide/index.md', '---\ntitle: Guide\n---\n');
+  await write(root, 'docs/02.reference/01.options.md', '# Options');
+  const application = await createApplication(siteOptions({ root }));
+  try {
+    const html = (await application.render('/v/current/guide/setup/')).html;
+    for (const href of ['/v/current/guide/install/', '/v/current/guide/install/#install', '/v/current/guide/', '/v/current/', '/v/current/reference/', '/v/current/reference/options/'])
+      expect(html).toContain(`href="${href}"`);
+  } finally { await application.close(); }
+  await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Gone](./gone)');
+  await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/03\.setup\.md: missing document \.\/gone: no page \.\/gone beside it\./);
+}, 30_000);
