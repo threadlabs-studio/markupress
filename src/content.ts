@@ -36,6 +36,8 @@ export interface FrontMatter {
   readonly navigation?: 'hidden' | 'collapsed';
   readonly id?: string;
   readonly aliases?: readonly string[];
+  /** Old route paths in the page's version, each a redirect page to the page (HTMLKit `hk:redirect-from`). */
+  readonly redirectFrom?: readonly string[];
   /** An HTMLKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
   readonly layout?: string | false;
   /** The heading levels the page's outline lists, such as [2, 3], or false for no outline. */
@@ -213,6 +215,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   navigation: [value => value === 'hidden' || value === 'collapsed', 'hidden, or collapsed on a folder\'s index page'],
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
+  redirectFrom: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   layout: [value => value === false || text(value), 'an HTMLKit layout name or false'],
   outline: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
@@ -343,6 +346,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
     (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
     aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
+    (fields.redirectFrom ?? []).map(path => `<meta name="hk:redirect-from" content="${escapeHTML(path)}">`).join('') +
     (fields.layout === undefined ? '' : `<meta name="hk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
