@@ -50,7 +50,7 @@ beforeAll(() => {
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
   write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n\n' +
-    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by :mention[Ada]{id=u1}.\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n');
+    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by :mention[Ada]{id=u1}, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
@@ -214,6 +214,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent))).toEqual(['Blocks', 'Über uns']);
       expect(await page.locator('main [data-looma-chip][data-color="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
       expect(await page.locator('main ul[data-type="taskList"] input[type="checkbox"]').count()).toBe(2);
+      // A footnote reference links to its note, whose section heading is only for assistive technology.
+      expect(await page.locator('main .footnotes h2').evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+      await page.locator('main [data-footnote-ref]').click();
+      await expect.poll(() => page.url()).toContain('#fn:1');
+      expect(await page.locator('main [id="fn:1"]').textContent()).toContain('The footnote.');
       const blocksAudit = await new AxeBuilder({ page }).analyze(); expect(blocksAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-blocks.png`), fullPage: true });
       if (mode === 'preview') {

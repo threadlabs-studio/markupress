@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.7.0
+
+- Markupress's Looma peer is exactly 0.30.8, the Looma release whose Looma Markdown has footnotes. A site's own Looma dependency moves to exactly 0.30.8.
+- `Text[^1]` and a `[^1]: The note.` definition render a footnote: a numbered superscript link to the note, and GFM's notes section at the end of the page, with a link back from each note to its reference. The theme sets the notes below a rule, in smaller type, and keeps their "Footnotes" heading for assistive technology only.
+- The browser proof follows a footnote reference to its note and audits the page with axe.
+
 ## 0.6.4
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.67, and its Looma peer is exactly 0.30.7, the Looma release built with HTML Next 1.0.0-alpha.67. A site's own Looma dependency moves to exactly 0.30.7.

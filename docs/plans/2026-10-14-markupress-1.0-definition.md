@@ -50,7 +50,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
-| C1 | GFM: tables, task lists, strikethrough, autolinks, footnotes | Partial (footnotes missing: Looma Markdown has none; tables, task lists, strikethrough and autolinks done, task lists unit- and browser-tested) | **In** |
+| C1 | GFM: tables, task lists, strikethrough, autolinks, footnotes | Done (footnotes from Looma Markdown 0.30.8) | **In** |
 | C2 | Front matter: `title`, `description`, `order`, `navigation` (`hidden`, or `collapsed` on a folder's index page), `id`, `aliases`, `layout`, `outline` (false or a heading range), `head` (meta, og, canonical), `editLink` | Done | **In** |
 | C3 | Heading anchors and `{#id}` | Present | Keep; add a visible anchor link on hover and focus |
 | C4 | Callouts: note, tip, info, important, warning, danger (`caution` is an alias), with a custom title. `::: tip Title … :::` and GitHub `> [!NOTE]` alerts render the shared Looma blocks (see "Shared block vocabulary"). | Done (the LoomaEditor export in AE1 is Looma work) | **In** |
