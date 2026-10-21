@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - The installed consumer test configures its site with `markupress.config.ts` and type-checks it against the packed package.
 - The `markdown` option extends every page's Markdown: `plugins`, markdown-it plugins as functions of the markdown-it instance, run after Looma Markdown and Markupress's own rules, and `transformers`, Shiki transformers run on every highlighted code block before Markupress's own. Text that a plugin's own rules render stays literal, as Markdown text does. `markdown()` and `compileMarkdown` take the same `markdown` option, and `MarkdownExtensions` and `MarkdownPlugin` are exported types.
 - The installed consumer's `markupress.config.ts` adds a markdown-it plugin, and a unit test covers an added rule, a replaced rule and a transformer.
+- Six Markupress theme tokens size the layout and set its font: `--markupress-font`, `--markupress-page-width`, `--markupress-content-width`, `--markupress-sidebar-width`, `--markupress-outline-width` and `--markupress-home-width`, with the theme's sizes as their defaults. A site sets them, and Looma's `--ui-*` tokens, in its own stylesheet from HTMLKit's `css` option. The README lists both token sets.
+- The browser proof sizes the sidebar from a site stylesheet's `--markupress-sidebar-width`.
 
 ## 0.6.4
 

@@ -16,7 +16,7 @@
 </li></ul></nav>
 <div class="actions"><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <style>
-:host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; border-bottom: 1px solid var(--ui-border, #8885); padding: .75rem max(1rem, calc((100vw - 90rem) / 2)); background: var(--ui-surface); }
+:host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; border-bottom: 1px solid var(--ui-border, #8885); padding: .75rem max(1rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
 .brand { display: flex; align-items: center; gap: .5rem; color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .logo { block-size: 2rem; inline-size: auto; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-inline-start: auto; }
 ul { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; margin: 0; padding: 0; list-style: none; }
@@ -31,7 +31,7 @@ a { color: inherit; text-decoration: none; } a:hover, a[aria-current="page"], a[
 <footer><div class="footer-columns" $if="$footer.columns.length"><div $each="column of $footer.columns"><strong>{$column.title}</strong><ul><li $each="link of $column.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></div></div>
 <p $if="$footer.copyright">{$footer.copyright}</p></footer>
 <style>
-:host { display: block; border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - 90rem) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }
+:host { display: block; border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }
 .footer-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1.5rem; } ul { margin: .5rem 0 0; padding: 0; list-style: none; } li { margin: .25rem 0; } strong { color: var(--ui-text); }
 p { margin: 1.5rem 0 0; }
 a { color: var(--ui-accent); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
