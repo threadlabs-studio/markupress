@@ -115,7 +115,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | --- | --- | --- |
 | Locale folders, `locales`, switcher, per-locale theme | Missing | Plan row S8, 1.1 (Decision 5). |
 | RTL | Missing | 1.1. Looma's components use logical properties. |
-| `lang` | Missing | `<html lang="en">` on every page (scratch); no option sets it. |
+| `lang` | Has | The `lang` option and `lang` front matter set `<html lang>` on every page and version: `tests/site.test.ts` ("sets <html lang>"). |
 
 ## Deploy
 
@@ -162,7 +162,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | `titleTemplate` | Has | See Frontmatter. |
 | `description` (site-wide) | Missing | Per page only. |
 | `head` (site-wide) | Has | A site layout's `<defs>` and HTMLKit's `app/head.js`: `website/docs/01.guide/07.security.md`. |
-| `lang`, `dir` | Missing | See Internationalization. |
+| `lang`, `dir` | Partial | `lang` (see Internationalization); `dir` with i18n, 1.1. |
 | `base`, `srcDir`, `outDir` | Has | `base`, `contentDir`, `outDir`. |
 | `srcExclude` | Partial | Files starting with `_` are not routed. |
 | `assetsDir`, `assetsBase`, `cacheDir` | Not applicable | HTMLKit owns `_htmlkit/`. |

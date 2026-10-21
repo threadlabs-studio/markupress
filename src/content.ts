@@ -49,6 +49,8 @@ export interface FrontMatter {
   };
   /** This page's "Edit this page" URL, or false to show none. */
   readonly editLink?: string | false;
+  /** This page's language, a BCP 47 tag such as `fr`, in place of the site's `lang`. */
+  readonly lang?: string;
 }
 /** A heading the page's outline lists. */
 export interface OutlineItem {
@@ -194,6 +196,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
+  lang: [value => text(value) && /^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(value as string), 'a language tag such as fr or pt-BR'],
 };
 function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: string): FrontMatter {
   for (const [name, value] of Object.entries(fields)) {

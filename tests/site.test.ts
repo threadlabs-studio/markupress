@@ -245,6 +245,7 @@ it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
     expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -486,4 +487,15 @@ it('titles each page with the titleTemplate option, ":title | <site title>" by d
   expect(await title({ title: 'Docs', titleTemplate: ':title · Docs' }, '/guide/install/')).toBe('Installation · Docs');
   expect(await title({ titleTemplate: false }, '/guide/install/')).toBe('Installation');
   expect(() => siteOptions({ root, titleTemplate: 'Docs' })).toThrow('The titleTemplate option places each page\'s title with :title: Docs.');
+it('sets <html lang> from the lang option on every page and version, and from a page\'s lang front matter', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/03.deutsch.md', '---\nlang: de\n---\n# Deutsch');
+  await write(root, 'docs/404.md', '# Introuvable');
+  const application = await createApplication(siteOptions({ root, lang: 'fr' }));
+  const lang = async (path: string) => /<html lang="([^"]*)"/.exec((await application.render(path)).html)?.[1];
+  try {
+    for (const path of ['/', '/guide/install/', '/v/current/guide/install/', '/nowhere/']) expect(await lang(path)).toBe('fr');
+    expect(await lang('/guide/deutsch/')).toBe('de');
+  } finally { await application.close(); }
+  expect(() => siteOptions({ root, lang: 'French!' })).toThrow('The lang option is a language tag such as fr or pt-BR: French!.');
 }, 30_000);

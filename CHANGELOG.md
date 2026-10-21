@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - The snapshot and installed-consumer tests link their components with `@/`, and a test changes the live component after a snapshot and checks that the snapshot renders its frozen copy.
 - A relative Markdown link with no extension is a page path from the Markdown file's folder: `[Install](./install)`, `./install/`, `../reference/` and `../reference/options/` link those pages in the same version, with or without the number prefixes of their files and folders. A path naming no page fails the build with the Markdown file and the link. A relative link whose last segment has an extension stays a file.
 - Each page's document `<title>` is its title and the site title, `Installation | My site`, from the `titleTemplate` option, `":title | <title>"` by default. `false` gives the page's title alone, and a template without `:title` fails with the option's value. A version's home page is titled with the site title, and an explicit `<title>` in Markdown takes the page's place.
+- The `lang` option, a language tag such as `fr` or `pt-BR`, is every page's `<html lang>`, in each version, alias and the not-found page, and a page's `lang` front matter takes its place. Markupress sets it through the layout loader's HTMLKit `head.lang`. An invalid tag fails with its value.
 
 ## 0.6.4
 
