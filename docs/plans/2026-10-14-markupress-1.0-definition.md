@@ -60,7 +60,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | C8 | Diff and focus markers, and code imports (`<<< ./file{lines}`) | Missing | Out: 1.1 |
 | C9 | Native HTML Next components in Markdown, with TypeScript controllers | Present | Keep (headline feature) |
 | C10 | Images and assets (relative paths, `public/`, hashed) | Present | Keep; fix root-relative links ignoring `base` |
-| C11 | Includes, math, Mermaid | Missing | Out: 1.1, through the Markdown extension hook (D5) |
+| C11 | Includes, math, Mermaid | Missing | Out: 1.1, as Expressive Markdown semantic types (Decision 6) |
 
 ### Navigation
 
@@ -112,7 +112,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Done | **In** |
 | D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
-| D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Done | **In** |
+| D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Removed | Out: Expressive Markdown keeps markdown-it internal and exposes no parser-plugin or engine-configuration API; content is customized through its open semantic types and attributes (Decision 6) |
 | D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, HTMLKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
 | D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Missing | **In** |
 
@@ -265,3 +265,6 @@ Defaults, kept unless the owner changes them:
 4. **The 18 Looma pages in no sidebar** (11 parts, 7 editor components) get sidebar
    entries under their sections, since folder-shaped URLs already group them.
 5. **i18n moves to 1.1** (S8). Neither consumer needs it.
+
+Owner, 2026-10-21:
+6. **Content customization goes through Expressive Markdown's open semantic types and attributes.** Looma Markdown is built on [Expressive Markdown](https://github.com/nextwebwg/expressmark), whose markdown-it engine is internal, with no supported parser-plugin or engine-configuration API. Markupress exposes no markdown-it plugin or Shiki transformer option, so D5 is Out.

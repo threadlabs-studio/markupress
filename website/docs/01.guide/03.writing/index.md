@@ -1,4 +1,4 @@
 ---
 title: Writing
-description: Pages, front matter, Markdown, code blocks, extensions and components.
+description: Pages, front matter, Markdown, code blocks and components.
 ---
