@@ -114,7 +114,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
 | D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Removed | Out: Expressive Markdown keeps markdown-it internal and exposes no parser-plugin or engine-configuration API; content is customized through its open semantic types and attributes (Decision 6) |
 | D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, HTMLKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
-| D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Missing | **In** |
+| D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Done | **In** |
 
 ### Documentation
 
@@ -126,7 +126,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done | **In** |
 | G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done | **In** |
 | G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done | **In** |
-| G7 | Search, SEO and deployment | Partial (SEO in the site; search and deployment missing) | **In** |
+| G7 | Search, SEO and deployment | Partial (SEO and deployment in the site; search missing) | **In** |
 | G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Done | **In** |
 | G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Missing | **In** |
 

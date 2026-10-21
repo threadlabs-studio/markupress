@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - The Markupress documentation site is in `website/`, built by Markupress itself and published at https://threadlabs-studio.github.io/markupress/: a guide (getting started, project structure, writing, navigation, versions, theme, the Content Security Policy and SEO) and a reference (configuration, the command line and the API). The README introduces Markupress and links to it.
 - `pnpm build:sites` builds the documentation site and `examples/site`, and `verify:pr` runs it, so CI builds both and checks their links. A push to `main` deploys the documentation site to GitHub Pages.
 - The `markdown` option for markdown-it plugins and Shiki transformers, merged for 0.7.0 and in no published release, is removed: Looma Markdown is built on Expressive Markdown, which keeps markdown-it internal, so content is customized through its open semantic types and attributes. The Markdown guide links to Expressive Markdown's README.
+- The guide's Deploy page publishes a site on GitHub Pages, Vercel, Netlify and any static host, with the base path, the host's Node version, its not-found page, and the git history that dates pages.
 
 ## 0.6.4
 
