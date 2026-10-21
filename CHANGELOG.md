@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file.
 - `npm create markupress@latest <folder>` starts a site from `create-markupress`, a package in `packages/create-markupress` that shares Markupress's version and releases with it: a home page, two guide pages, a component in `app/components/` linked with `@/`, a footer and `markupress.config.ts`. Its `package.json` depends on this Markupress release and the HTML Next and Looma releases Markupress pins, and a folder that already has files is refused. A test packs it, creates a site and builds it with the installed package.
 - `CHANGELOG.md` is a local path in `threadlabs.config.json`, and the Foundation release runner skips a package npm has never seen, with a message saying how to publish it once and add the trusted publisher.
 - The guide's Migrating page maps a Docusaurus or VitePress site's files and URLs, front matter, Markdown, configuration and versions onto Markupress's model, for a one-time conversion.
+- A snapshot freezes its `@/` links. `markupress snapshot <id>` rewrites a `@/` path in an `href`, `src` or `controller`, an `@import` or a module import, in each Markdown, HTML, CSS, TypeScript or JavaScript file it copies, to `@/versions/<id>/…` when the snapshot holds that file, so the version reads its frozen copy. Markdown code stays as written, and a `@/` path to a file outside the snapshot keeps naming the project's file, with a warning naming the file.
+- A `@/` path in a Markdown page's stylesheet, an `@import` or `url()`, stays for HTMLKit to resolve from the project root, in place of resolving beside the Markdown file.
+- The snapshot and installed-consumer tests link their components with `@/`, and a test changes the live component after a snapshot and checks that the snapshot renders its frozen copy.
 
 ## 0.6.4
 

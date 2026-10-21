@@ -9,7 +9,8 @@ export function stylesheet(css: string, file: string, rewrite: boolean): { css: 
   const root = postcss.parse(css, { from: file });
   const dependencies = new Set<string>();
   const local = (value: string, imported = false): string => {
-    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/|#)/.test(value) && !value.startsWith('file:')) return value;
+    // HTMLKit resolves @/, the project root, as it does in every page and component.
+    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/|#|@\/)/.test(value) && !value.startsWith('file:')) return value;
     const clean = value.split(/[?#]/)[0]!;
     let target: string;
     if (value.startsWith('file:')) target = fileURLToPath(value);
