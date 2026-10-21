@@ -11,6 +11,7 @@
 <prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string">Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
+<prop name="search" type="string" default="">The URL of the version's search index</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
 <prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as &lt;hk-nav&gt; renders them</prop>
 <prop name="contents" type="list(object({ label: string, href: string, description: string }))" required>A generated index's pages and folders</prop>
@@ -23,7 +24,7 @@
 <prop name="page" type="object({ editLink?: string, lastUpdated?: string, ... })" required>The page's front matter, with its edit link and the date its file last changed in git</prop>
 <state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:dark="$dark">
+<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:search="$search" from:dark="$dark">
 <span class="menu" slot="menu"><ui-button variant="ghost" tone="neutral" popovertarget="documentation-navigation">Navigation</ui-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation">
 <hk-nav from:items="$sidebar" label="Documentation"></hk-nav>

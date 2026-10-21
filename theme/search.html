@@ -1,0 +1,20 @@
+<link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-search-shell/ui-search-shell.html">
+<link rel="component" href="@threadlabs/looma/components/ui-search-result-row/ui-search-result-row.html">
+<!-- The search button and dialog. The button stays hidden until the controller runs, since search needs it. -->
+<template component="markupress-search" controller="../dist/controllers/search.js">
+<defs>
+<prop name="index" type="string" required>The URL of the version's search index</prop>
+<state name="open" type="boolean" value="false"></state>
+<state name="status" type="string" value=""></state>
+<state name="results" type="list(object({ href: string, page: string, heading: string, excerpt: string }))" value="[]"></state></defs>
+<div class="search"><span class="trigger" hidden><ui-button variant="ghost" tone="neutral" data-action="search" aria-keyshortcuts="/ Control+K Meta+K">Search</ui-button></span>
+<ui-search-shell from:open="$open" modal dismissible label="Search the documentation">
+<input slot="search" type="search" aria-label="Search the documentation" placeholder="Search" autocomplete="off" spellcheck="false">
+<p slot="status" role="status">{$status}</p>
+<div slot="body"><div $each="result of $results" from:data-href="$result.href"><ui-search-result-row><span slot="title">{$result.heading}</span><span slot="meta">{$result.page}</span><span slot="excerpt">{$result.excerpt}</span></ui-search-result-row></div></div>
+</ui-search-shell></div>
+<style>
+input { box-sizing: border-box; inline-size: 100%; padding: .75rem 1rem; border: 0; background: transparent; color: var(--ui-text); font: inherit; font-size: 1.1rem; outline: none; }
+p { margin: 0; padding: 0 1rem; color: var(--ui-text-muted, inherit); font-size: .875rem; } p:empty { display: none; }
+</style></template>

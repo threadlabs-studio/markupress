@@ -269,7 +269,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| Local search with keyboard shortcut | Partial | Built on `feat/search`: a per-version JSON index from HTMLKit's `generate` hook and Looma's `ui-search-shell`, opened with `/`, Ctrl+K or Cmd+K. It merges with 0.7.0. |
+| Local search with keyboard shortcut | Has | A per-version JSON index from HTMLKit's `generate` hook and Looma's `ui-search-shell`, opened with `/`, Ctrl+K or Cmd+K: `tests/site.test.ts`, browser proof, `website/docs/01.guide/08.search.md`. |
 | `search: false` front matter | Missing | |
 | Search i18n, MiniSearch options, custom renderer | Missing | 1.1. |
 | Algolia DocSearch | Missing | Plan row S2, 1.1. |

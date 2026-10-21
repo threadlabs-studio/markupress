@@ -289,6 +289,37 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.locator('#second').evaluate(element => element.scrollIntoView());
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
+      // Search: / opens Looma's search dialog, typing finds a heading on another page, and Enter opens it.
+      await page.goto(server.url + 'v/current/guide/install/');
+      const dialog = page.getByRole('dialog', { name: 'Search the documentation' });
+      await page.getByRole('button', { name: 'Search' }).waitFor();
+      await page.keyboard.press('/');
+      await expect.poll(() => dialog.isVisible()).toBe(true);
+      // The dialog's field takes focus as it opens.
+      await expect.poll(() => page.getByRole('searchbox').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
+      await page.keyboard.type('secnd');
+      await expect.poll(() => dialog.getByRole('status').textContent()).toBe('No results for "secnd"');
+      await page.getByRole('searchbox').fill('second');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
+      expect(await dialog.locator('[data-href]').first().textContent()).toContain('Outline');
+      const searchAudit = await new AxeBuilder({ page }).include('[data-component="ui-search-shell"]').analyze();
+      expect(searchAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      await page.keyboard.press('Enter');
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server.url + 'v/current/guide/outline/#second');
+      await expect.poll(() => dialog.isVisible()).toBe(false);
+      // Ctrl+K opens it too, Escape closes it, and each version searches its own pages: v1 has no "New document".
+      await page.goto(server.url + 'v/v1/guide/install/');
+      await page.getByRole('button', { name: 'Search' }).waitFor();
+      await page.keyboard.press('Control+k');
+      await expect.poll(() => dialog.isVisible()).toBe(true);
+      await page.getByRole('searchbox').fill('new document');
+      await expect.poll(() => dialog.getByRole('status').textContent()).toBe('No results for "new document"');
+      // v1's results are v1's pages.
+      await page.getByRole('searchbox').fill('second');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/v1/guide/outline/#second');
+      await page.keyboard.press('Escape');
+      await expect.poll(() => dialog.isVisible()).toBe(false);
+      await page.goto(server.url + 'v/current/guide/outline/');
       // The top navigation links each section folder with an index page, then the configured links; the logo and footer come from conventions.
       const main = page.getByRole('navigation', { name: 'Main' });
       expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);

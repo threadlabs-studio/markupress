@@ -1,5 +1,6 @@
 <link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-badge/ui-badge.html">
+<link rel="component" href="./search.html">
 <template component="markupress-header">
 <defs>
 <prop name="title" type="string" required>Site title</prop>
@@ -7,6 +8,7 @@
 <prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
+<prop name="search" type="string" default="">The URL of the version's search index, or "" for no search</prop>
 <prop name="dark" type="boolean" default="false">Whether the dark theme is on, which the layout's controller sets</prop></defs>
 <header><slot name="menu"></slot>
 <a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template>{$title}</a>
@@ -14,7 +16,7 @@
 <nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
 <a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
 </li></ul></nav>
-<div class="actions"><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
+<div class="actions"><markupress-search $if="$search" from:index="$search"></markupress-search><ui-button variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark">Dark theme</ui-button></div></header>
 <style>
 :host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; border-bottom: 1px solid var(--ui-border, #8885); padding: .75rem max(1rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
 .brand { display: flex; align-items: center; gap: .5rem; color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .logo { block-size: 2rem; inline-size: auto; }

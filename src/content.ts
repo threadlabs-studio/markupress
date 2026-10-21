@@ -66,6 +66,14 @@ export interface OutlineItem {
   readonly label: string;
   readonly depth: number;
 }
+/** A part of a page for search: the text from one heading to the next, or from the top to the first heading. */
+export interface SearchSection {
+  /** The heading's anchor, or "" for the text before the page's first heading. */
+  readonly id: string;
+  /** The heading's text, or "" before the first heading. */
+  readonly heading: string;
+  readonly text: string;
+}
 export interface CompiledMarkdown {
   readonly resource: string;
   readonly title: string;
@@ -76,6 +84,8 @@ export interface CompiledMarkdown {
   readonly outline: readonly OutlineItem[];
   /** An index page with an empty body: its layout lists the folder's pages below its title. */
   readonly generated: boolean;
+  /** The page's text by heading, which the site's search index lists. */
+  readonly sections: readonly SearchSection[];
 }
 const index = /^(?:\d+\.)?index\.md$/;
 /** Whether a Markdown file is its folder's index page, which HTMLKit reads as the folder's own entry. */
@@ -340,9 +350,30 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const [from, to] = fields.outline === false ? [0, -1] : fields.outline ?? [2, 3];
   const css = [...(options.styles ?? []).map(file => `@import "${pathToFileURL(file).href}";`), ...imports].join('');
   const styles = css ? `<style>${stylesheet(css, options.file, true).css}</style>` : '';
-  return { title, aliases, generated, ...(fields.id === undefined ? {} : { id: fields.id }),
+  return { title, aliases, generated, sections: searchSections(fragment), ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
     resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+}
+
+/**
+ * The rendered page's text, split at each heading with an anchor. Code buttons, component definitions and styles hold
+ * no reading text, and Markdown's literal-brace escapes are removed, so the text reads as the page shows it.
+ */
+const inline = new Set(['a', 'abbr', 'b', 'code', 'del', 'em', 'i', 'ins', 'kbd', 'mark', 's', 'small', 'span', 'strong', 'sub', 'sup', 'u']);
+function searchSections(fragment: DefaultTreeAdapterMap['documentFragment']): SearchSection[] {
+  const sections = [{ id: '', heading: '', text: '' }];
+  const visit = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('value' in node && node.nodeName === '#text') { sections.at(-1)!.text += node.value; return; }
+    if (!('tagName' in node) || ['template', 'style', 'script'].includes(node.tagName) || node.attrs.some(attr => attr.name === 'class' && attr.value === 'code-actions')) return;
+    const id = /^h[1-6]$/.test(node.tagName) ? node.attrs.find(attr => attr.name === 'id')?.value : undefined;
+    if (id !== undefined) { sections.push({ id, heading: textContent(node), text: '' }); return; }
+    for (const child of node.childNodes) visit(child);
+    // Block boundaries separate words that the HTML runs together.
+    if (!inline.has(node.tagName)) sections.at(-1)!.text += ' ';
+  };
+  for (const node of fragment.childNodes) visit(node);
+  const clean = (text: string) => text.replace(/\\([\\{])/g, '$1').replace(/\s+/g, ' ').trim();
+  return sections.map(section => ({ id: section.id, heading: clean(section.heading), text: clean(section.text) })).filter(section => section.id !== '' || section.text !== '');
 }
 
 type Node = DefaultTreeAdapterMap['node'];
