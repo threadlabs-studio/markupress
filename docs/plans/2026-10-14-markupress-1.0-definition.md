@@ -94,7 +94,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
-| S1 | Local full-text search: a build-time index plus a search dialog with keyboard shortcut and per-version filtering | Missing | **In** |
+| S1 | Local full-text search: a build-time index plus a search dialog with keyboard shortcut and per-version filtering | Done | **In** |
 | S2 | Algolia DocSearch | Missing | Out: 1.1 config option |
 | S3 | Versioning: snapshots, a switcher, document identity | Present | Keep (headline feature) |
 | S4 | Sitemap (HTMLKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Done (`sitemap.xml` with `origin`; front matter `head`, `description` and canonical) | **In** |
@@ -126,7 +126,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | G4 | Navigation: sidebar, groups and sections, top navigation, outline, aliases | Done | **In** |
 | G5 | Versions: snapshots in `versions/`, the `versions` option, the switcher and its fallback | Done | **In** |
 | G6 | Theme: tokens, the home layout, overriding the layout, the footer and logo | Done | **In** |
-| G7 | Search, SEO and deployment | Partial (SEO and deployment in the site; search missing) | **In** |
+| G7 | Search, SEO and deployment | Done | **In** |
 | G8 | Reference: config options and defaults, CLI, programmatic API (`markupress()`, `markdown()`, `buildSite`, `snapshotVersion`, `compileMarkdown`) | Done | **In** |
 | G9 | Migrating from Docusaurus and VitePress: a guide to converting syntax, sidebars and front matter into Markupress's model | Done | **In** |
 

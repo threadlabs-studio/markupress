@@ -517,3 +517,18 @@ it('drops, relabels and retargets the pager links from previous and next front m
   await write(root, 'docs/01.guide/04.last.md', '---\nnext: { label: "" }\n---\n# Last');
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow('04.last.md: front matter next must be false, or a mapping of label and href.');
 }, 30_000);
+
+it('writes each version\'s search index, and the default version\'s at the root, with each heading\'s section text', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\n---\nIntro {text}.\n\n## Requirements\n\nNode 22 or `24`.\n\n```sh\nnpm install\n```');
+  const result = await buildSite({ root, base: '/docs/' });
+  const index = async (path: string) => JSON.parse(await readFile(join(result.outDir, path), 'utf8')) as { page: string; heading: string; href: string; text: string }[];
+  const current = await index('v/current/_search.json');
+  expect(current).toEqual(expect.arrayContaining([
+    { page: 'Installation', heading: 'Installation', href: '/docs/v/current/guide/install/', text: 'Intro {text}.' },
+    { page: 'Installation', heading: 'Requirements', href: '/docs/v/current/guide/install/#requirements', text: 'Node 22 or 24. npm install' }]));
+  // The root's index links the root's own pages.
+  expect((await index('_search.json')).map(entry => entry.href)).toContain('/docs/guide/install/#requirements');
+  // Generated files are no pages: the sitemap and navigation leave them out.
+  expect(result.routes.some(route => route.includes('_search'))).toBe(false);
+}, 60_000);

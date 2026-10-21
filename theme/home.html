@@ -11,11 +11,12 @@
 <prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string">Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
+<prop name="search" type="string" default="">The URL of the version's search index</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
 <state name="dark" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:dark="$dark"></markupress-header>
+<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:search="$search" from:dark="$dark"></markupress-header>
 <main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>

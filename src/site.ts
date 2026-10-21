@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
   type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@nextwebwg/htmlkit';
-import { isIndex, type FrontMatter, type OutlineItem, type PagerLink } from './content.js';
+import { isIndex, type FrontMatter, type OutlineItem, type PagerLink, type SearchSection } from './content.js';
 import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
@@ -60,7 +60,7 @@ export interface DocumentationPage {
 }
 
 type Document = DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
-  readonly outline: readonly OutlineItem[]; readonly generated: boolean };
+  readonly outline: readonly OutlineItem[]; readonly generated: boolean; readonly sections: readonly SearchSection[] };
 
 function inside(root: string, path: string) {
   const part = relative(root, path); return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith('../') && !part.startsWith('..\\'));
@@ -129,7 +129,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
         const twin = current().find(doc => doc.source !== page.file && doc.version === edition.id && doc.id === id);
         if (twin) throw new Error(`Documentation identity collision: ${twin.source} and ${page.file} (${id}).`);
         documents.set(`${edition.id}\0${page.file}`, { id, version: edition.id, source: page.file, pathname: `/v/${edition.id}/${path}`,
-          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline, generated: page.generated,
+          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline, generated: page.generated, sections: page.sections,
           page: { ...page.frontmatter, id, title: page.title } });
       }
     },
@@ -154,7 +154,9 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     // The default version also serves the root; its entries are marked current under /v/<id>/.
     const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
     const items = await navigation(within);
+    // The version's search index is served beside its pages: under /v/<id>/, or at the root for the default version there.
     const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
+      search: base + (path.startsWith('/v/') ? `v/${selected}/` : '') + '_search.json',
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
       crumbs: await breadcrumbs(within), ...pagerLinks(await pager(within), page?.page), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
@@ -165,6 +167,18 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const lang = page?.page.lang ?? options.lang;
     return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data },
       ...(lang === undefined ? {} : { head: { lang } }) };
+  }
+  /**
+   * A version's search index: each section of its pages, linked under the path the index is served at, so a reader at
+   * the site root finds the root's pages. HTMLKit routes no file whose name starts with `_`, so the path is free.
+   */
+  function searchIndex(selected: string, served: string, base: string): string {
+    const own = `/v/${selected}/`;
+    return JSON.stringify(current().filter(doc => doc.version === selected).flatMap(doc => {
+      const href = base + served.slice(1) + doc.pathname.slice(own.length);
+      return doc.sections.map(section => ({ page: doc.page.title, heading: section.heading || doc.page.title,
+        href: section.id ? `${href}#${section.id}` : href, text: section.text }));
+    }));
   }
   /** The shell around the page: the sections and links of the top navigation, logo, badge, the section's sidebar and the footer. */
   async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], selected: string, current: string, base: string) {
@@ -202,7 +216,12 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   if (typeof options.titleTemplate === 'string' && !options.titleTemplate.includes(':title')) throw new Error(`The titleTemplate option places each page's title with :title: ${options.titleTemplate}.`);
   if (options.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(options.lang)) throw new Error(`The lang option is a language tag such as fr or pt-BR: ${options.lang}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
-  return { ...pages, name: 'markupress', async config(htmlkit) {
+  return { ...pages, name: 'markupress',
+    // Each version's search index beside its pages, and the default version's at the root too. HTMLKit runs this once
+    // every page has compiled, and again in development after each change.
+    generate: ({ base }) => Object.fromEntries([...editions.map(edition => [`/v/${edition.id}/_search.json`, searchIndex(edition.id, `/v/${edition.id}/`, base)]),
+      ['/_search.json', searchIndex(defaultVersion, '/', base)]]),
+    async config(htmlkit) {
     root = resolve(htmlkit.root ?? root); siteBase = htmlkit.base ?? '/';
     // Conventions first: public/logo.svg, public/logo-dark.svg and public/favicon.svg, which the options override.
     const own = (name: string) => existsSync(join(root, 'public', name)) ? `/${name}` : undefined;
