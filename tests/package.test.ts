@@ -114,6 +114,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         document.addEventListener('transitionrun', event => { if (event.target instanceof Element && event.target.closest('[data-action="theme"]')) load.transitions.push(event.propertyName); }, true);
       });
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+      const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
       // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
@@ -144,14 +145,21 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
       expect(await versions.getByRole('link', { name: 'v1', exact: true }).evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      logged.length = 0;
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
       // HTMLKit commits the URL before the page arrives. v1's counter has its own controller, which this
-      // document cannot also define, so HTMLKit loads v1 as a document; wait for it before clicking.
+      // document cannot also define, so HTMLKit loads v1 as a document, at its top, without logging; wait for it before clicking.
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.waitForLoadState();
+      expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
+      // The document load takes the place of the committed entry, so back returns to the current version's page once.
+      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
+      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.waitForLoadState(); expect(logged).toEqual([]);
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
       await page.goto(server.url + 'v/current/guide/new/');
       // The page's imported stylesheet styles its own heading.
