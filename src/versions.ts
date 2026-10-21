@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
-import { cp, mkdir, readFile, realpath, rename, rm } from 'node:fs/promises';
-import { resolve, join, relative, isAbsolute, dirname } from 'node:path';
+import { cp, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { resolve, join, relative, isAbsolute, dirname, sep } from 'node:path';
+import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
 import { siteOptions, snapshotOf, type DocumentationVersion, type MarkupressOptions } from './site.js';
@@ -20,6 +21,28 @@ export function versionLinks(documents: readonly { readonly id: string; readonly
       current: selected === version.id ? 'page' : 'false',
       note: target ? '' : `This document is unavailable in ${version.label ?? version.id}; open its documentation home.` };
   });
+}
+
+// A quoted @/ specifier where HTMLKit resolves one: an href, src or controller attribute, an @import, or a module import.
+const rootPath = /(\b(?:href|src|controller)\s*=\s*|@import\s+(?:url\(\s*)?|\bfrom\s*|\bimport\s*\(?\s*)(["'])@\/([^"'\s?#]+)([^"']*)\2/g;
+const markdown = createLoomaMarkdownIt();
+/**
+ * The file's @/ specifiers that name a file the snapshot copies, rewritten into the snapshot. A @/ specifier naming any
+ * other file keeps reading the live project, with a warning. Markdown's code, fenced, indented and inline, stays as written.
+ */
+export function freezeRootPaths(text: string, path: string, id: string, copied: ReadonlySet<string>): string {
+  const freeze = (part: string) => part.replace(rootPath, (whole, before: string, quote: string, target: string, rest: string) => {
+    // HTMLKit resolves a controller's or module's .js name to its TypeScript source.
+    if (copied.has(target) || copied.has(target.replace(/\.([cm]?)js(x?)$/, '.$1ts$2'))) return `${before}${quote}@/versions/${id}/${target}${rest}${quote}`;
+    process.emitWarning(`${path}: @/${target} is outside version ${id}, so the snapshot reads the project's current file.`);
+    return whole;
+  });
+  if (!path.endsWith('.md')) return freeze(text);
+  const lines = text.split(/(?<=\n)/);
+  const code = new Set<number>();
+  for (const token of markdown.parse(text, {})) if ((token.type === 'fence' || token.type === 'code_block') && token.map) for (let line = token.map[0]; line < token.map[1]; line++) code.add(line);
+  // Inline code spans are literal text too.
+  return lines.map((line, index) => code.has(index) ? line : line.split(/(`+[^`]*`+)/).map(part => part.startsWith('`') ? part : freeze(part)).join('')).join('');
 }
 
 /**
@@ -72,12 +95,23 @@ export async function snapshotVersion(id: string, options: MarkupressOptions = {
       for (const dependency of stylesheet(await readFile(input, 'utf8'), input, false).files) inputs.add(dependency);
     }
     await cp(source, join(staging, relation), { recursive: true, dereference: false });
+    // The project-relative paths the snapshot holds, which its @/ specifiers then name inside the snapshot.
+    const copied = new Set((await readdir(source, { recursive: true, withFileTypes: true })).filter(entry => entry.isFile())
+      .map(entry => relative(root, join(entry.parentPath, entry.name)).split(sep).join('/')));
     for (const input of inputs) {
       const file = input.split('?')[0]!;
       if (file.endsWith('.htmlkit.css')) continue; // HTMLKit's virtual inline stylesheet, not an authored file.
       const path = relative(canonicalRoot, await realpath(file));
       if (isAbsolute(path) || path.startsWith('..') || path.split(/[/\\]/).includes('node_modules') || /^versions[/\\]/.test(path)) continue;
       const target = join(staging, path); await mkdir(dirname(target), { recursive: true }); await cp(file, target);
+      copied.add(path.split(sep).join('/'));
+    }
+    // A copy names its frozen neighbours: @/<path> becomes @/versions/<id>/<path> wherever the snapshot holds the file.
+    for (const path of copied) {
+      if (!/\.(?:md|html|css|[cm]?[jt]sx?)$/.test(path)) continue;
+      const file = join(staging, path), text = await readFile(file, 'utf8');
+      const frozen = freezeRootPaths(text, path, id, copied);
+      if (frozen !== text) await writeFile(file, frozen);
     }
     try { await cp(join(root, 'public'), join(staging, 'public'), { recursive: true, dereference: false }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
