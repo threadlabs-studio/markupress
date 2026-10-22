@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.8.0
+
+Breaking changes from 0.7.0:
+
+- A Markdown page links its components with `<link rel="component" href="@/…">`. A `<template component>` written in a page's Markdown is raw HTML under CommonMark's HTML block rules, as any other tag is; component definitions live in component files such as `app/components/counter.html`.
+
 ## 0.7.0
 
 - Markupress depends on HTMLKit and HTML Next 1.0.0-alpha.69, and its Looma peer is exactly 0.31.4, the Looma release built with HTML Next 1.0.0-alpha.69. A site's own Looma dependency moves to exactly 0.31.4, and `create-markupress`'s starter depends on both.

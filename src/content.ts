@@ -2,7 +2,7 @@ import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { applyLoomaCodeNotation, parseLoomaFenceInfo, splitLoomaFrontmatter, type LoomaFenceInfo } from '@threadlabs/looma/markdown';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
-import type { StateBlock, Token } from 'markdown-it';
+import type { Token } from 'markdown-it';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
@@ -137,8 +137,7 @@ function textContent(node: DefaultTreeAdapterMap['node']): string {
 /** Per-page render state: fences Shiki highlighted before the synchronous render. */
 interface RenderEnv { readonly highlighted: ReadonlyMap<Token, string> }
 
-// Looma Markdown: Looma's markdown-it plugin parses every form and renders the standard's canonical HTML. Markupress adds its presentation on top: Shiki code figures, heading self-links, literal text,
-// and native component carriers.
+// Looma Markdown: Looma's markdown-it plugin parses every form and renders the standard's canonical HTML. Markupress adds its presentation on top: Shiki code figures, heading self-links and literal text.
 const md = createLoomaMarkdownIt();
 const { escapeHtml } = md.utils;
 const rules = md.renderer.rules;
@@ -167,27 +166,6 @@ rules.fence = (tokens, index, _options, env: RenderEnv) => {
   return codeFigure(env.highlighted.get(token) ?? plainCode(token.content, info), title);
 };
 rules.code_block = (tokens, index) => codeFigure(plainCode(tokens[index]!.content, { meta: '' }));
-
-// A native component carrier, `<template component>` at the start of a block, is raw HTML through its closing tag,
-// blank lines included. Native fragment parsing finds the boundary, nested templates too, so Markdown never
-// interprets a component's CSS, expressions or internal markup.
-md.block.ruler.before('html_block', 'native_component', (state: StateBlock, startLine, endLine, silent) => {
-  const start = state.bMarks[startLine]! + state.tShift[startLine]!;
-  if (state.sCount[startLine]! - state.blkIndent >= 4 || !/^<template(?:\s|>)/i.test(state.src.slice(start, start + 10))) return false;
-  const carrier = parseFragment(state.src.slice(start), { sourceCodeLocationInfo: true }).childNodes.find(node => 'tagName' in node);
-  if (!carrier || !('tagName' in carrier) || carrier.tagName !== 'template' || !carrier.attrs.some(attr => attr.name === 'component')) return false;
-  const end = carrier.sourceCodeLocation?.endTag?.endOffset;
-  if (end === undefined) throw new Error(`${(state.env as { file: string }).file}: unclosed native component template.`);
-  let line = startLine;
-  while (line < endLine && state.eMarks[line]! < start + end) line++;
-  if (line >= endLine) return false;
-  if (silent) return true;
-  const token = state.push('html_block', '', 0);
-  token.content = state.src.slice(start, state.eMarks[line]) + '\n';
-  token.map = [startLine, line + 1];
-  state.line = line + 1;
-  return true;
-}, { alt: ['paragraph', 'reference', 'blockquote'] });
 
 function frontmatter(source: string, file: string) {
   const split = splitLoomaFrontmatter(source);
@@ -318,8 +296,8 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
       const kept: typeof node.childNodes = [];
       for (const child of node.childNodes) {
         visit(child, inCarrier);
-        if (!inCarrier && 'tagName' in child && child.tagName === 'template' && child.attrs.some(attr => attr.name === 'component')) declarations.push(serializeOuter(child));
-        else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('component'))) declarations.push(serializeOuter(child));
+        // A page links its components; their definitions live in component files.
+        if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('component'))) declarations.push(serializeOuter(child));
         // A stylesheet is no head declaration: the page's <style> imports it, which scopes it to the page as its own CSS.
         else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('stylesheet'))) {
           const attr = (name: string) => child.attrs.find(item => item.name === name)?.value;

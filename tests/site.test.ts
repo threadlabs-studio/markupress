@@ -63,12 +63,6 @@ it('builds a static site using the installed HTMLKit package and native navigati
   expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
 }, 30_000);
 
-it('reports native carrier build errors against the original Markdown file', async () => {
-  const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/broken.md', '<template component="broken-example"><p>First</p><p>Second</p></template>\n\n<broken-example></broken-example>');
-  await expect(buildSite({ root })).rejects.toThrow(new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/docs/broken\\.md'));
-}, 30_000);
-
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/02.install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
