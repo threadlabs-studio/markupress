@@ -13,24 +13,24 @@ table { border-collapse: collapse; display: block; max-width: 100%; overflow: au
 th, td { border: 1px solid var(--ui-border, #8885); padding: .4rem .75rem; }
 :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
 /* Looma Markdown's inline elements and blocks, drawn with the tokens LoomaEditor uses for them. */
-[data-looma-chip] {
+[data-type="chip"] {
   --_chip-surface: var(--ui-surface-subtle); --_chip-text: var(--ui-text-secondary);
   padding: .08em .45em; border: var(--ui-border-width, 1px) solid color-mix(in srgb, var(--_chip-surface) 75%, var(--_chip-text) 25%);
   border-radius: var(--ui-radius-round, 999px); background: var(--_chip-surface); color: var(--_chip-text);
   font-size: var(--ui-font-size-sm, .85em); font-weight: var(--ui-font-medium, 500); box-decoration-break: clone;
 }
-[data-looma-chip][data-color="blue"] { --_chip-surface: var(--ui-info-soft); --_chip-text: var(--ui-info-subtle-text); }
-[data-looma-chip][data-color="green"] { --_chip-surface: var(--ui-success-soft); --_chip-text: var(--ui-success-subtle-text); }
-[data-looma-chip][data-color="yellow"] { --_chip-surface: var(--ui-warning-soft); --_chip-text: var(--ui-warning-subtle-text); }
-[data-looma-chip][data-color="red"] { --_chip-surface: var(--ui-danger-soft); --_chip-text: var(--ui-danger-subtle-text); }
-[data-looma-chip][data-color="purple"] { --_chip-surface: var(--ui-accent-soft); --_chip-text: var(--ui-accent-subtle-text); }
-.looma-mention { padding: .08em .28em; border-radius: var(--ui-radius-sm, 4px); background: var(--ui-accent-soft); color: var(--ui-accent-active, var(--ui-accent)); font-weight: var(--ui-font-medium, 500); white-space: nowrap; }
+[data-type="chip"][data-tone="blue"] { --_chip-surface: var(--ui-info-soft); --_chip-text: var(--ui-info-subtle-text); }
+[data-type="chip"][data-tone="green"] { --_chip-surface: var(--ui-success-soft); --_chip-text: var(--ui-success-subtle-text); }
+[data-type="chip"][data-tone="yellow"] { --_chip-surface: var(--ui-warning-soft); --_chip-text: var(--ui-warning-subtle-text); }
+[data-type="chip"][data-tone="red"] { --_chip-surface: var(--ui-danger-soft); --_chip-text: var(--ui-danger-subtle-text); }
+[data-type="chip"][data-tone="purple"] { --_chip-surface: var(--ui-accent-soft); --_chip-text: var(--ui-accent-subtle-text); }
+[data-type="mention"]::before { content: "@"; }
+[data-type="mention"] { padding: .08em .28em; border-radius: var(--ui-radius-sm, 4px); background: var(--ui-accent-soft); color: var(--ui-accent-active, var(--ui-accent)); font-weight: var(--ui-font-medium, 500); white-space: nowrap; }
 ul[data-type="taskList"] { padding-left: .25rem; list-style: none; }
 ul[data-type="taskList"] input { margin: 0 .5rem 0 0; accent-color: var(--ui-accent-solid, var(--ui-accent)); }
-nav[data-looma-toc] { margin: 1rem 0; }
-nav[data-looma-toc] :is(ol, ul, div)[role="list"] { margin: .25rem 0; padding-left: 1.25rem; }
-nav[data-looma-toc] > [role="list"] { padding-left: 0; }
-nav[data-looma-toc][data-format="numbered"] > ol, nav[data-looma-toc][data-format="bulleted"] > ul { padding-left: 1.25rem; }
+nav[data-type="toc"] { margin: 1rem 0; } nav[data-type="toc"] > strong { display: block; margin-bottom: .25rem; }
+nav[data-type="toc"] :is(ul, ol) { margin: .25rem 0; padding-left: 1.25rem; } nav[data-type="toc"][data-format="plain"] ul { padding-left: 0; list-style: none; }
+nav[data-type="toc"] li[data-depth="2"] { margin-inline-start: 1rem; } nav[data-type="toc"] li[data-depth="3"] { margin-inline-start: 2rem; }
 figure:not(.code) { margin: 1.5rem 0; }
 figure:not(.code) > figcaption { margin-top: .5rem; font-size: .9rem; color: var(--ui-text-muted, inherit); }
 img[data-placement="center"] { display: block; margin-inline: auto; }
@@ -43,9 +43,8 @@ img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
 .hero p { margin: 0 0 1rem; font-size: 1.25rem; color: var(--ui-text-secondary, inherit); }
 .hero .actions { margin-top: 1.5rem; }
 .hero-image img { display: block; margin-inline: auto; max-block-size: min(18rem, 40vh); }
-/* Footnotes: GFM's notes section, below a rule, with its heading for assistive technology only. */
-.footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--ui-border, #8885); font-size: .9rem; color: var(--ui-text-secondary, inherit); }
-.footnotes .sr-only { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
-.footnotes li:target { background: var(--ui-accent-soft); }
+/* Footnotes: Expressive Markdown's notes section, named "Footnotes" for assistive technology, below a rule. */
+[data-footnotes] { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--ui-border, #8885); font-size: .9rem; color: var(--ui-text-secondary, inherit); }
+[data-footnotes] li:target { background: var(--ui-accent-soft); }
 [data-footnote-ref] { text-decoration: none; }
 :is([id^="fn:"], [id^="fnref:"]) { scroll-margin-top: 5rem; }

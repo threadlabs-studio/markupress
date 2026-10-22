@@ -4,7 +4,7 @@ Build a versioned Markdown documentation site with native HTML Next components, 
 
 **Documentation: [threadlabs-studio.github.io/markupress](https://threadlabs-studio.github.io/markupress/)**
 
-- **Markdown:** GitHub Flavored Markdown with footnotes, callouts, details, tabs and code groups, shared with Looma's components and LoomaEditor.
+- **Markdown:** [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language), GitHub Flavored Markdown with footnotes, callouts, details, tabs and code groups, shared with LoomaEditor.
 - **Code blocks:** Shiki highlighting at build time in both themes, titles, line highlights and numbers, copy and wrap.
 - **Components:** native HTML Next components in any page, with TypeScript controllers.
 - **Navigation:** sections and sidebars from folders, a top navigation, breadcrumbs, an "On this page" outline, a mobile drawer, edit links and last-updated dates.

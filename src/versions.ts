@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { resolve, join, relative, isAbsolute, dirname, sep } from 'node:path';
-import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
 import { siteOptions, snapshotOf, type DocumentationVersion, type MarkupressOptions } from './site.js';
@@ -25,10 +24,9 @@ export function versionLinks(documents: readonly { readonly id: string; readonly
 
 // A quoted @/ specifier where HTMLKit resolves one: an href, src or controller attribute, an @import, or a module import.
 const rootPath = /(\b(?:href|src|controller)\s*=\s*|@import\s+(?:url\(\s*)?|\bfrom\s*|\bimport\s*\(?\s*)(["'])@\/([^"'\s?#]+)([^"']*)\2/g;
-const markdown = createLoomaMarkdownIt();
 /**
  * The file's @/ specifiers that name a file the snapshot copies, rewritten into the snapshot. A @/ specifier naming any
- * other file keeps reading the live project, with a warning. Markdown's code, fenced, indented and inline, stays as written.
+ * other file keeps reading the live project, with a warning. Markdown's fenced and inline code stays as written.
  */
 export function freezeRootPaths(text: string, path: string, id: string, copied: ReadonlySet<string>): string {
   const freeze = (part: string) => part.replace(rootPath, (whole, before: string, quote: string, target: string, rest: string) => {
@@ -39,8 +37,14 @@ export function freezeRootPaths(text: string, path: string, id: string, copied: 
   });
   if (!path.endsWith('.md')) return freeze(text);
   const lines = text.split(/(?<=\n)/);
+  // ponytail: fenced code only, read by its fence lines; an indented code block's @/ text would freeze too.
   const code = new Set<number>();
-  for (const token of markdown.parse(text, {})) if ((token.type === 'fence' || token.type === 'code_block') && token.map) for (let line = token.map[0]; line < token.map[1]; line++) code.add(line);
+  let fence: string | undefined;
+  for (const [index, line] of lines.entries()) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence === undefined && marker) { fence = marker; code.add(index); }
+    else if (fence !== undefined) { code.add(index); if (marker && marker[0] === fence[0] && marker.length >= fence.length && line.trim() === marker) fence = undefined; }
+  }
   // Inline code spans are literal text too.
   return lines.map((line, index) => code.has(index) ? line : line.split(/(`+[^`]*`+)/).map(part => part.startsWith('`') ? part : freeze(part)).join('')).join('');
 }
