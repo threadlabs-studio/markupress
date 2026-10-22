@@ -13,7 +13,7 @@ Versioned documentation from Markdown, with native HTML Next components and a Lo
 
 ## Components in Markdown
 
-Declare an HTML Next component in a page, or link one, and use it on the next line. Its controller is TypeScript.
+Link an HTML Next component in a page and use it on the next line. Its controller is TypeScript.
 
 ## Versions
 
