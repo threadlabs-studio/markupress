@@ -41,28 +41,11 @@ Text {notAnExpression}.
   expect(compiled.resource).not.toContain('<template component="fake-page">');
 });
 
-it('preserves authored component expressions and emitted controller module spelling', async () => {
-  const compiled = await compileMarkdown(`<template component="helper-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><output>{$count}</output></template>
-
-<helper-counter></helper-counter>`, { file: '/project/docs/example.md', pageName: 'page-example' });
-  expect(compiled.resource).toContain('controller="file:///project/docs/counter.js"');
-  // Braces inside a component carrier stay expressions; only Markdown prose escapes them.
-  expect(compiled.resource).toContain('<output>{$count}</output>');
-  expect(compiled.resource).toContain('<meta name="hk:page" content="page-example">');
-});
-
-it('keeps native carrier CSS and text expressions opaque to Markdown', async () => {
-  const compiled = await compileMarkdown('<template component="inline-example"><p>{$count}</p><style>:host { color: teal; }</style></template>\n\n<inline-example></inline-example>', { file: '/project/demo.md', pageName: 'page-example' });
-  expect(compiled.resource).toContain('<p>{$count}</p>');
-  expect(compiled.resource).toContain(':host { color: teal; }');
-});
-
-it('resolves literal assets inside authored carriers while retaining dynamic attribute bindings', async () => {
-  const compiled = await compileMarkdown('<template component="inline-image"><div><img src="./image.svg"><img from:src="$image"></div></template>', {
-    file: '/project/demo.md', pageName: 'page-example', resolveLink: href => '/assets/' + href.replace('./', ''),
-  });
-  expect(compiled.resource).toContain('src="/assets/image.svg"');
-  expect(compiled.resource).toContain('from:src="$image"');
+it('keeps a component definition written in Markdown as raw HTML in place, linking components only', async () => {
+  const compiled = await compileMarkdown('<link rel="component" href="./counter.html">\n\n<template component="x-inline">\n<p>Raw</p>\n</template>', { file: '/project/docs/raw.md', pageName: 'page-raw' });
+  const page = compiled.resource.indexOf('<template component="page-raw"');
+  expect(compiled.resource.indexOf('<link rel="component" href="file:///project/docs/counter.html">')).toBeLessThan(page);
+  expect(compiled.resource.indexOf('<template component="x-inline">')).toBeGreaterThan(page);
 });
 
 it('reports duplicate frontmatter keys against the Markdown source', async () => {

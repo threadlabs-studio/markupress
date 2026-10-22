@@ -149,8 +149,8 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
       const kept: typeof node.childNodes = [];
       for (const child of node.childNodes) {
         visit(child, inCarrier);
-        if (!inCarrier && 'tagName' in child && child.tagName === 'template' && child.attrs.some(attr => attr.name === 'component')) declarations.push(serializeOuter(child));
-        else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('component'))) declarations.push(serializeOuter(child));
+        // A page links its components; their definitions live in component files.
+        if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('component'))) declarations.push(serializeOuter(child));
         // A stylesheet is no head declaration: the page's <style> imports it, which scopes it to the page as its own CSS.
         else if (!inCarrier && 'tagName' in child && child.tagName === 'link' && child.attrs.some(attr => attr.name === 'rel' && attr.value.split(/\s+/).includes('stylesheet'))) {
           const attr = (name: string) => child.attrs.find(item => item.name === name)?.value;
