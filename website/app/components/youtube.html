@@ -1,0 +1,11 @@
+<template component="x-youtube">
+  <defs>
+    <prop name="video" type="string" required>The video's ID, the part after watch?v= in a YouTube URL.</prop>
+    <prop name="label" type="string" default="YouTube video">The frame's accessible title.</prop>
+  </defs>
+  <iframe from:src="concat('https://www.youtube-nocookie.com/embed/', $video)" from:title="$label"
+    loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen></iframe>
+  <style>:host { display: block; inline-size: 100%; aspect-ratio: 16 / 9; margin-block: 1rem; border: 0; }</style>
+</template>
