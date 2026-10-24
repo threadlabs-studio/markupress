@@ -60,7 +60,7 @@ Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is t
 
 ## Theme the whole documentation site
 
-Markupress has its own quiet green light/dark palette. Its shell, navigation rows, current selection, focus, prose and controls consume Looma's public semantic properties, so a site can apply a different identity throughout. Put site-wide overrides in `app/site.css`, or use HTMLKit's `css` option. Keep styling for a new identity at that theme boundary rather than selecting the internals of nested Looma controls.
+Markupress has its own quiet green light/dark palette. Its shell, navigation rows, current selection, focus, prose and controls consume Looma's public semantic properties, so a site can apply a different identity throughout. Put site-wide overrides in `app/site.css`, or use HTMLKit's `css` option. Keep styling for a new identity at that theme boundary rather than selecting the internals of nested Looma controls. Set `--markupress-background` to add a page-wide texture or gradient; it defaults to `var(--ui-surface)` and can use the same semantic colors.
 
 Without a saved mode, the site follows the operating system and responds when that preference changes. The header's theme button fixes and remembers the chosen mode. In an application that supplies its own mode switch, set `data-theme="light"` or `data-theme="dark"`; nested boundaries apply only to their descendants. Remove the root attribute when using the CSS directly to follow system preference.
 

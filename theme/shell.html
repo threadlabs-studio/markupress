@@ -36,7 +36,7 @@
 <aside class="outline" $if="$outline.length" aria-label="On this page"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
-:host { display: block; background: var(--ui-surface); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--markupress-font, var(--ui-font-sans)); min-height: 100vh; }
+:host { display: block; background: var(--markupress-background, var(--ui-surface)); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--markupress-font, var(--ui-font-sans)); min-height: 100vh; }
 .site { display: flex; flex-direction: column; min-height: 100vh; }
 .columns { display: flex; gap: var(--ui-space-6); flex: 1; inline-size: 100%; max-inline-size: var(--markupress-page-width, 90rem); margin: auto; padding: 0; }
 #documentation-navigation { flex: 0 0 var(--markupress-sidebar-width, 18rem); } main { min-width: 0; flex: 1; padding: var(--ui-space-4) var(--ui-space-5) var(--ui-space-6); max-width: var(--markupress-content-width, 54rem); } .outline { flex: 0 0 var(--markupress-outline-width, 13rem); }
