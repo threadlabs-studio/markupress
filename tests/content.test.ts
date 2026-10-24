@@ -139,10 +139,16 @@ it('derives titles and anchors from visible heading text rather than Markdown li
   expect(compiled.resource).toContain('<title>Install package &amp; run()</title>');
 });
 
-it('retains indented component examples as literal Markdown code', async () => {
-  const compiled = await compileMarkdown('    <template component="fake-indented"><p>{count}</p></template>', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<pre><code>&lt;template');
-  expect(compiled.resource).not.toContain('<template component="fake-indented">');
+it('uses modern Markdown by default, including Markdown inside HTML and indented prose', async () => {
+  const compiled = await compileMarkdown('<section>\n\n**Readable**\n\n</section>\n\n    Indented prose', { file: '/docs/index.md', pageName: 'page-index' });
+  expect(compiled.resource).toContain('<strong>Readable</strong>');
+  expect(compiled.resource).toContain('<p>Indented prose</p>');
+  expect(compiled.resource).not.toContain('<pre>');
+});
+
+it('lets document frontmatter select compatible Markdown', async () => {
+  const compiled = await compileMarkdown('---\nmarkdownSyntax: compatible\n---\n    Literal code', { file: '/docs/index.md', pageName: 'page-index' });
+  expect(compiled.resource).toContain('<pre><code>Literal code');
 });
 
 it('takes a heading id from a trailing {#id} attribute, and keeps an authored ID as written', async () => {

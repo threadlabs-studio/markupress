@@ -9,7 +9,7 @@ const fixtures: readonly (readonly [name: string, markdown: string, html: readon
   ['link references', 'See [the guide][g].\n\n[g]: https://example.com/guide "Guide"', ['<a href="https://example.com/guide" title="Guide">the guide</a>']],
   ['headings with anchors and authored IDs', '## Setup\n\n## Install {#install}', ['<h2 id="setup"><a href="#setup">Setup</a></h2>', '<h2 id="install"><a href="#install">Install</a></h2>']],
   ['tables with column alignment', '| a | b |\n| :- | -: |\n| 1 | 2 |', ['<th style="text-align:start">a</th>', '<td style="text-align:end">2</td>']],
-  ['tight and loose lists', '- one\n- two\n\n1. first\n\n2. second', ['<ul><li>one</li><li>two</li></ul>', '<ol><li><p>first</p></li><li><p>second</p></li></ol>']],
+  ['lists separated by blank lines', '- one\n- two\n\n1. first\n\n2. second', ['<ul><li>one</li><li>two</li></ul>', '<ol><li>first</li></ol><ol start="2"><li>second</li></ol>']],
   ['task lists', '- [x] Done\n- [ ] Next', ['<ul data-type="taskList"><li data-type="taskItem" data-checked="true"><label><input type="checkbox" disabled="" checked=""> Done</label></li>']],
   ['footnotes', 'Text[^n].\n\n[^n]: The note.', ['<sup><a href="#fn:n" id="fnref:n" data-footnote-ref="">1</a></sup>', '<section data-footnotes="" aria-label="Footnotes">']],
   ['line blocks', '| One line\n| Another', ['<div data-type="line-block" style="white-space:pre-line">One line<br>Another</div>']],

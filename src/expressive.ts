@@ -129,7 +129,10 @@ function rawHtmlNames(document: Document): { tags: Set<string>; attributes: Set<
     if ('content' in node) visit(node.content);
     if ('childNodes' in node) for (const child of node.childNodes) visit(child);
   };
-  for (const node of nodes(document)) if (node.type === 'html' && node.value) visit(parseFragment(node.value));
+  for (const node of nodes(document)) {
+    const html = node.type === 'htmlElement' ? node.open : node.type === 'html' ? node.value : undefined;
+    if (html) visit(parseFragment(html));
+  }
   return { tags, attributes: names };
 }
 
@@ -139,7 +142,7 @@ function rawHtmlNames(document: Document): { tags: Set<string>; attributes: Set<
  * task checkboxes and generated tables of contents. Front matter errors fail with the Markdown file.
  */
 export async function renderMarkdown(source: string, options: { readonly file: string; readonly lineNumbers?: boolean }): Promise<RenderedMarkdown> {
-  const document = parse(source, { trustedHtml: true, onDiagnostic(diagnostic) {
+  const document = parse(source, { syntax: 'modern', trustedHtml: true, onDiagnostic(diagnostic) {
     // Front matter is page metadata, so a mistake in it fails the build as an unknown field does.
     if (diagnostic.code === 'invalid-frontmatter' || diagnostic.code === 'duplicate-metadata-key') throw new Error(`${options.file}: ${diagnostic.message}`);
   } });

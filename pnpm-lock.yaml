@@ -170,8 +170,8 @@ importers:
         specifier: 1.0.0-alpha.69
         version: 1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
-        specifier: 0.1.11
-        version: 0.1.11
+        specifier: 0.1.18
+        version: 0.1.18
       parse5:
         specifier: 8.0.1
         version: 8.0.1
@@ -1135,8 +1135,8 @@ packages:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
 
-  expressmark@0.1.11:
-    resolution: {integrity: sha512-AXCLDg+9nCfzLYX3IA5/geI9lroGTk/gkUPb1+V675mxQZUXN0utkZPvfIJS3CvxlMqB2iY1BAesTz0TEIEM9Q==}
+  expressmark@0.1.18:
+    resolution: {integrity: sha512-yCg1I/O4uSmDM7JjZ3lsvZ847gPKcpxBrmwoiaLE5XfM6ZKm81QilGJrnjANkzBuCCf8i5cWa8IP4JL5BlOH3w==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
 
   expressmark@0.1.6:
@@ -1305,6 +1305,10 @@ packages:
     resolution: {integrity: sha512-q4IGxMv56jCqT4OCRCADBoDP3LO4MhmTXjFbphHPXs4g3j9Xg5RDnxqN8IF/3vIWEU+VCnUq+7JUg/cfy2E6Qw==}
     hasBin: true
 
+  markdown-it@15.0.3:
+    resolution: {integrity: sha512-+Az7Ojz3iRGu8KYMvJ6xVhvrxP3eE+vEtJX75Ow88XBpcQNV/0lGX5ZynIIBftREo4DC2jsveAMDaeltmm8QvQ==}
+    hasBin: true
+
   mdast-util-to-hast@13.2.1:
     resolution: {integrity: sha512-cctsq2wp5vTsLIcaymblUriiTcZd0CwWtCbLvrOzYCDZoWyMNV8sZ7krj09FSnsiJi3WVsHLM4k6Dq/yaPyCXA==}
 
@@ -1372,6 +1376,11 @@ packages:
 
   parseman@0.54.0:
     resolution: {integrity: sha512-axAkINMNllfz1IRxKhI6qm3GVcBvvTVxnjvIo+kKCmL9PWYeK1XYQO/121uYuEsTvsw1QXpT5wTUyZmu+xTfcQ==}
+    engines: {node: ^20.19.0 || >=22.13.0}
+    hasBin: true
+
+  parseman@0.55.2:
+    resolution: {integrity: sha512-FmRj2BmiK08Ey6i4tK8XJPV7JARytnnxLnuozCeyPUVtSgWQ/qolx3zUNXpmjTY5Qz5WKMS/kzc8ui7tYzVDGQ==}
     engines: {node: ^20.19.0 || >=22.13.0}
     hasBin: true
 
@@ -2291,11 +2300,11 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  expressmark@0.1.11:
+  expressmark@0.1.18:
     dependencies:
       htmlparser2: 12.0.0
-      markdown-it: 15.0.2
-      parseman: 0.54.0
+      markdown-it: 15.0.3
+      parseman: 0.55.2
       sanitize-html: 2.18.1
       yaml: 2.9.1
 
@@ -2477,6 +2486,15 @@ snapshots:
       punycode.js: 2.3.1
       uc.micro: 3.0.0
 
+  markdown-it@15.0.3:
+    dependencies:
+      argparse: 3.0.3
+      entities: 8.1.0
+      linkify-it: 6.1.0
+      mdurl: 2.1.0
+      punycode.js: 2.3.1
+      uc.micro: 3.0.0
+
   mdast-util-to-hast@13.2.1:
     dependencies:
       '@types/hast': 3.0.5
@@ -2598,6 +2616,14 @@ snapshots:
       entities: 8.1.0
 
   parseman@0.54.0:
+    dependencies:
+      linecraft: 0.2.6
+      magic-string: 0.30.21
+      oxc-parser: 0.137.0
+      oxc-resolver: 11.23.0
+      unplugin: 3.0.0
+
+  parseman@0.55.2:
     dependencies:
       linecraft: 0.2.6
       magic-string: 0.30.21

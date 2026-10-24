@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 0.8.0
 
-- Markupress renders Markdown as [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language) with expressmark 0.1.11, in place of Looma's markdown-it renderer, and its Looma peer is exactly 0.32.0. A site's own Looma dependency moves to exactly 0.32.0.
+- Markupress renders Markdown as [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language) with expressmark 0.1.18, in place of Looma's markdown-it renderer, and its Looma peer is exactly 0.32.0. A site's own Looma dependency moves to exactly 0.32.0.
 
 Breaking changes from 0.7.0:
+
+- Markdown uses Expressmark's `modern` syntax by default, including Markdown inside HTML and no indentation-based code blocks. Fenced code remains literal. A document can opt into CommonMark/GFM interpretation with `markdownSyntax: compatible` in its frontmatter.
 
 - A tab panel is a `::: tab [Label]` container, and consecutive tabs form a group; `:::: tabs {group=name}` around them names it. `== Label` panels inside `::: tabs` or `::: code-group` read as text.
 - A mention is `@[Name]#id`; `:mention[Name]{id=…}` reads as text.

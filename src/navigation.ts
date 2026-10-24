@@ -53,7 +53,7 @@ export function footer(file: string): { columns: { title: string; items: Link[] 
     const found = find(item);
     return found && { label: plainText(found), href: found.url ?? '' };
   };
-  for (const node of parse(readFileSync(file, 'utf8')).body) {
+  for (const node of parse(readFileSync(file, 'utf8'), { syntax: 'modern' }).body) {
     if (node.type === 'heading') result.columns.push({ title: plainText(node), items: [] });
     else if (node.type === 'list') {
       const column = result.columns.at(-1) ?? fail('a footer list follows a heading, which titles its column.');
