@@ -23,6 +23,7 @@ Added:
 
 - Container titles in brackets, `::: warning [Before you upgrade]`, alongside the unbracketed spelling; GitHub alerts with a title after the marker; code blocks' `{title="a.ts" highlight=1,3-5 show-line-numbers}`, alongside the info string Markupress also reads; `::: toc [Title] {depth=2}`; `::: layout {align=center}`; line blocks; link reference definitions; and table column alignment.
 - Tests render every Expressive Markdown construct through Markupress (`tests/conformance.test.ts`), and `tests/convert.test.ts` covers the conversion and the converted Markdown's rendering.
+- Render section navigation with Looma Disclosure and Nav Item controls, including shared chevrons, spacing, selected state, focus and pointer feedback. Linked groups expose a separate overview link, so expanding a section does not navigate away.
 
 - Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
 

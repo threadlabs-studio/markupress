@@ -165,15 +165,15 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await page.emulateMedia({ colorScheme: 'light' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
-      // The theme's global stylesheet reaches HTMLKit's built-in sidebar navigation, breadcrumbs and pager.
-      expect(await page.locator('#documentation-navigation [data-component="hk-nav"] ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
+      // Navigation uses Looma rows; HTMLKit supplies the breadcrumbs and pager.
+      expect(await page.locator('#documentation-navigation [data-component~="markupress-nav-items"]').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
       expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
       expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
       // Navigation has a full selectable row, with the same public theme roles as controls.
-      const selectedNavigation = page.locator('#documentation-navigation [data-component="hk-nav"] a[aria-current="page"]');
+      const selectedNavigation = page.locator('#documentation-navigation [data-component~="ui-nav-item"][aria-current="page"]');
       expect(await selectedNavigation.evaluate(element => getComputedStyle(element).textDecorationLine)).toBe('none');
       expect(await selectedNavigation.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(32);
       const scopes = await page.evaluate(() => {
@@ -383,13 +383,17 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/install/#install');
       await expect.poll(() => page.locator('[data-component="markupress-shell"]').count(), { timeout: 30_000 }).toBe(1);
       if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + 'v/current/'); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
-      // The root sidebar is HTMLKit's navigation tree in <hk-nav>: the guide folder is an open native <details> after hydration.
       await page.goto(server.url + 'v/current/about/');
-      const group = page.locator('#documentation-navigation details').filter({ has: page.locator('summary', { hasText: 'guide' }) });
-      await expect.poll(() => group.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
-      expect(await group.getByRole('link').allTextContents()).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
-      const linkedGroup = page.locator('#documentation-navigation summary').filter({ has: page.getByRole('link', { name: 'Reference', exact: true }) });
+      const group = page.locator('#documentation-navigation [data-component~="ui-disclosure"]').filter({ has: page.getByRole('button', { name: 'guide', exact: true }) });
+      const trigger = group.getByRole('button', { name: 'guide', exact: true });
+      await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('true');
+      expect((await group.getByRole('link').allTextContents()).map(text => text.trim())).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
+      expect(await trigger.locator('svg').count()).toBeGreaterThan(0);
+      await trigger.click(); await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('false');
+      await trigger.press('Enter'); await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('true');
+      const linkedGroup = page.getByRole('button', { name: 'Reference', exact: true });
       expect(await linkedGroup.evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(40);
+      expect(await page.getByRole('link', { name: 'Reference overview', exact: true }).getAttribute('href')).toContain('/reference/');
       await page.goto(server.url + 'v/v1/');
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
@@ -413,6 +417,17 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The home page fits a narrow screen too.
       await page.goto(server.url + 'v/current/');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (mode === 'preview') {
+        const noScript = await browser.newContext({ javaScriptEnabled: false });
+        try {
+          const plain = await noScript.newPage(); await plain.goto(server.url + 'v/current/about/');
+          const fallback = plain.locator('.native details').filter({ has: plain.locator('summary', { hasText: 'guide' }) });
+          expect(await fallback.isVisible()).toBe(true);
+          await fallback.locator('summary').click();
+          expect(await fallback.getAttribute('open')).toBe(null);
+          expect(await plain.locator('.enhanced').isVisible()).toBe(false);
+        } finally { await noScript.close(); }
+      }
       expect(errors).toEqual([]); expect(violations).toEqual([]); await context.close(); await server.close(); server = undefined;
     }
   } finally { await server?.close(); await browser.close(); }

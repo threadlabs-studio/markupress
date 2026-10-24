@@ -57,7 +57,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title data-component-head="">Installation | Documentation</title>');
   expect(page).toContain('href="/manual/v/current/guide/install/"');
-  expect(page).toMatch(/<nav aria-label="Documentation"[^>]*>/);
+  expect(page).toMatch(/<nav\b[^>]*aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
   expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
@@ -136,7 +136,7 @@ it('replaces the shell with the site\'s app/layouts/default.html, which receives
   await write(root, 'docs/01.guide/_layout.server.js', 'export function load({ parent }) { return { props: { section: String(parent.markupress.navigation.length) } }; }');
   const application = await createApplication(siteOptions({ root }));
   try {
-    const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
+    const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     expect(html).not.toContain('data-component="markupress-shell"');
     expect(html).toContain('<header class="site">Installation</header>');
     expect(html).toContain('href="/v/current/guide/install/"');
@@ -155,17 +155,18 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   // The folder's index page labels, orders and collapses the folder.
   await write(root, 'docs/02.components/02.layout/index.md', '---\ntitle: Layout\norder: 0\nnavigation: collapsed\n---\n# Layout components');
   await write(root, 'docs/editor.md', '---\norder: 1\n---\n# Editor\n\n## Tables');
-  const sidebar = (html: string) => /<nav aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const sidebar = (html: string) => /<nav\b[^>]*aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->|<\?[^>]*>/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const application = await createApplication(siteOptions({ root }));
   try {
     // order 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
-    expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
-    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '').replace(/>\s+</g, '><');
-    expect(sidebar(button)).toBe('Layout Stack forms Button');
-    // A collapsed group stays closed unless it holds the current page.
-    // A folder with an index page is that page's node, so its summary links to the page.
-    expect(button).toMatch(/<details(?![^>]* open)[^>]*><summary[^>]*><a href="\/v\/current\/components\/layout\/"[^>]*>Layout<\/a><\/summary>/);
-    expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>(?:<[^>]*>)*forms</);
+    expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Layout overview Stack forms Button');
+    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/>\s+</g, '><');
+    expect(sidebar(button)).toBe('Layout Layout overview Stack forms Button');
+    expect(button.match(/data-component="ui-disclosure"/g)).toHaveLength(2);
+    expect(button).toContain('<span class="summary">Layout</span>');
+    expect(button).toContain('<span class="summary">forms</span>');
+    expect(button).toContain('Layout overview');
+    expect(button).toContain('href="/v/current/components/layout/"');
     expect(button).toContain('href="/v/current/components/forms/button/" aria-current="page"');
   } finally { await application.close(); }
 }, 30_000);
@@ -206,8 +207,8 @@ it('renders no logo, icon or missing pager link when the shell receives null for
   const root = await fixture(); await linkDependencies(root);
   const application = await createApplication(siteOptions({ root }));
   try {
-    const first = (await application.render('/')).html.replace(/<!--[^>]*-->/g, '');
-    const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
+    const first = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
+    const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     for (const html of [first, last]) {
       expect(html).not.toContain('rel="icon"');
       expect(html).toMatch(/<a class="brand" href="\/"><span class="brand-title">Documentation<\/span><\/a>/);
@@ -225,7 +226,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
   const application = await createApplication(siteOptions({ root, logo: '/mark.svg', favicon: '/icon.png',
     versions: [{ id: 'current', label: 'Next', directory: 'docs' }, { id: 'v1', label: 'Version 1', directory: 'docs' }] }));
   try {
-    const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->/g, '');
+    const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     expect(html).toContain('<link rel="icon" href="/icon.png" data-component-head="">');
     expect(html).toMatch(/<img class="logo logo-light"[^>]* src="\/mark.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/mark.svg"/);
     expect(html).toMatch(/data-component="ui-badge"[^>]*>.*Version 1/s);
@@ -278,7 +279,7 @@ it('renders a folder index page with an empty body as a list of its pages and fo
   await write(root, 'docs/02.components/03.secret.md', '---\nnavigation: hidden\n---\n# Secret');
   await write(root, 'docs/02.components/04.(More)/menu.md', '# Menu');
   const application = await createApplication(siteOptions({ root }));
-  const list = (html: string) => /<ul class="contents"[^>]*>(.*?)<\/ul>/s.exec(html.replace(/<!--[^>]*-->/g, ''))?.[1];
+  const list = (html: string) => /<ul class="contents"[^>]*>(.*?)<\/ul>/s.exec(html.replace(/<!--[^>]*-->|<\?[^>]*>/g, ''))?.[1];
   try {
     const html = (await application.render('/components/')).html;
     expect(html).toMatch(/<article class="markupress-prose"[^>]*><h1>Components<\/h1><\/article>/);
@@ -324,9 +325,12 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
   try {
     const rendered = await application.render('/intro/');
     expect(rendered.status).toBe(200);
-    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
+    const html = rendered.html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
-    expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
+    expect(rendered.html).toContain('data-component="ui-disclosure"');
+    expect(html).toContain('<span class="summary">Getting started</span>');
+    expect(html).toContain('href="/v/current/intro/" aria-current="page"');
+    expect(rendered.html).toContain('class="native"');
     expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
   } finally { await application.close(); }
 }, 30_000);

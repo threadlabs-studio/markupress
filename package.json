@@ -1,6 +1,6 @@
 {
   "name": "markupress",
-  "version": "0.8.0",
+  "version": "0.8.4",
   "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
   "license": "MIT",
   "type": "module",
@@ -73,7 +73,7 @@
   },
   "peerDependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": "^0.33.0 || ^0.34.0"
+    "@threadlabs/looma": "^0.33.0 || ^0.34.0 || ^0.35.0"
   },
   "bin": {
     "markupress": "./dist/cli.js"
