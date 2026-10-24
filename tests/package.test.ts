@@ -49,6 +49,9 @@ beforeAll(() => {
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
   write('docs/03.about.md', '# About');
+  mkdirSync(join(workspace, 'docs/workspace'));
+  write('docs/workspace/index.md', '---\nsidebar: false\n---\n# Workspace');
+  write('docs/workspace/edit.md', '# Edit workspace');
   mkdirSync(join(workspace, 'docs/02.reference'));
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
@@ -158,6 +161,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
       expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(250, 251, 249)', code: 'rgb(239, 243, 238)' });
+      await expect.poll(() => page.getByRole('button', { name: 'Automatic appearance' }).getAttribute('aria-pressed')).toBe('true');
       await page.emulateMedia({ colorScheme: 'dark' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await page.emulateMedia({ colorScheme: 'light' });
@@ -190,15 +194,26 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // Highlighted code follows the theme's color-scheme through light-dark().
       const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
       const light = await color();
-      await page.getByRole('button', { name: 'Dark theme' }).click();
+      await page.getByRole('button', { name: 'Dark appearance' }).click();
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(25, 34, 31)', code: 'rgb(19, 28, 24)' });
       await expect.poll(color).not.toBe(light);
-      await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: 'Dark appearance' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: 'Dark appearance' }).getAttribute('aria-pressed')).toBe('true');
       // A saved theme is applied before first paint, so nothing fades out of the default theme.
       expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [], pending: [] });
+      // An explicit choice ignores the system, while Automatic clears that choice and follows it again.
+      await page.emulateMedia({ colorScheme: 'light' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await page.getByRole('button', { name: 'Automatic appearance' }).click();
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
+      expect(await page.evaluate(() => localStorage.getItem('markupress:theme'))).toBeNull();
+      await page.emulateMedia({ colorScheme: 'dark' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await page.reload();
+      await expect.poll(() => page.getByRole('button', { name: 'Automatic appearance' }).getAttribute('aria-pressed')).toBe('true');
+      await page.getByRole('button', { name: 'Dark appearance' }).click();
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
@@ -344,7 +359,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/guide/outline/');
       // The top navigation links each section folder with an index page, then the configured links; the logo and footer come from conventions.
       const main = page.getByRole('navigation', { name: 'Main' });
-      expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await main.getByRole('link', { name: 'Outline' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('header img.logo-light').getAttribute('src')).toBe('/manual/logo.svg');
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
@@ -365,13 +380,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component="markupress-home"] .hero h1').textContent()).toBe('Welcome');
       expect(await page.locator('.hero-image img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
       expect(await page.locator('.features [data-component="ui-card"] h2').allTextContents()).toEqual(['Components', 'Versions']);
-      expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       expect(await page.locator('#documentation-navigation, [data-component="hk-pager"]').count()).toBe(0);
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
         // A reload settles the theme, so no color is caught mid-transition.
-        if (theme === 'light') { await page.getByRole('button', { name: 'Dark theme' }).click(); await page.reload(); }
+        if (theme === 'light') { await page.getByRole('button', { name: 'Light appearance' }).click(); await page.reload(); }
         await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe(theme);
         const homeAudit = await new AxeBuilder({ page }).analyze(); expect(homeAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       }
@@ -397,7 +412,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const brand = page.getByRole('link', { name: 'Example docs with a deliberately long product title', exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
-      for (const label of ['Navigation', 'Search', 'Dark theme']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
+      for (const label of ['Navigation', 'Search', 'Automatic appearance', 'Light appearance', 'Dark appearance']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
@@ -411,6 +426,23 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
+      // Workspace pages retain a mobile section menu without duplicating documentation navigation.
+      await page.goto(server.url + 'v/current/workspace/edit/');
+      expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(0);
+      await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+      expect(await page.getByRole('navigation', { name: 'Sections', exact: true }).isVisible()).toBe(true);
+      await page.keyboard.press('Escape');
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      expect(await page.locator('#documentation-navigation').isVisible()).toBe(false);
+      await page.goto(server.url + 'v/current/guide/outline/');
+      const outlineTitle = page.getByText('On this page', { exact: true });
+      const header = page.locator('[data-component="markupress-header"]');
+      expect((await outlineTitle.boundingBox())!.y).toBeGreaterThan((await header.boundingBox())!.y + (await header.boundingBox())!.height + 10);
+      await page.locator('html').evaluate(element => element.style.setProperty('--markupress-header-height', '96px'));
+      await page.evaluate(() => scrollTo(0, 500));
+      await expect.poll(async () => (await outlineTitle.boundingBox())!.y).toBeGreaterThanOrEqual(106);
+      await page.locator('html').evaluate(element => element.style.removeProperty('--markupress-header-height'));
+      await page.setViewportSize({ width: 390, height: 844 });
       // The home page fits a narrow screen too.
       await page.goto(server.url + 'v/current/');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

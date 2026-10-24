@@ -198,7 +198,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
     expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
-    expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation">/);
+    expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation" data-sidebar="">/);
     expect(html).toMatch(/<button\b[^>]* popovertarget="documentation-navigation"/);
   } finally { await application.close(); }
 }, 30_000);
@@ -545,3 +545,21 @@ it('redirects a page\'s redirectFrom paths to it in each version, with redirect 
   expect(await readFile(join(result.outDir, 'setup/index.html'), 'utf8')).toContain('/guide/install/');
   expect(await readFile(join(result.outDir, 'v/current/old/install/index.html'), 'utf8')).toContain('/v/current/guide/install/');
 }, 60_000);
+
+
+it('lets a section hide documentation navigation while a child page can opt back in', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/workspace/index.md', '---\nsidebar: false\n---\n# Workspace');
+  await write(root, 'docs/workspace/edit.md', '# Edit');
+  await write(root, 'docs/workspace/reference.md', '---\nsidebar: true\n---\n# Reference');
+  await write(root, 'docs/customize.md', '---\nsidebar: false\n---\n# Customize');
+  const app = await createApplication(siteOptions({ root }));
+  try {
+    for (const path of ['/workspace/', '/workspace/edit/', '/customize/']) {
+      const html = (await app.render(path)).html;
+      expect(html).not.toMatch(/<nav[^>]*aria-label="Documentation"/);
+      expect(html).toContain('aria-label="Sections"');
+    }
+    for (const path of ['/workspace/reference/', '/guide/install/']) expect((await app.render(path)).html).toMatch(/<nav[^>]*aria-label="Documentation"/);
+  } finally { await app.close(); }
+}, 30_000);
