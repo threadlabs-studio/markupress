@@ -16,7 +16,7 @@ export function siteLink(to: string, home: string): string {
 /** A top navigation link after the sections, shown as its `icon` image (a path starting with `/` is in `public/`) or its label. */
 export type NavItem = Link & { readonly icon?: string };
 
-/** A sidebar entry as `<hk-nav>` renders it: a page or link with `href`, and a folder or group with `children`. */
+/** A sidebar entry from HTMLKit, rendered through Looma navigation controls: a page or link with `href`, and a folder or group with `children`. */
 export interface SidebarNode {
   readonly label: string;
   readonly href?: string;

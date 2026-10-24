@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Render section navigation with Looma Disclosure and Nav Item controls, including shared chevrons, spacing, selected state, focus and pointer feedback. Linked groups expose a separate overview link, so expanding a section does not navigate away.
+
 - Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
 
 ## 0.8.0
