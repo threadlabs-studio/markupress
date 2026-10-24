@@ -157,7 +157,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
-      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
+      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(250, 251, 249)', code: 'rgb(239, 243, 238)' });
+      await page.emulateMedia({ colorScheme: 'dark' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await page.emulateMedia({ colorScheme: 'light' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
       // The theme's global stylesheet reaches HTMLKit's built-in sidebar navigation, breadcrumbs and pager.
       expect(await page.locator('#documentation-navigation [data-component="hk-nav"] ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
@@ -165,12 +169,30 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
+      // Navigation has a full selectable row, with the same public theme roles as controls.
+      const selectedNavigation = page.locator('#documentation-navigation [data-component="hk-nav"] a[aria-current="page"]');
+      expect(await selectedNavigation.evaluate(element => getComputedStyle(element).textDecorationLine)).toBe('none');
+      expect(await selectedNavigation.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(32);
+      const scopes = await page.evaluate(() => {
+        const outer = document.createElement('section'); outer.dataset.theme = 'dark';
+        const inner = document.createElement('section'); inner.dataset.theme = 'light';
+        const nested = document.createElement('section'); nested.dataset.theme = 'dark';
+        for (const node of [outer, inner, nested]) node.style.cssText = 'background:var(--ui-surface);color:var(--ui-text)';
+        outer.append(inner); inner.append(nested); document.body.append(outer);
+        const read = (node: Element) => { const style = getComputedStyle(node); return { background: style.backgroundColor, color: style.color, scheme: style.colorScheme }; };
+        const result = [outer, inner, nested].map(read); outer.remove(); return result;
+      });
+      expect(scopes).toEqual([
+        { background: 'rgb(25, 34, 31)', color: 'rgb(237, 244, 237)', scheme: 'dark' },
+        { background: 'rgb(250, 251, 249)', color: 'rgb(36, 52, 44)', scheme: 'light' },
+        { background: 'rgb(25, 34, 31)', color: 'rgb(237, 244, 237)', scheme: 'dark' },
+      ]);
       // Highlighted code follows the theme's color-scheme through light-dark().
       const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
       const light = await color();
       await page.getByRole('button', { name: 'Dark theme' }).click();
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(26, 26, 26)', code: 'rgb(46, 46, 46)' });
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(25, 34, 31)', code: 'rgb(19, 28, 24)' });
       await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
@@ -233,7 +255,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => groups.nth(1).getByRole('tab').count()).toBe(2);
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('pnpm markupress build');
       // The theme's global block styles reach the Markdown projected into Looma's components.
-      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(46, 46, 46)');
+      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(19, 28, 24)');
       await groups.first().getByRole('tab', { name: 'npm', exact: true }).click();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('npx markupress build');
@@ -363,13 +385,17 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const group = page.locator('#documentation-navigation details').filter({ has: page.locator('summary', { hasText: 'guide' }) });
       await expect.poll(() => group.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
       expect(await group.getByRole('link').allTextContents()).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
+      const linkedGroup = page.locator('#documentation-navigation summary').filter({ has: page.getByRole('link', { name: 'Reference', exact: true }) });
+      expect(await linkedGroup.evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(40);
       await page.goto(server.url + 'v/v1/');
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
+      expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
       await expect.poll(() => sidebar.isVisible()).toBe(true);
+      expect(await page.getByRole('navigation', { name: 'Sections', exact: true }).isVisible()).toBe(true);
       await page.keyboard.press('Escape');
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
