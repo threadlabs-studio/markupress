@@ -1,6 +1,7 @@
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
 <link rel="component" href="./chrome.html">
 <link rel="component" href="./outline.html">
+<link rel="component" href="./navigation.html">
 <template component="markupress-shell" controller="../dist/controllers/shell.js">
 <defs>
 <title>{$title}</title>
@@ -13,7 +14,7 @@
 <prop name="badge" type="string" default="">Badge beside the title</prop>
 <prop name="search" type="string" default="">The URL of the version's search index</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
-<prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as &lt;hk-nav&gt; renders them</prop>
+<prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as HTMLKit supplies them</prop>
 <prop name="contents" type="list(object({ label: string, href: string, description: string }))" required>A generated index's pages and folders</prop>
 <prop name="outline" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
@@ -28,7 +29,7 @@
 <span class="menu" slot="menu"><ui-icon-button label="Navigation" variant="ghost" tone="neutral" popovertarget="documentation-navigation"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></ui-icon-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation">
 <nav class="mobile-sections" $if="$nav.length" aria-label="Sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current">{$item.label}</a></li></ul></nav>
-<hk-nav from:items="$sidebar" label="Documentation"></hk-nav>
+<markupress-navigation from:items="$sidebar" label="Documentation"></markupress-navigation>
 <nav class="versions" $if="$versions.length > 1" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
 </aside><main id="documentation-content" tabindex="-1"><hk-breadcrumbs from:items="$crumbs"></hk-breadcrumbs><slot name="page"></slot>
 <ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul>

@@ -13,7 +13,6 @@ it('keeps folders open unless their index page collapses them, and always opens 
     node('Layout', [node('Stack', [], { href: '/layout/stack/' })], { href: '/layout/' }),
     node('More', [node('Deep', [node('Page', [], { href: '/more/deep/page/', current: 'page', open: true })])], { href: '/more/' })];
   const collapsed = (href: string) => href === '/layout/' || href === '/more/';
-  // Folders nest as deep as the tree does: <hk-nav> renders each level.
   expect(shape(generatedSidebar(tree, collapsed))).toEqual(['Home', ['Forms', true, ['Button']], ['Layout', false, ['Stack']], ['More', true, [['Deep', true, ['Page']]]]]);
   // A folder without an index page has no href, and stays open.
   expect(generatedSidebar([node('loose', [node('A', [], { href: '/loose/a/' })])], () => true)[0]!.open).toBe(true);

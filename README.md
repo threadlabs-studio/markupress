@@ -64,4 +64,4 @@ Markupress has its own quiet green light/dark palette. Its shell, navigation row
 
 Without a saved mode, the site follows the operating system and responds when that preference changes. The header's theme button fixes and remembers the chosen mode. In an application that supplies its own mode switch, set `data-theme="light"` or `data-theme="dark"`; nested boundaries apply only to their descendants. Remove the root attribute when using the CSS directly to follow system preference.
 
-The shared shell supports `--markupress-sidebar-width`, `--markupress-content-width`, `--markupress-page-width` and `--markupress-outline-width`. Navigation uses Looma's `--ui-nav-*`, `--ui-selection-*`, typography, spacing and focus families. On screens at or below 996px it becomes a native popover drawer.
+The shared shell supports `--markupress-sidebar-width`, `--markupress-content-width`, `--markupress-page-width` and `--markupress-outline-width`. Navigation is rendered by Looma's Disclosure and Nav Item components and uses its `--ui-nav-*`, `--ui-selection-*`, typography, spacing and focus families. On screens at or below 996px it becomes a native popover drawer.

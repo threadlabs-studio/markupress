@@ -9,23 +9,6 @@
 [data-component~="markupress-shell"] [data-component="hk-pager"] a { display: grid; }
 [data-component~="markupress-shell"] [data-component="hk-pager"] a[rel="next"] { margin-inline-start: auto; text-align: end; }
 [data-component~="markupress-shell"] [data-component="hk-pager"] small { color: var(--ui-text-muted, inherit); }
-/* The sidebar is HTMLKit's <hk-nav>: nested lists, with each folder and group in a native <details>. */
-[data-component~="markupress-shell"] [data-component="hk-nav"] ul { margin: 0; padding: 0; list-style: none; }
-[data-component~="markupress-shell"] [data-component="hk-nav"] { font-size: var(--ui-font-size-sm); line-height: var(--ui-line-height-normal, 1.5); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] li { margin: var(--ui-space-0-5) 0; }
-[data-component~="markupress-shell"] [data-component="hk-nav"] details ul { padding-inline-start: var(--ui-space-3); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] summary { cursor: pointer; font-weight: var(--ui-font-bold); font-size: var(--ui-font-size-xs); letter-spacing: .09em; text-transform: uppercase; color: var(--ui-text-secondary); padding: var(--ui-nav-padding-block) var(--ui-nav-padding-inline); border-radius: var(--ui-selection-radius); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] a {
-  display: flex; align-items: center; min-block-size: var(--ui-nav-compact-min-block-size);
-  padding: var(--ui-nav-compact-padding-block) var(--ui-nav-compact-padding-inline);
-  border-radius: var(--ui-selection-radius); color: var(--ui-text-secondary); text-decoration: none;
-  transition: background-color var(--ui-motion-fast) var(--ui-ease-standard, ease), color var(--ui-motion-fast) var(--ui-ease-standard, ease);
-}
-[data-component~="markupress-shell"] [data-component="hk-nav"] summary > a { display: inline; padding: 0; min-block-size: 0; font: inherit; color: inherit; }
-[data-component~="markupress-shell"] [data-component="hk-nav"] :is(a, summary):hover { background: var(--ui-nav-hover-surface); color: var(--ui-text); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] :is(a, summary):active { background: var(--ui-selection-surface); color: var(--ui-selection-text); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] a[aria-current="page"] { background: var(--ui-selection-surface); color: var(--ui-selection-text); font-weight: var(--ui-font-bold); }
-[data-component~="markupress-shell"] [data-component="hk-nav"] :is(a, summary):focus-visible { outline: var(--ui-focus-width) solid var(--ui-focus-ring); outline-offset: var(--ui-focus-offset, 2px); }
 /* Shared blocks. Markdown inside a callout or tabs is projected into a Looma component, where the page's scoped
    prose styles never reach (HTML Next styling: a page's rules stop at every nested component), so these global
    rules space the blocks and repeat the prose code styles inside them. Details is native and needs no script. */
