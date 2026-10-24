@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add page and section sidebar visibility so workspace pages can supply contextual tools without a second documentation sidebar.
+- Offer Automatic, Light and Dark appearance choices with standard icons, and keep the outline below the measured header.
+
 - Render section navigation with Looma Disclosure and Nav Item controls, including shared chevrons, spacing, selected state, focus and pointer feedback. Linked groups expose a separate overview link, so expanding a section does not navigate away.
 
 - Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.

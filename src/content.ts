@@ -34,6 +34,8 @@ export interface FrontMatter {
    * page, `collapsed` starts the folder's sidebar group closed.
    */
   readonly navigation?: 'hidden' | 'collapsed';
+  /** Show documentation navigation; a folder index supplies its descendants' default. */
+  readonly sidebar?: boolean;
   readonly id?: string;
   readonly aliases?: readonly string[];
   /** Old route paths in the page's version, each a redirect page to the page (HTMLKit `hk:redirect-from`). */
@@ -191,6 +193,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   navigation: [value => value === 'hidden' || value === 'collapsed', 'hidden, or collapsed on a folder\'s index page'],
+  sidebar: [value => typeof value === 'boolean', 'true or false'],
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   redirectFrom: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],

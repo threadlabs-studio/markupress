@@ -155,7 +155,10 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
     const items = await navigation(within);
     // The version's search index is served beside its pages: under /v/<id>/, or at the root for the default version there.
-    const data: Record<string, unknown> = { title: options.title ?? 'Documentation', home: base, navigation: items,
+    const sidebarDefault = catalog.filter(doc => doc.version === selected && isIndex(doc.source) &&
+      (page?.pathname ?? requested).startsWith(doc.pathname) && doc.page.sidebar !== undefined)
+      .sort((a, b) => b.pathname.length - a.pathname.length)[0]?.page.sidebar;
+    const data: Record<string, unknown> = { sidebarVisible: page?.page.sidebar ?? sidebarDefault ?? true, title: options.title ?? 'Documentation', home: base, navigation: items,
       search: base + (path.startsWith('/v/') ? `v/${selected}/` : '') + '_search.json',
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
