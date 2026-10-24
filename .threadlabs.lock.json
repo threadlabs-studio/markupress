@@ -2,13 +2,11 @@
   "artifacts": {
     ".gitattributes": "e54c83aec897237a7b75759915ef0634b3466eae3614a8d676db2012d49faa9e",
     ".github/dependabot.yml": "4c835c01213d922e37a495e4c027c9fc5a37afe86939ac216d848f18750b19d2",
-    ".github/workflows/release.yml": "cab273c80e52ba40f7c8145a24f3a15da4755e993f6b3dfdcdcaaedde69882d3",
     "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49",
     "LICENSE": "6bed3f63fdb93da6da00d91f2611a0f51cb1b9c0f0fc63d37084ee24babc8ff6",
     "docs/code-documentation-standard.md": "86c505d61ecf7c87f014dfc421b083379b46d3796e194e1e17fcf88b6ec6d1ec",
     "oxlint.json": "d435ac06f3f195c630ac9ee7556695dad99e18d647df60441c53ee6dd9db38cc",
-    "scripts/release.mjs": "2820461d5551fff706db0724bd1f30bcfdaad3d2be70367b03f5c24280621bdb",
-    "threadlabs.config.json": "b74168cd5a00ad4c581ec0bb21f2e7d6f599c62bd86038842c4ff04251ebbfb2",
+    "threadlabs.config.json": "f653e6e08c14d230e8469652799147c8f0915e85aad5dc703d729ed7adbdde48",
     "tsconfig.build.json": "86aabca591603c918fc0e30f0f15beea30de0a5ed1ba980101deefa2affcb6e9",
     "tsconfig.json": "bdd65ea8907cee3913f8ad013ba816448bacab64e8d4fc37104c0f91451c080c",
     "vitest.config.ts": "2c8c7edc88606b92688de92185d8d25302701ecf2394d104ce9847927caa7d79"

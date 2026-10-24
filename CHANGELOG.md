@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Next release
+
+- Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
+
 ## 0.8.0
 
 - Use Looma 0.33 with HTML Next 1.0.0-alpha.69. The starter pins 0.33.0; the peer accepts compatible 0.33 patch releases, including consumers that ship Looma’s documentation generator.

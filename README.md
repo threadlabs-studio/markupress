@@ -52,7 +52,7 @@ MARKUPRESS_BROWSER_TEST=1 corepack pnpm exec vitest run tests/package.test.ts --
 
 The package contract packs and installs the actual package, runs its CLI, checks frozen imports and checks controller types. The browser proof exercises production and development controllers under HTMLKit's generated Content Security Policy, failing on any violation, keyboard version selection, reloads, mobile navigation, the home page and an axe accessibility audit. CI runs that browser proof separately, and builds both sites. A push to `main` deploys the documentation site to GitHub Pages.
 
-Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is the contributor contract; [threadlabs.config.json](threadlabs.config.json) records ownership. The [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md) defines product boundaries. Publishing uses the protected GitHub release workflow and npm environment.
+Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is the contributor contract; [threadlabs.config.json](threadlabs.config.json) records ownership. The [implementation plan](docs/plans/2026-10-04-1830-feat-markupress-platform-plan.md) defines product boundaries. Merges to main automatically publish a verified patch release through GitHub Actions and the npm environment. A larger version declared in a PR is preserved. Release snapshots keep Markupress and its starter aligned; rerunning the same source resumes the frozen version after a partial publication. The release workflow and runner are locally owned in the Foundation manifest.
 
 ## License
 
