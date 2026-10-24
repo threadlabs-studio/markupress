@@ -11,7 +11,7 @@
 <prop name="search" type="string" default="">The URL of the version's search index, or "" for no search</prop>
 <prop name="dark" type="boolean" default="false">Whether the dark theme is on, which the layout's controller sets</prop></defs>
 <header><slot name="menu"></slot>
-<a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template>{$title}</a>
+<a class="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template><span class="brand-title">{$title}</span></a>
 <ui-badge $if="$badge" tone="accent">{$badge}</ui-badge>
 <nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
 <a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
@@ -19,14 +19,14 @@
 <div class="actions"><markupress-search $if="$search" from:index="$search"></markupress-search><ui-icon-button label="Dark theme" variant="ghost" tone="neutral" data-action="theme" from:aria-pressed="$dark"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="1"></circle></svg></ui-icon-button></div></header>
 <style>
 :host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2) var(--ui-space-4); min-block-size: var(--markupress-header-height, 4.25rem); border-bottom: 1px solid var(--ui-border, #8885); padding: var(--ui-space-2) max(var(--ui-space-4), calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
-.brand { display: flex; align-items: center; gap: var(--ui-space-3); color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .logo { block-size: 2rem; inline-size: auto; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-inline-start: auto; }
+.brand { min-inline-size: 0; display: flex; align-items: center; gap: var(--ui-space-3); color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .brand-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .logo { flex-shrink: 0; block-size: 2rem; inline-size: auto; }
+.actions { display: flex; flex-shrink: 0; align-items: center; gap: .5rem; margin-inline-start: auto; }
 ul { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; margin: 0; padding: 0; list-style: none; }
 a { color: inherit; text-decoration: none; } a:hover, a[aria-current="page"], a[aria-current="true"] { color: var(--ui-accent); } a[aria-current="page"] { font-weight: 700; }
 .top { font-size: var(--ui-font-size-sm); font-weight: var(--ui-font-semibold); }
 .top img { display: block; block-size: 1.25rem; inline-size: auto; }
 :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
-@media (max-width: 996px) { :host { min-block-size: var(--markupress-mobile-header-height, 3.75rem); } .top { display: none; } }
+@media (max-width: 996px) { :host { flex-wrap: nowrap; min-block-size: var(--markupress-mobile-header-height, 3.75rem); } .brand { flex: 1; } .top { display: none; } }
 @media (max-width: 640px) { :host { padding-inline: 1rem; } }
 </style></template>
 <template component="markupress-footer">

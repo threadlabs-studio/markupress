@@ -24,7 +24,7 @@ beforeAll(() => {
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
-  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
+  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs with a deliberately long product title', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
   // The site's own page-wide stylesheet sets a Markupress theme token.
   mkdirSync(join(workspace, 'app'));
   write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
@@ -62,7 +62,7 @@ afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
-  expect(html).toContain('<title data-component-head="">Installation | Example docs</title>'); expect(html).toContain('id="install-1"');
+  expect(html).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>'); expect(html).toContain('id="install-1"');
   // HTMLKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
@@ -75,7 +75,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
   expect(html).not.toContain('Last updated');
-  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs</title>');
+  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
     .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
@@ -391,6 +391,9 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
       expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
+      const brand = page.getByRole('link', { name: 'Example docs with a deliberately long product title', exact: true });
+      expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+      for (const label of ['Navigation', 'Search', 'Dark theme']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
