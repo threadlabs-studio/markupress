@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.8.4
 
 - Render section navigation with Looma Disclosure and Nav Item controls, including shared chevrons, spacing, selected state, focus and pointer feedback. Linked groups expose a separate overview link, so expanding a section does not navigate away.
 
