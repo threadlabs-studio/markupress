@@ -184,7 +184,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
     expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg" data-component-head="">');
-    expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
+    expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
     // One version shows no badge.
     expect(html).not.toContain('data-component="ui-badge"');
     const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
@@ -198,7 +198,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
     expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation">/);
-    expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
+    expect(html).toMatch(/<button\b[^>]* popovertarget="documentation-navigation"/);
   } finally { await application.close(); }
 }, 30_000);
 
@@ -210,7 +210,7 @@ it('renders no logo, icon or missing pager link when the shell receives null for
     const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
     for (const html of [first, last]) {
       expect(html).not.toContain('rel="icon"');
-      expect(html).toMatch(/<a class="brand" href="\/">Documentation<\/a>/);
+      expect(html).toMatch(/<a class="brand" href="\/"><span class="brand-title">Documentation<\/span><\/a>/);
     }
     expect(first).not.toContain('rel="prev"');
     expect(first).toMatch(/<a [^>]*rel="next"/);

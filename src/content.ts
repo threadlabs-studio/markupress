@@ -244,14 +244,9 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const tokens = md.parse(source, { file: options.file });
   const highlighted = new Map<Token, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
   let hasCode = false;
-  for (const [index, token] of tokens.entries()) {
+  for (const token of tokens) {
     const component = blockComponent(token);
     if (component) components.add(component);
-    if (token.type === 'heading_open') {
-      const id = token.attrGet('id')!;
-      const label = textContent(parseFragment(md.renderer.renderInline(tokens[index + 1]!.children ?? [], md.options, { highlighted }))).replace(/\\([\\{])/g, '$1');
-      headings.push({ id, href: `#${id}`, label, depth: Number(token.tag.slice(1)) });
-    }
     if (token.type === 'code_block') hasCode = true;
     if (token.type !== 'fence') continue;
     hasCode = true;
@@ -263,7 +258,25 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     const marked = new Set([...lines, ...noted]);
     highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta)));
   }
-  return { html: md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv), frontmatter: fields, body, headings, hasCode, components };
+  const html = md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv);
+  // Markdown and authored HTML share one outline in document order. A template defines
+  // another component; its headings, like escaped code examples, are not page headings.
+  const collectHeadings = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) {
+      if (node.tagName === 'template') return;
+      const id = node.attrs.find(attribute => attribute.name === 'id')?.value;
+      const hidden = node.attrs.some(attribute => attribute.name === 'hidden' || (attribute.name === 'aria-hidden' && attribute.value === 'true')
+        || (attribute.name === 'class' && attribute.value.split(/\s+/).includes('sr-only')));
+      if (hidden) return;
+      if (/^h[1-6]$/.test(node.tagName) && id) {
+        const label = textContent(node).replace(/\\([\\{])/g, '$1');
+        headings.push({ id, href: `#${id}`, label, depth: Number(node.tagName.slice(1)) });
+      }
+    }
+    if ('childNodes' in node) node.childNodes.forEach(collectHeadings);
+  };
+  collectHeadings(parseFragment(html));
+  return { html, frontmatter: fields, body, headings, hasCode, components };
 }
 
 export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {

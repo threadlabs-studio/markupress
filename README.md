@@ -10,7 +10,7 @@ Build a versioned Markdown documentation site with native HTML Next components, 
 - **Navigation:** sections and sidebars from folders, a top navigation, breadcrumbs, an "On this page" outline, a mobile drawer, edit links and last-updated dates.
 - **Search:** local full-text search of each version, opened with `/` or Ctrl+K.
 - **Versions:** `markupress snapshot v1` records the docs, and readers switch versions on the same document.
-- **Theme:** Looma's light and dark themes, a home layout, a footer, and site layouts that replace the shell.
+- **Theme:** a coordinated light/dark Markupress palette, Looma controls, a home layout, a footer, and site layouts that replace the shell.
 
 ## Get started
 
@@ -57,3 +57,11 @@ Foundation pins TypeScript, Vitest, Oxlint and pnpm. [AGENTS.md](AGENTS.md) is t
 ## License
 
 [MIT](LICENSE), copyright Threadlabs Studio contributors.
+
+## Theme the whole documentation site
+
+Markupress has its own quiet green light/dark palette. Its shell, navigation rows, current selection, focus, prose and controls consume Looma's public semantic properties, so a site can apply a different identity throughout. Put site-wide overrides in `app/site.css`, or use HTMLKit's `css` option. Keep styling for a new identity at that theme boundary rather than selecting the internals of nested Looma controls. Set `--markupress-background` to add a page-wide texture or gradient; it defaults to `var(--ui-surface)` and can use the same semantic colors.
+
+Without a saved mode, the site follows the operating system and responds when that preference changes. The header's theme button fixes and remembers the chosen mode. In an application that supplies its own mode switch, set `data-theme="light"` or `data-theme="dark"`; nested boundaries apply only to their descendants. Remove the root attribute when using the CSS directly to follow system preference.
+
+The shared shell supports `--markupress-sidebar-width`, `--markupress-content-width`, `--markupress-page-width` and `--markupress-outline-width`. Navigation uses Looma's `--ui-nav-*`, `--ui-selection-*`, typography, spacing and focus families. On screens at or below 996px it becomes a native popover drawer.
