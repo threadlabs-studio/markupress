@@ -28,6 +28,10 @@
     },
     {
       "mode": "local",
+      "path": ".github/workflows/release.yml"
+    },
+    {
+      "mode": "local",
       "path": ".gitignore"
     },
     {
@@ -52,6 +56,10 @@
     },
     {
       "mode": "local",
+      "path": "scripts/release.mjs"
+    },
+    {
+      "mode": "local",
       "path": "src/index.ts"
     },
     {
@@ -72,10 +80,6 @@
     },
     {
       "mode": "managed",
-      "path": ".github/workflows/release.yml"
-    },
-    {
-      "mode": "managed",
       "path": ".threadlabs.lock.json"
     },
     {
@@ -93,10 +97,6 @@
     {
       "mode": "managed",
       "path": "oxlint.json"
-    },
-    {
-      "mode": "managed",
-      "path": "scripts/release.mjs"
     },
     {
       "mode": "managed",
