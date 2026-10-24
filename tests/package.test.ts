@@ -18,7 +18,10 @@ const run = (command: string, args: string[]) => execFileSync(command, args, { c
 beforeAll(() => {
   const packed = execFileSync('corepack', ['pnpm', 'pack', '--pack-destination', workspace], { cwd: root, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
   const tarball = isAbsolute(packed) ? packed : join(workspace, packed);
-  write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
+  // Pair source tarballs with the verified development peer, as the starter does.
+  // A newly published Looma may require a newer Markupress than this source version.
+  const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { devDependencies: Record<string, string> };
+  write('package.json', JSON.stringify({ name: 'markupress-consumer', private: true, type: 'module', dependencies: { '@threadlabs/looma': own.devDependencies['@threadlabs/looma'] } }));
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
@@ -53,7 +56,7 @@ beforeAll(() => {
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
-  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
+  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x} now\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n\n' +
     '## Über uns\n\nStatus :chip[Ready]{tone=green}, by @[Ada]#u1, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
   run(process.execPath, [cli, 'build']);
@@ -267,13 +270,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.reload();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.first().getByRole('tabpanel').textContent()).toContain('npm install markupress');
-      // Looma Markdown's newer forms: ::toc links reach their headings, a chip takes its hue, and task items are checkboxes.
-      expect(await page.locator('main nav[data-looma-toc] a').evaluateAll(links => links.map(link =>
+      // Expressive Markdown's forms: ::toc links reach their headings, a chip takes its hue, and task items are checkboxes.
+      expect(await page.locator('main nav[data-type="toc"] a').evaluateAll(links => links.map(link =>
         (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent))).toEqual(['Blocks', 'Über uns']);
-      expect(await page.locator('main [data-looma-chip][data-color="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(await page.locator('main [data-type="chip"][data-tone="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
       expect(await page.locator('main ul[data-type="taskList"] input[type="checkbox"]').count()).toBe(2);
-      // A footnote reference links to its note, whose section heading is only for assistive technology.
-      expect(await page.locator('main .footnotes h2').evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+      // A footnote reference links to its note, in a notes section named for assistive technology.
+      expect(await page.getByRole('region', { name: 'Footnotes' }).count()).toBe(1);
       await page.locator('main [data-footnote-ref]').click();
       await expect.poll(() => page.url()).toContain('#fn:1');
       expect(await page.locator('main [id="fn:1"]').textContent()).toContain('The footnote.');

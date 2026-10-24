@@ -2,6 +2,7 @@
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadConfig } from './config.js';
+import { convertSite } from './convert.js';
 import { buildSite, devSite, previewSite, type MarkupressOptions } from './site.js';
 import { snapshotVersion } from './versions.js';
 
@@ -9,7 +10,7 @@ async function main() {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
     root: { type: 'string' }, base: { type: 'string' }, port: { type: 'string' }, help: { type: 'boolean', short: 'h' },
   } });
-  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000]\n       markupress snapshot <version-id> [--root directory]\nConfiguration: markupress.config.ts, .js or .json, and htmlkit.config.ts for HTMLKit options and plugins\n'); return; }
+  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000]\n       markupress snapshot <version-id> [--root directory]\n       markupress convert [--root directory]\nConfiguration: markupress.config.ts, .js or .json, and htmlkit.config.ts for HTMLKit options and plugins\n'); return; }
   const root = resolve(values.root ?? process.cwd());
   const config = await loadConfig(root);
   const options: MarkupressOptions = { ...config, root, ...(values.base === undefined ? {} : { base: values.base }),
@@ -19,10 +20,16 @@ async function main() {
     if (!positionals[1]) throw new Error('snapshot requires a version id.');
     const version = await snapshotVersion(positionals[1], options); process.stdout.write(`Recorded ${version.id} in ${version.directory}\n`); return;
   }
+  if (command === 'convert') {
+    // Markdown in every version's content, which Expressive Markdown reads from 0.8.0 on.
+    const changed = await convertSite(root, [options.contentDir ?? 'docs', 'versions']);
+    process.stdout.write(changed.length === 0 ? 'Every Markdown file reads as Expressive Markdown.\n' : `Converted ${changed.length} files:\n${changed.map(file => `  ${file}\n`).join('')}`);
+    return;
+  }
   if (command === 'build') {
     const built = await buildSite(options); process.stdout.write(`Generated ${built.routes.length} pages in ${built.outDir}\n`); return;
   }
-  if (command !== 'dev' && command !== 'preview') throw new Error(`Unknown command: ${command}. Use build, dev, or preview.`);
+  if (command !== 'dev' && command !== 'preview') throw new Error(`Unknown command: ${command}. Use build, dev, preview, snapshot or convert.`);
   const server = await (command === 'dev' ? devSite(options) : previewSite(options));
   process.stdout.write(`Markupress ${command}: ${server.url}\n`);
   const close = () => { void server.close().then(() => process.exit(0)); };

@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Markupress renders Markdown as [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language) with expressmark 0.1.18, in place of Looma's markdown-it renderer.
+
+Breaking changes from 0.8.3:
+
+- Markdown uses Expressmark's `modern` syntax by default, including Markdown inside HTML and no indentation-based code blocks. Fenced code remains literal. A document can opt into CommonMark/GFM interpretation with `markdownSyntax: compatible` in its frontmatter.
+
+- A tab panel is a `::: tab [Label]` container, and consecutive tabs form a group; `:::: tabs {group=name}` around them names it. `== Label` panels inside `::: tabs` or `::: code-group` read as text.
+- A mention is `@[Name]#id`; `:mention[Name]{id=…}` reads as text.
+- `markupress convert` rewrites both, and a tab group's name (`::: tabs pm` becomes `:::: tabs {group=pm}`), in every version's content, once.
+- Braces at the end of a container's opening line or a heading are its attributes, so `::: warning Breaking {x}` is titled "Breaking" with the attribute `x`, and a callout's title is its heading as plain text.
+- A heading of only symbols, such as `## 🚀`, anchors as `section`.
+- An authored heading ID stays as written when two headings share it.
+- Chips render `span[data-type="chip"][data-tone]`, mentions `span[data-type="mention"][data-ref]`, tables of contents `nav[data-type="toc"]` and footnotes `section[data-footnotes][aria-label="Footnotes"]`; the theme styles each.
+- Any other container type renders as `<section data-type="…">`.
+
+Added:
+
+- Container titles in brackets, `::: warning [Before you upgrade]`, alongside the unbracketed spelling; GitHub alerts with a title after the marker; code blocks' `{title="a.ts" highlight=1,3-5 show-line-numbers}`, alongside the info string Markupress also reads; `::: toc [Title] {depth=2}`; `::: layout {align=center}`; line blocks; link reference definitions; and table column alignment.
+- Tests render every Expressive Markdown construct through Markupress (`tests/conformance.test.ts`), and `tests/convert.test.ts` covers the conversion and the converted Markdown's rendering.
+
 - Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
 
 ## 0.8.0

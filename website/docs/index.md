@@ -23,6 +23,6 @@ Link an HTML Next component in a page and use it on the next line. Its controlle
 
 Folders are sections, an index page labels its folder, and `_footer.md` is the footer. Configuration comes last.
 
-## Looma Markdown
+## Expressive Markdown
 
-Callouts, details, tabs and code groups read the same in Markupress, Looma's components and LoomaEditor.
+Callouts, details, tabs, code groups and footnotes read the same in Markupress, LoomaEditor and every Expressive Markdown tool.

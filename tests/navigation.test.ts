@@ -1,6 +1,18 @@
 import type { NavigationNode } from '@nextwebwg/htmlkit';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { generatedSidebar, type SidebarNode } from '../src/navigation.js';
+import { footer, generatedSidebar, type SidebarNode } from '../src/navigation.js';
+
+it('reads indented footer links with the same modern syntax as pages', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'markupress-footer-'));
+  try {
+    const file = join(directory, '_footer.md');
+    writeFileSync(file, '# Resources\n\n    - [Guide](/guide/)');
+    expect(footer(file).columns[0]!.items).toEqual([{ label: 'Guide', href: '/guide/' }]);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 
 const node = (label: string, children: NavigationNode[] = [], fields: Partial<NavigationNode> = {}): NavigationNode =>
   ({ label, current: 'false', open: children.some(child => child.open), depth: 0, order: null, children, ...fields });
