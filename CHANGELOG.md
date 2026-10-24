@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.8.1
 
 - Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
 
