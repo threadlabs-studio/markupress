@@ -22,6 +22,7 @@
 
 - Preserve unrelated changes and never rewrite pushed history without explicit authorization.
 - Preview Foundation plans and review their exact digest, ownership, modules, and verification cost before application.
+- The release workflow and runner are locally owned for the merge-triggered paired-package release policy.
 - Check ownership before editing. Change Foundation templates for managed paths; preserve local paths and stop on ambiguous ownership.
 - Use a single agent and the current model by default. Cross-model review is off unless explicitly requested. Keep automatic PR babysitting enabled.
 - Keep plans under docs/plans and durable verified learnings under docs/solutions. Record execution progress outside plan documents.
@@ -32,4 +33,4 @@
 - Run focused tests and `corepack pnpm verify:inner` during development; run `corepack pnpm verify:pr` before handoff. Report results, skips, and remaining judgment.
 - Exercise packed installed consumers rather than relying on workspace resolution.
 - Run one foreground Playwright runner per repository with `--workers=1` locally.
-- Publish only through the protected, human-approved release workflow. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.
+- Merges to main trigger the release workflow automatically. It verifies a source-specific snapshot, advances the patch when no larger version is declared, and publishes through the npm environment with trusted publishing. Do not request per-release human approval or publish locally. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.

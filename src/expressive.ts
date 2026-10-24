@@ -228,6 +228,20 @@ export async function renderMarkdown(source: string, options: { readonly file: s
   const html = renderHtml(document, { title: false, transformers, escapeText: literal,
     // The site's own authors write its Markdown, so its raw HTML and Markupress's presentation pass the profile as written.
     trustedHtml: { tags: [...ownTags, ...raw.tags], attributes: { '*': [...ownAttributes, ...raw.attributes] }, styles: shikiStyles } });
+  // Markdown and authored HTML share one outline in rendered document order. Inert
+  // component definitions and hidden examples never become page navigation.
+  const outline: OutlineItem[] = [];
+  const text = (node: DefaultTreeAdapterMap['node']): string => 'value' in node ? node.value : 'childNodes' in node ? node.childNodes.map(text).join('') : '';
+  const collect = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) {
+      if (node.tagName === 'template' || node.attrs.some(attribute => attribute.name === 'hidden' || (attribute.name === 'aria-hidden' && attribute.value === 'true')
+        || (attribute.name === 'class' && attribute.value.split(/\s+/).includes('sr-only')))) return;
+      const id = node.attrs.find(attribute => attribute.name === 'id')?.value;
+      if (/^h[1-6]$/.test(node.tagName) && id) outline.push({ id, href: `#${id}`, label: text(node).replace(/\\([\\{])/g, '$1'), depth: Number(node.tagName.slice(1)) });
+    }
+    if ('childNodes' in node) node.childNodes.forEach(collect);
+  };
+  collect(parseFragment(html));
   const frontmatter = { ...(document.title ? { title: plainText(document.title) } : {}), ...(document.id ? { id: document.id } : {}), ...document.metadata };
-  return { html, frontmatter, empty: document.body.length === 0, headings, hasCode, components };
+  return { html, frontmatter, empty: document.body.length === 0, headings: outline, hasCode, components };
 }

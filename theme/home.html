@@ -20,7 +20,7 @@
 <main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
-:host { display: block; background: var(--ui-surface); color: var(--ui-text); font: 1rem/1.7 var(--markupress-font, system-ui, sans-serif); min-height: 100vh; }
+:host { display: block; background: var(--ui-surface); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--markupress-font, var(--ui-font-sans)); min-height: 100vh; }
 .site { display: flex; flex-direction: column; min-height: 100vh; }
 main { flex: 1; inline-size: 100%; max-inline-size: var(--markupress-home-width, 75rem); margin-inline: auto; padding: 2rem 1.5rem 4rem; }
 .skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-accent); z-index: 3; } .skip:focus { transform: none; }

@@ -297,7 +297,7 @@ it('derives heading anchors by Expressive Markdown\'s rule, keeping letters and 
 });
 
 it('renders chips, mentions, task lists, figures and image placement, with literal labels', async () => {
-  const resource = await page('Status :chip[Ready {x}]{tone=green}, by @[Ada]#u1.\n\n- [x] Done {y}\n- [ ] Next\n\n' +
+  const resource = await page('Status :chip[Ready {x}]{tone=green} and :chip[Draft]{tone=teal}, by @[Ada]#u1.\n\n- [x] Done {y}\n- [ ] Next\n\n' +
     '::: figure The *build*\n![Pipeline](./pipeline.svg){width=640 placement=wrap-left}\n:::');
   expect(resource).toContain('<span data-tone="green" data-type="chip">Ready \\{x}</span>');
   expect(resource).toContain('<span data-type="mention" data-ref="u1">Ada</span>');
@@ -356,4 +356,12 @@ Use them in Markdown.
   const plain = await compileMarkdown('---\nlayout: home\ntitle: Welcome\n---\nJust a tagline.', { file: '/project/docs/index.md', pageName: 'page-home' });
   expect(plain.resource).toContain('<article class="markupress-prose"><header class="hero"><div class="hero-text"><h1>Welcome</h1><p>Just a tagline.</p></div></header></article>');
   expect(plain.resource).not.toContain('ui-card');
+});
+
+it('includes authored HTML headings in outline order while ignoring inert examples and definitions', async () => {
+  const compiled = await compileMarkdown('# Reference\n\n<h2 id="preview">Preview <em>states</em></h2>\n\n## Options\n\n```html\n<h2 id="fake">Example code</h2>\n```\n\n<template component="demo-box"><h2 id="internal">Internal title</h2></template>\n\n<div hidden><h2 id="hidden">Hidden section</h2></div>\n\n<div aria-hidden="true"><h2 id="decorative">Decorative section</h2></div>', { file: '/docs/reference.md', pageName: 'page-reference' });
+  expect(compiled.outline).toEqual([
+    { id: 'preview', href: '#preview', label: 'Preview states', depth: 2 },
+    { id: 'options', href: '#options', label: 'Options', depth: 2 },
+  ]);
 });

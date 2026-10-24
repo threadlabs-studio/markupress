@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.8.0
+## Next release
 
-- Markupress renders Markdown as [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language) with expressmark 0.1.18, in place of Looma's markdown-it renderer, and its Looma peer is exactly 0.32.0. A site's own Looma dependency moves to exactly 0.32.0.
+- Markupress renders Markdown as [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language) with expressmark 0.1.18, in place of Looma's markdown-it renderer.
 
-Breaking changes from 0.7.0:
+Breaking changes from 0.8.3:
 
 - Markdown uses Expressmark's `modern` syntax by default, including Markdown inside HTML and no indentation-based code blocks. Fenced code remains literal. A document can opt into CommonMark/GFM interpretation with `markdownSyntax: compatible` in its frontmatter.
 
@@ -23,6 +23,18 @@ Added:
 
 - Container titles in brackets, `::: warning [Before you upgrade]`, alongside the unbracketed spelling; GitHub alerts with a title after the marker; code blocks' `{title="a.ts" highlight=1,3-5 show-line-numbers}`, alongside the info string Markupress also reads; `::: toc [Title] {depth=2}`; `::: layout {align=center}`; line blocks; link reference definitions; and table column alignment.
 - Tests render every Expressive Markdown construct through Markupress (`tests/conformance.test.ts`), and `tests/convert.test.ts` covers the conversion and the converted Markdown's rendering.
+
+- Merges to main automatically publish verified paired Markupress and starter releases. Immutable source snapshots allow retries after a partial publication without choosing a new version.
+
+## 0.8.0
+
+- Use Looma 0.33 with HTML Next 1.0.0-alpha.69. The starter pins 0.33.0; the peer accepts compatible 0.33 patch releases, including consumers that ship Looma’s documentation generator.
+
+Breaking changes from 0.7.0:
+
+- Mentions follow Looma 0.33’s canonical Expressive Markdown spelling, such as `@[Ada]#u1`. Replace the former `:mention[Ada]{id=u1}` spelling in authored pages.
+
+- A Markdown page links its components with `<link rel="component" href="@/…">`. A `<template component>` written in a page's Markdown is raw HTML under CommonMark's HTML block rules, as any other tag is; component definitions live in component files such as `app/components/counter.html`.
 
 ## 0.7.0
 
