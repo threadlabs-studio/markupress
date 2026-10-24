@@ -292,7 +292,7 @@ it('derives heading anchors by the Looma Markdown rule, keeping letters and mark
 });
 
 it('renders chips, mentions, task lists, figures and image placement, with literal labels', async () => {
-  const resource = await page('Status :chip[Ready {x}]{tone=green} and :chip[Draft]{tone=teal}, by :mention[Ada]{id=u1}.\n\n- [x] Done\n- [ ] Next\n\n' +
+  const resource = await page('Status :chip[Ready {x}]{tone=green} and :chip[Draft]{tone=teal}, by @[Ada]#u1.\n\n- [x] Done\n- [ ] Next\n\n' +
     '::: figure The *build*\n![Pipeline](./pipeline.svg){width=640 placement=wrap-left}\n:::');
   expect(resource).toContain('<span data-looma-chip="" data-label="Ready {x}" data-color="green">Ready \\{x}</span>');
   expect(resource).toContain('data-color="neutral">Draft</span>');

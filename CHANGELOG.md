@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## 0.8.0
 
+- Use Looma 0.33 with HTML Next 1.0.0-alpha.69. The starter pins 0.33.0; the peer accepts compatible 0.33 patch releases, including consumers that ship Looma’s documentation generator.
+
 Breaking changes from 0.7.0:
+
+- Mentions follow Looma 0.33’s canonical Expressive Markdown spelling, such as `@[Ada]#u1`. Replace the former `:mention[Ada]{id=u1}` spelling in authored pages.
 
 - A Markdown page links its components with `<link rel="component" href="@/…">`. A `<template component>` written in a page's Markdown is raw HTML under CommonMark's HTML block rules, as any other tag is; component definitions live in component files such as `app/components/counter.html`.
 

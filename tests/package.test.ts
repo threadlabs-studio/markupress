@@ -55,7 +55,7 @@ beforeAll(() => {
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
   write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
     '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n\n' +
-    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by :mention[Ada]{id=u1}, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
+    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by @[Ada]#u1, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
@@ -85,7 +85,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
 it('creates a starter site from the packed create-markupress, at the shared version, that builds with the installed package', () => {
   const created = mkdtempSync(join(tmpdir(), 'markupress-create-'));
   try {
-    const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string; peerDependencies: Record<string, string> };
+    const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string; peerDependencies: Record<string, string>; devDependencies: Record<string, string> };
     const creator = join(root, 'packages/create-markupress');
     expect((JSON.parse(readFileSync(join(creator, 'package.json'), 'utf8')) as { version: string }).version).toBe(own.version);
     const packed = execFileSync('npm', ['pack', '--pack-destination', created], { cwd: creator, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
@@ -94,9 +94,9 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     expect(create('my-docs')).toContain('npm run dev');
     const site = join(created, 'my-docs');
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
-    // The starter depends on this release of Markupress and on the HTML Next and Looma it pins.
+    // The starter pins the same concrete HTML Next and Looma releases qualified by this package.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ ...own.peerDependencies, markupress: `^${own.version}` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.devDependencies['@threadlabs/looma'], markupress: `^${own.version}` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);

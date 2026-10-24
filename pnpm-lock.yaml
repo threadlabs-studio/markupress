@@ -195,8 +195,8 @@ importers:
         specifier: 1.0.0-alpha.69
         version: 1.0.0-alpha.69
       '@threadlabs/looma':
-        specifier: 0.31.4
-        version: 0.31.4(@nextwebwg/html-next@1.0.0-alpha.69)
+        specifier: 0.33.0
+        version: 0.33.0(@nextwebwg/html-next@1.0.0-alpha.69)
       '@types/markdown-it':
         specifier: 14.2.0
         version: 14.2.0
@@ -831,8 +831,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.31.4':
-    resolution: {integrity: sha512-WQLhzlqo+ZmxWyiRFcvfHjDwbTlM6/gTq5e6Zq5/uj9YGN9yCgdoJ4XbSxpZPx7xnOosC4HceojoTxL/TABgmw==}
+  '@threadlabs/looma@0.33.0':
+    resolution: {integrity: sha512-4iqiG8dYREEy+PMSWiVnm4wKQSe+AHCdG5ExElRXaGICMJBFdtsu050aRr/D7mbP6e+WZnS3af7rGm2QYuoNMA==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     peerDependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.69
@@ -2071,7 +2071,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.31.4(@nextwebwg/html-next@1.0.0-alpha.69)':
+  '@threadlabs/looma@0.33.0(@nextwebwg/html-next@1.0.0-alpha.69)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.69
       dompurify: 3.4.15
