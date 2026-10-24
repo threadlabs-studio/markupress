@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.8.5
 
 - Add page and section sidebar visibility so workspace pages can supply contextual tools without a second documentation sidebar.
 - Offer Automatic, Light and Dark appearance choices with standard icons, and keep the outline below the measured header.
