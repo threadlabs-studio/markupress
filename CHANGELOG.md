@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.9.1
 
 - Align header brand and navigation text on their baseline, increase navigation spacing, and allow a removable status chip before search with an application-owned dismissal action.
 
