@@ -26,19 +26,23 @@ export default function shell(host: ComponentHost): void {
     const observer = new window.ResizeObserver(measureHeader);
     if (header) observer.observe(header);
     measureHeader();
+    const appearanceChange = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof window.Element) || !target.matches('[data-action="theme"]')) return;
+      const choice = (event as CustomEvent<{ value: string }>).detail?.value;
+      if (choice !== 'automatic' && choice !== 'light' && choice !== 'dark') return;
+      appearance = choice;
+      apply();
+      try { if (choice === 'automatic') window.localStorage.removeItem('markupress:theme'); else window.localStorage.setItem('markupress:theme', choice); } catch { /* Theme still applies for this page. */ }
+    };
     const click = (event: Event) => {
       const target = event.target;
       if (!(target instanceof window.Element)) return;
-      const choice = target.closest<HTMLElement>('[data-action="theme"]')?.dataset.themeChoice;
-      if (choice === 'automatic' || choice === 'light' || choice === 'dark') {
-        appearance = choice;
-        apply();
-        try { if (choice === 'automatic') window.localStorage.removeItem('markupress:theme'); else window.localStorage.setItem('markupress:theme', choice); } catch { /* Theme still applies for this page. */ }
-      }
       if (target.closest('a[href]')) host.root.querySelector<HTMLElement>('#documentation-navigation:popover-open')?.hidePopover();
     };
     // The page sits inside the shell, so this sees every click.
+    host.root.addEventListener('change', appearanceChange);
     host.root.addEventListener('click', click);
-    return () => { host.root.removeEventListener('click', click); system.removeEventListener('change', apply); observer.disconnect(); window.cancelAnimationFrame(ready); };
+    return () => { host.root.removeEventListener('change', appearanceChange); host.root.removeEventListener('click', click); system.removeEventListener('change', apply); observer.disconnect(); window.cancelAnimationFrame(ready); };
   });
 }

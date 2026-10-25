@@ -3,10 +3,22 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import type { ApplicationServer } from '@nextwebwg/htmlkit';
+
+async function chooseAppearance(page: Page, choice: 'automatic' | 'light' | 'dark') {
+  const button = page.getByRole('button', { name: /^Appearance:/ });
+  const desired = `Appearance: ${choice.charAt(0).toUpperCase()}${choice.slice(1)}`;
+  for (let step = 0; step < 3; step++) {
+    const before = await button.getAttribute('aria-label');
+    if (before === desired) return;
+    await button.click();
+    await expect.poll(() => button.getAttribute('aria-label')).not.toBe(before);
+  }
+  expect(await button.getAttribute('aria-label')).toBe(desired);
+}
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const workspace = mkdtempSync(join(tmpdir(), 'markupress-consumer-'));
@@ -161,7 +173,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
       expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(250, 251, 249)', code: 'rgb(239, 243, 238)' });
-      await expect.poll(() => page.getByRole('button', { name: 'Automatic appearance' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
       await page.emulateMedia({ colorScheme: 'dark' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await page.emulateMedia({ colorScheme: 'light' });
@@ -194,26 +206,26 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // Highlighted code follows the theme's color-scheme through light-dark().
       const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
       const light = await color();
-      await page.getByRole('button', { name: 'Dark appearance' }).click();
+      await chooseAppearance(page, 'dark');
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(25, 34, 31)', code: 'rgb(19, 28, 24)' });
       await expect.poll(color).not.toBe(light);
-      await expect.poll(() => page.getByRole('button', { name: 'Dark appearance' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(() => page.getByRole('button', { name: 'Dark appearance' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       // A saved theme is applied before first paint, so nothing fades out of the default theme.
       expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [], pending: [] });
       // An explicit choice ignores the system, while Automatic clears that choice and follows it again.
       await page.emulateMedia({ colorScheme: 'light' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await page.getByRole('button', { name: 'Automatic appearance' }).click();
+      await chooseAppearance(page, 'automatic');
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
       expect(await page.evaluate(() => localStorage.getItem('markupress:theme'))).toBeNull();
       await page.emulateMedia({ colorScheme: 'dark' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await page.reload();
-      await expect.poll(() => page.getByRole('button', { name: 'Automatic appearance' }).getAttribute('aria-pressed')).toBe('true');
-      await page.getByRole('button', { name: 'Dark appearance' }).click();
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
+      await chooseAppearance(page, 'dark');
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
@@ -386,7 +398,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
         // A reload settles the theme, so no color is caught mid-transition.
-        if (theme === 'light') { await page.getByRole('button', { name: 'Light appearance' }).click(); await page.reload(); }
+        if (theme === 'light') { await chooseAppearance(page, 'light'); await page.reload(); }
         await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe(theme);
         const homeAudit = await new AxeBuilder({ page }).analyze(); expect(homeAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       }
@@ -412,7 +424,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const brand = page.getByRole('link', { name: 'Example docs with a deliberately long product title', exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
-      for (const label of ['Navigation', 'Search', 'Automatic appearance', 'Light appearance', 'Dark appearance']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
+      for (const label of ['Navigation', 'Search']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
+      expect(await page.getByRole('button', { name: /^Appearance:/ }).count()).toBe(1);
+      // Invisible targets fit their own cells; the shared comfort preference remains adjustable.
+      const searchAction = page.getByRole('button', { name: 'Search', exact: true });
+      const appearanceAction = page.getByRole('button', { name: /^Appearance:/ });
+      const assertSeparateTargets = async () => {
+        const searchBox = (await searchAction.boundingBox())!;
+        const appearanceBox = (await appearanceAction.boundingBox())!;
+        const preferred = await appearanceAction.evaluate(element => parseFloat(getComputedStyle(element).getPropertyValue('--ui-control-min-block-size')));
+        const searchTarget = Math.max(searchBox.width, preferred), appearanceTarget = Math.max(appearanceBox.width, preferred);
+        expect((appearanceBox.x + appearanceBox.width / 2) - (searchBox.x + searchBox.width / 2)).toBeGreaterThanOrEqual((searchTarget + appearanceTarget) / 2 - .5);
+      };
+      await assertSeparateTargets();
+      const actionWidth = await page.locator('[data-component~="markupress-header"] > .actions').evaluate(element => element.getBoundingClientRect().width);
+      await page.evaluate(() => document.documentElement.style.setProperty('--ui-control-min-block-size', '30px'));
+      await assertSeparateTargets();
+      expect(await page.locator('[data-component~="markupress-header"] > .actions').evaluate(element => element.getBoundingClientRect().width)).toBeLessThan(actionWidth);
+      await page.evaluate(() => document.documentElement.style.removeProperty('--ui-control-min-block-size'));
+
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();

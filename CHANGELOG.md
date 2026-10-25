@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Replace the three appearance controls with one Looma CycleButton using standard state icons. Automatic is the default; explicit choices persist across navigation and reload. The theme and starter now require Looma 0.37.1 or newer on the supported 0.37 line.
+
 - Accept Looma 0.37 in strict peer-dependency installs, including its document-root theme scale.
 
 - Accept Looma 0.36 in strict peer-dependency installs so its documentation generator can use Markupress with relational theme controls.
