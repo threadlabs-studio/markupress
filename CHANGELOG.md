@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.9.0
 
 - Replace the three appearance controls with one Looma CycleButton using standard state icons. Automatic is the default; explicit choices persist across navigation and reload. The theme and starter now require Looma 0.37.1 or newer on the supported 0.37 line.
 

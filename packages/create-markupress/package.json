@@ -14,7 +14,9 @@
   "engines": {
     "node": ">=22.22.2 <23 || >=24.15 <25"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/threadlabs-studio/markupress.git",
