@@ -23,7 +23,7 @@
 </li></ul></nav>
 <div class="actions" from:data-ready="$appearanceReady"><span $if="$headerNotice" class="notice"><ui-button size="sm" variant="outline" tone="neutral" shape="pill" data-action="dismiss-header-notice" from:aria-label="concat('Remove ', $headerNotice)">{$headerNotice}<ui-icon name="x"></ui-icon></ui-button></span><markupress-search $if="$search" from:index="$search"></markupress-search><ui-cycle-button label="Appearance" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" items='[{"value":"automatic","label":"Automatic","icon":"monitor"},{"value":"light","label":"Light","icon":"sun"},{"value":"dark","label":"Dark","icon":"moon"}]'></ui-cycle-button></div></header>
 <style>
-:host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ui-space-2) var(--ui-space-6); min-block-size: var(--markupress-header-height, 4.25rem); border-bottom: 1px solid var(--ui-border, #8885); padding: var(--ui-space-2) max(var(--ui-space-4), calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
+:host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: baseline; align-content: center; gap: var(--ui-space-2) var(--ui-space-6); min-block-size: var(--markupress-header-height, 4.25rem); border-bottom: 1px solid var(--ui-border, #8885); padding: var(--ui-space-2) max(var(--ui-space-4), calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
 .brand { min-inline-size: 0; display: flex; align-items: baseline; gap: var(--ui-space-3); color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .brand-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .logo { align-self: center; flex-shrink: 0; block-size: 2rem; inline-size: auto; }
 .actions:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
 .notice { display: var(--markupress-header-notice-display, inline-flex); }
@@ -33,7 +33,7 @@ a { color: inherit; text-decoration: none; } a:hover, a[aria-current="page"], a[
 .top { font-size: var(--ui-font-size-sm); font-weight: var(--ui-font-semibold); }
 .top img { display: block; block-size: 1.25rem; inline-size: auto; }
 :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
-@media (max-width: 996px) { :host { flex-wrap: nowrap; min-block-size: var(--markupress-mobile-header-height, 3.75rem); } .brand { flex: 1; } .top { display: none; } }
+@media (max-width: 996px) { :host { flex-wrap: nowrap; align-items: center; min-block-size: var(--markupress-mobile-header-height, 3.75rem); } .brand { flex: 1; } .top { display: none; } }
 @media (max-width: 640px) { :host { flex-wrap: wrap; column-gap: max(var(--ui-space-2), calc(var(--ui-control-min-block-size) - var(--ui-control-size-sm))); padding-inline: 1rem; } .actions { display: contents; } .actions > :not(.notice) { align-self: center; flex-shrink: 0; } .notice { order: 1; flex-basis: 100%; justify-content: flex-end; } }
 </style></template>
 <template component="markupress-footer">

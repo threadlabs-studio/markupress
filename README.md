@@ -31,6 +31,22 @@ npx markupress preview   # serve the built site
 
 `docs/index.md` is a complete site. The [guide](https://threadlabs-studio.github.io/markupress/guide/getting-started/) covers project structure, writing, navigation, versions, theming and SEO, and the [reference](https://threadlabs-studio.github.io/markupress/reference/) covers configuration, the command line and the API.
 
+## Home pages
+
+Set `layout: home` in Markdown front matter. The h1 and introductory paragraphs form the hero, a paragraph containing only links supplies its actions, and each h2 starts a feature card. The first action uses the theme accent.
+
+An image can sit beside the story. To show live components there instead, import their definitions and mark one top-level wrapper `data-hero-media`:
+
+```html
+<link rel="component" href="@/app/components/product-preview.html">
+
+<div data-hero-media>
+<product-preview></product-preview>
+</div>
+```
+
+The media stacks below the story on narrow screens. Its components retain their own styling and behavior.
+
 ## Build from source
 
 Build and try the source with pnpm through Corepack. The documentation site is in `website/`, built by Markupress itself, and the example site in `examples/site/` serves at `/manual/`:

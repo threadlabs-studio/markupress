@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Keep header content vertically centered while preserving the wordmark/navigation text baseline. Give home actions an explicit accent and preserve their spacing across component boundaries. Use the text-safe accent for prose links.
+- Allow a home page to place live content beside its story by marking a top-level element `data-hero-media`.
+
 - Align header brand and navigation text on their baseline, increase navigation spacing, and allow a removable status chip before search with an application-owned dismissal action.
 
 - Replace the three appearance controls with one Looma CycleButton using standard state icons. Automatic is the default; explicit choices persist across navigation and reload. The theme and starter now require Looma 0.37.1 or newer on the supported 0.37 line.

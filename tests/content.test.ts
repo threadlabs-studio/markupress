@@ -340,8 +340,8 @@ Use them in Markdown.
 `, { file: '/project/docs/index.md', pageName: 'page-home', resolveLink: href => href === './guide.md' ? '/v/current/guide/' : href });
   const article = /<article class="markupress-prose">(.*)<\/article>/s.exec(compiled.resource)![1]!;
   expect(article).toBe('<header class="hero"><div class="hero-text"><h1 id="markupress"><a href="#markupress">Markupress</a></h1><p>Docs from <em>Markdown</em> \\{literally}.</p>' +
-    '<ui-cluster class="actions" gap="m"><ui-button as="a" href="/v/current/guide/" variant="solid" size="lg">Get started</ui-button>' +
-    '<ui-button as="a" href="https://github.com/example" variant="outline" size="lg">GitHub</ui-button></ui-cluster></div>' +
+    '<div class="actions"><ui-cluster gap="m"><ui-button as="a" href="/v/current/guide/" variant="solid" tone="accent" size="lg">Get started</ui-button>' +
+    '<ui-button as="a" href="https://github.com/example" variant="outline" tone="neutral" size="lg">GitHub</ui-button></ui-cluster></div></div>' +
     '<div class="hero-image"><img src="./logo.svg" alt="Logo"></div></header>' +
     '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components"><a href="#components">Components</a></h2><p>Use them in Markdown.</p></ui-card>' +
     '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul>\n<li>Snapshot</li>\n<li>Switch</li>\n</ul></ui-card></ui-grid>');
@@ -359,4 +359,25 @@ it('includes authored HTML headings in outline order while ignoring inert exampl
     { id: 'preview', href: '#preview', label: 'Preview states', depth: 2 },
     { id: 'options', href: '#options', label: 'Options', depth: 2 },
   ]);
+});
+
+
+it('places authored live content in the home media region without duplicating it in the story', async () => {
+  const compiled = await compileMarkdown(`---
+layout: home
+---
+# Build something
+
+A live example beside the story.
+
+<link rel="component" href="./example.html">
+
+<div data-hero-media>
+<demo-example></demo-example>
+</div>
+`, { file: '/project/docs/index.md', pageName: 'page-live-home' });
+  expect(compiled.resource).toContain('<link rel="component" href="file:///project/docs/example.html">');
+  expect(compiled.resource).toContain('<div class="hero-image"><div data-hero-media="">\n<demo-example></demo-example>\n</div></div>');
+  expect(compiled.resource.match(/<demo-example>/g)).toHaveLength(1);
+  expect(compiled.resource).not.toMatch(/class="hero-text">[\s\S]*<demo-example>[\s\S]*<div class="hero-image">/);
 });

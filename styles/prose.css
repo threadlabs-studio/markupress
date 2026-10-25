@@ -1,6 +1,6 @@
 /* Documentation typography. Each Markdown page component imports this, so its selectors match inside
    that page only and stop at any component the page embeds. The page root itself is .markupress-prose. */
-a { color: var(--ui-accent); text-underline-offset: .2em; }
+a { color: var(--ui-accent-active, var(--ui-accent)); text-underline-offset: .2em; }
 h1 { margin-block: 0 var(--ui-space-5); font: var(--ui-font-bold) clamp(2rem, 5vw, 3rem)/var(--ui-line-height-tight) var(--ui-font-display, var(--ui-font-sans)); letter-spacing: -.025em; }
 h2, h3, h4, h5, h6 { font-family: var(--ui-font-display, var(--ui-font-sans)); }
 h2, h3 { line-height: var(--ui-line-height-tight); }

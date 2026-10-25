@@ -381,6 +381,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         const delta = Math.abs(probes[0]!.getBoundingClientRect().top - probes[1]!.getBoundingClientRect().top); probes.forEach(probe => probe.remove()); return delta;
       });
       expect(baselineDelta).toBeLessThan(1);
+      const headerCenterDelta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
+        const bar = header.getBoundingClientRect(), brand = header.querySelector('.brand')!.getBoundingClientRect();
+        return Math.abs(brand.y + brand.height / 2 - bar.y - bar.height / 2);
+      });
+      expect(headerCenterDelta).toBeLessThan(2);
       await page.evaluate(() => { (window as unknown as {noticeDismissed:boolean}).noticeDismissed=false; window.addEventListener('markupress-header-notice-dismiss',()=>{ (window as unknown as {noticeDismissed:boolean}).noticeDismissed=true; document.documentElement.style.setProperty('--markupress-header-notice-display','none'); }); });
       expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
       await page.getByRole('button',{name:'Remove Custom theme',exact:true}).click();
@@ -404,6 +409,14 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/');
       expect(await page.locator('[data-component="markupress-home"] .hero h1').textContent()).toBe('Welcome');
       expect(await page.locator('.hero-image img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
+      const primaryAction = page.getByRole('link', { name: 'Installation', exact: true });
+      expect(await primaryAction.getAttribute('data-ui-button-prop-tone')).toBe('accent');
+      const actionGap = await page.locator('.hero').evaluate(hero => {
+        const story = hero.querySelector('.hero-text > p')!.getBoundingClientRect();
+        const action = hero.querySelector('.actions')!.getBoundingClientRect();
+        return action.y - story.y - story.height;
+      });
+      expect(actionGap).toBeGreaterThan(16);
       expect(await page.locator('.features [data-component="ui-card"] h2').allTextContents()).toEqual(['Components', 'Versions']);
       expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');

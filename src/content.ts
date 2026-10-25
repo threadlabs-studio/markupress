@@ -384,7 +384,7 @@ const only = (node: Node, tag: string): node is Element => element(node, 'p') &&
 /**
  * A home page (`layout: home`) is read from its Markdown structure, so it reads the same as plain Markdown anywhere.
  * Everything before the first h2 is the hero: its h1 is the title, a paragraph of only links is its actions (the first
- * one primary), an image alone in its paragraph is its image, and the rest is its tagline. Each h2 starts a feature card
+ * one primary), an image or an element marked data-hero-media is its media, and the rest is its tagline. Each h2 starts a feature card
  * that holds everything up to the next h2.
  */
 function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string, components: Set<string>): string {
@@ -394,16 +394,16 @@ function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string
     else (features.at(-1) ?? hero).push(node);
   }
   // Looma Markdown renders an image alone in its paragraph as a block image, with no paragraph.
-  const actions = hero.find(node => only(node, 'a')), image = hero.find(node => element(node, 'img') || only(node, 'img'));
+  const actions = hero.find(node => only(node, 'a')), image = hero.find(node => ('tagName' in node && node.attrs.some(attr => attr.name === 'data-hero-media')) || element(node, 'img') || only(node, 'img'));
   // Markdown puts text in blocks, so the fragment's own text nodes are only the space between them.
   const outer = (nodes: readonly Node[]) => nodes.map(node => 'tagName' in node ? serializeOuter(node) : '').join('');
   const heading = hero.some(node => element(node, 'h1')) ? '' : `<h1>${literal(escapeHTML(title))}</h1>`;
   const buttons = (actions && 'childNodes' in actions ? actions.childNodes : []).filter(child => element(child, 'a')).map((link, index) =>
-    `<ui-button as="a" href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" size="lg">${serialize(link)}</ui-button>`).join('');
+    `<ui-button as="a" href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" tone="${index === 0 ? 'accent' : 'neutral'}" size="lg">${serialize(link)}</ui-button>`).join('');
   if (buttons) components.add('ui-cluster').add('ui-button');
   if (features.length > 0) components.add('ui-grid').add('ui-card');
   return `<header class="hero"><div class="hero-text">${heading}${outer(hero.filter(node => node !== actions && node !== image))}` +
-    (buttons ? `<ui-cluster class="actions" gap="m">${buttons}</ui-cluster>` : '') + '</div>' +
+    (buttons ? `<div class="actions"><ui-cluster gap="m">${buttons}</ui-cluster></div>` : '') + '</div>' +
     (image ? `<div class="hero-image">${element(image, 'p') ? serialize(image) : outer([image])}</div>` : '') + '</header>' +
     (features.length === 0 ? '' : `<ui-grid class="features" min="md">${features.map(nodes => `<ui-card as="section">${outer(nodes)}</ui-card>`).join('')}</ui-grid>`);
 }
