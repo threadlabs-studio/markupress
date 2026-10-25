@@ -36,7 +36,7 @@ beforeAll(() => {
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
-  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs with a deliberately long product title', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
+  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs with a deliberately long product title', headerNotice: 'Custom theme', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
   // The site's own page-wide stylesheet sets a Markupress theme token.
   mkdirSync(join(workspace, 'app'));
   write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
@@ -374,6 +374,18 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await main.getByRole('link', { name: 'Outline' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('header img.logo-light').getAttribute('src')).toBe('/manual/logo.svg');
+      const baselineDelta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
+        const probes = [header.querySelector('.brand-title')!, header.querySelector('.top a')!].map(label => {
+          const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; label.append(probe); return probe;
+        });
+        const delta = Math.abs(probes[0]!.getBoundingClientRect().top - probes[1]!.getBoundingClientRect().top); probes.forEach(probe => probe.remove()); return delta;
+      });
+      expect(baselineDelta).toBeLessThan(1);
+      await page.evaluate(() => { (window as unknown as {noticeDismissed:boolean}).noticeDismissed=false; window.addEventListener('markupress-header-notice-dismiss',()=>{ (window as unknown as {noticeDismissed:boolean}).noticeDismissed=true; document.documentElement.style.setProperty('--markupress-header-notice-display','none'); }); });
+      await page.getByRole('button',{name:'Remove Custom theme',exact:true}).click();
+      expect(await page.evaluate(() => (window as unknown as {noticeDismissed:boolean}).noticeDismissed)).toBe(true);
+      await expect.poll(() => page.getByRole('button',{name:'Search',exact:true}).evaluate(el => el === document.activeElement)).toBe(true);
+
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       // A generated folder index is a page of links, which navigate like any other.
       await main.getByRole('link', { name: 'Reference' }).click();
@@ -436,6 +448,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         const searchTarget = Math.max(searchBox.width, preferred), appearanceTarget = Math.max(appearanceBox.width, preferred);
         expect((appearanceBox.x + appearanceBox.width / 2) - (searchBox.x + searchBox.width / 2)).toBeGreaterThanOrEqual((searchTarget + appearanceTarget) / 2 - .5);
       };
+      expect(await page.locator('html').evaluate(el=>el.scrollWidth <= innerWidth)).toBe(true);
       await assertSeparateTargets();
       const actionWidth = await page.locator('[data-component~="markupress-header"] > .actions').evaluate(element => element.getBoundingClientRect().width);
       await page.evaluate(() => document.documentElement.style.setProperty('--ui-control-min-block-size', '30px'));

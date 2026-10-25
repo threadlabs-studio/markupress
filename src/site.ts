@@ -28,6 +28,8 @@ export interface MarkupressOptions {
   readonly robots?: boolean | string;
   readonly outDir?: string;
   readonly title?: string;
+  /** A removable status chip before search; dismissal emits markupress-header-notice-dismiss on window. */
+  readonly headerNotice?: string;
   readonly versions?: readonly DocumentationVersion[];
   readonly defaultVersion?: string;
   readonly host?: string;
@@ -50,7 +52,7 @@ export interface MarkupressOptions {
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -211,6 +213,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       logo: logo === undefined ? null : { light: file(logo.light), dark: file(logo.dark ?? logo.light) },
       favicon: favicon === undefined ? null : file(favicon),
       badge: versions ? versions.label ?? versions.id : '',
+      headerNotice: options.headerNotice ?? '',
       footer: { columns: columns.map(column => ({ title: column.title, items: column.items.map(link) })), copyright },
     };
   }

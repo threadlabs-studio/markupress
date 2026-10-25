@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Align header brand and navigation text on their baseline, increase navigation spacing, and allow a removable status chip before search with an application-owned dismissal action.
+
 - Replace the three appearance controls with one Looma CycleButton using standard state icons. Automatic is the default; explicit choices persist across navigation and reload. The theme and starter now require Looma 0.37.1 or newer on the supported 0.37 line.
 
 - Accept Looma 0.37 in strict peer-dependency installs, including its document-root theme scale.
