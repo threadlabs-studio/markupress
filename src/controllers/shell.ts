@@ -38,6 +38,11 @@ export default function shell(host: ComponentHost): void {
     const click = (event: Event) => {
       const target = event.target;
       if (!(target instanceof window.Element)) return;
+      const notice = target.closest<HTMLElement>('[data-action="dismiss-header-notice"]');
+      if (notice) {
+        window.dispatchEvent(new window.CustomEvent('markupress-header-notice-dismiss'));
+        if (!notice.checkVisibility()) host.root.querySelector<HTMLElement>('[aria-label="Search"], [data-action="theme"] button')?.focus();
+      }
       if (target.closest('a[href]')) host.root.querySelector<HTMLElement>('#documentation-navigation:popover-open')?.hidePopover();
     };
     // The page sits inside the shell, so this sees every click.

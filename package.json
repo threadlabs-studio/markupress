@@ -72,7 +72,7 @@
   },
   "peerDependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": "^0.37.1"
+    "@threadlabs/looma": "^0.37.1 || ^0.38.0"
   },
   "bin": {
     "markupress": "./dist/cli.js"

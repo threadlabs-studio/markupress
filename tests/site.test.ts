@@ -181,11 +181,12 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
   await write(root, 'docs/03.loose/page.md', '# Loose page');
   for (const file of ['logo.svg', 'logo-dark.svg', 'favicon.svg', 'github.svg']) await write(root, `public/${file}`, '<svg xmlns="http://www.w3.org/2000/svg"/>');
   await write(root, 'docs/_footer.md', '## Docs\n\n- [Home](/)\n- [Proposal](https://nextwebwg.org/)\n\n## Project\n\n- [GitHub](https://github.com/example)\n\nCopyright 2026 Example.\n');
-  const application = await createApplication(siteOptions({ root, base: '/docs/', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
+  const application = await createApplication(siteOptions({ root, base: '/docs/', headerNotice: 'Preview', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
     expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg" data-component-head="">');
     expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
+    expect(html).toContain('aria-label="Remove Preview"');
     // One version shows no badge.
     expect(html).not.toContain('data-component="ui-badge"');
     const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
@@ -239,7 +240,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, headerNotice, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
