@@ -9,7 +9,7 @@ import { lastUpdated } from '../src/git.js';
 import { markdown } from '../src/markdown.js';
 import { buildSite, siteOptions } from '../src/site.js';
 import { themeScript } from '../src/theme.js';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/htmlkit';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });

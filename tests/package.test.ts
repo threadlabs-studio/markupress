@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium, type Page } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import type { ApplicationServer } from '@nextwebwg/htmlkit';
+import type { ApplicationServer } from '@threadlabs/htmlkit';
 
 async function chooseAppearance(page: Page, choice: 'automatic' | 'light' | 'dark') {
   const button = page.getByRole('button', { name: /^Appearance:/ });

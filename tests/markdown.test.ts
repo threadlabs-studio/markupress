@@ -1,7 +1,7 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/htmlkit';
 import { expect, it } from 'vitest';
 import { markdown } from '../src/markdown.js';
 import { linkDependencies } from './fixture.js';

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, type Dirent } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { HtmlKitPlugin, PageContext } from '@nextwebwg/htmlkit';
+import type { HtmlKitPlugin, PageContext } from '@threadlabs/htmlkit';
 import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter } from './content.js';
 import { siteLink } from './navigation.js';
 

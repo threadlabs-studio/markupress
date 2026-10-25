@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/htmlkit';
 import { siteOptions } from '../src/site.js';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { expect, it } from 'vitest';
-import { buildApplication } from '@nextwebwg/htmlkit';
+import { buildApplication } from '@threadlabs/htmlkit';
 import { freezeRootPaths, versionLinks } from '../src/versions.js';
 import { linkDependencies } from './fixture.js';
 

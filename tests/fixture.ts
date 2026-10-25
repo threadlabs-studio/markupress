@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 /** Disposable projects resolve the same public package resources as installed consumers. */
 export async function linkDependencies(root: string): Promise<void> {
   const paths = [
-    ['@nextwebwg/htmlkit', dirname(fileURLToPath(import.meta.resolve('@nextwebwg/htmlkit'))).replace(/[/\\]dist$/, '')],
+    ['@threadlabs/htmlkit', dirname(fileURLToPath(import.meta.resolve('@threadlabs/htmlkit'))).replace(/[/\\]dist$/, '')],
     ['@threadlabs/looma', dirname(fileURLToPath(import.meta.resolve('@threadlabs/looma/tokens.css')))],
     ['markupress', fileURLToPath(new URL('..', import.meta.url))],
   ] as const;

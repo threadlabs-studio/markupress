@@ -3,7 +3,7 @@ import { cp, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'n
 import { resolve, join, relative, isAbsolute, dirname, sep } from 'node:path';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import { fileURLToPath } from 'node:url';
-import { buildApplication, createApplication } from '@nextwebwg/htmlkit';
+import { buildApplication, createApplication } from '@threadlabs/htmlkit';
 import { siteOptions, snapshotOf, type DocumentationVersion, type MarkupressOptions } from './site.js';
 import { stylesheet } from './styles.js';
 

@@ -3,7 +3,7 @@ import { readdir } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
-  type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@nextwebwg/htmlkit';
+  type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@threadlabs/htmlkit';
 import { isIndex, type FrontMatter, type OutlineItem, type PagerLink, type SearchSection } from './content.js';
 import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';

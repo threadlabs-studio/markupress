@@ -166,9 +166,9 @@ importers:
 
   .:
     dependencies:
-      '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.69
-        version: 1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/htmlkit':
+        specifier: 0.1.0
+        version: 0.1.0(@types/node@22.20.1)(yaml@2.9.1)
       parse5:
         specifier: 8.0.1
         version: 8.0.1
@@ -830,6 +830,11 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@threadlabs/htmlkit@0.1.0':
+    resolution: {integrity: sha512-xUkNioefkxlMPbk1LNklu43gvGm9IaNbm/dvyIrZvYK7BMHKSLy5a2V3IC6K0nQfB07LCNFLP94ivEWVJ1J7aQ==}
+    engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    hasBin: true
 
   '@threadlabs/looma@0.37.1':
     resolution: {integrity: sha512-ssqZRIwOVhqMQ3zm7Cu17sUQQ9aS8zkpWKJBMj1ylaoSwNF1tpkLiyLZcxcXPIycOYHYg5gYyIA5+rezc1DGWQ==}
@@ -1807,6 +1812,7 @@ snapshots:
       - terser
       - tsx
       - yaml
+    optional: true
 
   '@oxc-parser/binding-android-arm-eabi@0.137.0':
     optional: true
@@ -2080,6 +2086,28 @@ snapshots:
       '@types/hast': 3.0.5
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@threadlabs/htmlkit@0.1.0(@types/node@22.20.1)(yaml@2.9.1)':
+    dependencies:
+      '@nextwebwg/html-next': 1.0.0-alpha.69
+      parse5: 8.0.1
+      typescript-compiler: '@typescript/typescript6@6.0.2'
+      vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - '@types/node'
+      - '@vitejs/devtools'
+      - canvas
+      - esbuild
+      - jiti
+      - less
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
   '@threadlabs/looma@0.37.1(@nextwebwg/html-next@1.0.0-alpha.69)(@nextwebwg/htmlkit@1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:

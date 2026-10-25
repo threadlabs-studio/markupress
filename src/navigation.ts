@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import type { NavigationNode } from '@nextwebwg/htmlkit';
+import type { NavigationNode } from '@threadlabs/htmlkit';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import type { Token } from 'markdown-it';
 
