@@ -3,7 +3,7 @@ import type { ComponentHost } from '@nextwebwg/html-next/runtime';
 
 /**
  * Native controls and storage own interaction; HTML Next owns reactive state and cleanup. The drawer is a
- * native popover, which opens without this controller. HTMLKit keeps the shell across client navigation, so a
+ * native popover, which opens without this controller. MarkupKit keeps the shell across client navigation, so a
  * followed link here closes the drawer, as a document load would.
  */
 export default function shell(host: ComponentHost): void {

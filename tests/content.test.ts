@@ -28,11 +28,11 @@ Text {notAnExpression}.
 `, { file: '/project/docs/01.products.md', pageName: 'page-products' });
   expect(compiled.title).toBe('Products');
   // The title is the navigation label too.
-  expect(compiled.resource).toContain('<meta name="hk:label" content="Products">');
+  expect(compiled.resource).toContain('<meta name="mk:label" content="Products">');
   expect(compiled.resource).toContain('<title>Products</title>');
   expect(compiled.resource).toContain('<meta name="description" content="Manage products.">');
-  // Head content and HTMLKit settings are the page component's head declarations, in its <defs>; hk:page names the component.
-  expect(compiled.resource).toMatch(/^<meta name="hk:page" content="page-products">.*<template component="page-products"[^>]*><defs><title>Products<\/title>.*<meta name="hk:label" content="Products">.*<\/defs><article/s);
+  // Head content and MarkupKit settings are the page component's head declarations, in its <defs>; mk:page names the component.
+  expect(compiled.resource).toMatch(/^<meta name="mk:page" content="page-products">.*<template component="page-products"[^>]*><defs><title>Products<\/title>.*<meta name="mk:label" content="Products">.*<\/defs><article/s);
   expect(compiled.resource).toContain('id="products-1"');
   expect(compiled.resource).toContain('href="file:///project/docs/counter.html"');
   expect(compiled.resource).toContain('<demo-counter>');
@@ -52,7 +52,7 @@ it('reports duplicate frontmatter keys against the Markdown source', async () =>
   await expect(compileMarkdown('---\ntitle: One\ntitle: Two\n---\n# Page', { file: '/docs/page.md', pageName: 'page-example' })).rejects.toThrow(/page\.md.*unique/i);
 });
 
-it('maps front matter onto HTMLKit page metadata and head, and keeps the rest as page data', async () => {
+it('maps front matter onto MarkupKit page metadata and head, and keeps the rest as page data', async () => {
   const compiled = await compileMarkdown(`---
 title: Guide
 layout: wide
@@ -74,8 +74,8 @@ head:
 
 ##### Deep
 `, { file: '/docs/guide.md', pageName: 'page-guide' });
-  expect(compiled.resource).toContain('<meta name="hk:layout" content="wide">');
-  expect(compiled.resource).toContain('<meta name="hk:redirect-from" content="/start/"><meta name="hk:redirect-from" content="/old/guide/">');
+  expect(compiled.resource).toContain('<meta name="mk:layout" content="wide">');
+  expect(compiled.resource).toContain('<meta name="mk:redirect-from" content="/start/"><meta name="mk:redirect-from" content="/old/guide/">');
   expect(compiled.resource).toContain('<meta name="keywords" content="docs, html">');
   expect(compiled.resource).toContain('<meta property="og:image" content="https://example.com/social.png"><meta property="og:image:width" content="1200">');
   expect(compiled.resource).toContain('<link rel="canonical" href="https://example.com/guide/">');
@@ -83,7 +83,7 @@ head:
     { id: 'options', href: '#options', label: 'Options', depth: 3 }, { id: 'flags', href: '#flags', label: 'Flags', depth: 4 }]);
   expect(compiled.frontmatter.editLink).toBe('https://example.com/edit/guide.md');
   const plain = await compileMarkdown('---\nlayout: false\noutline: false\neditLink: false\n---\n# Plain\n\n## Section', { file: '/docs/plain.md', pageName: 'page-plain' });
-  expect(plain.resource).toContain('<meta name="hk:layout" content="none">');
+  expect(plain.resource).toContain('<meta name="mk:layout" content="none">');
   expect(plain.outline).toEqual([]);
   expect((await compileMarkdown('# Default\n\n## Two\n\n### Three\n\n#### Four', { file: '/docs/default.md', pageName: 'page-default' })).outline.map(item => item.depth)).toEqual([2, 3]);
 });
@@ -99,21 +99,21 @@ it('rejects unknown and mistyped front matter fields with the Markdown file', as
   await expect(page('head: { script: x }')).rejects.toThrow('front matter head must be a mapping of meta, og and canonical.');
   await expect(page('head: { og: { image: [a, b] } }')).rejects.toThrow('front matter head must be');
   await expect(page('editLink: true')).rejects.toThrow('front matter editLink must be a URL or false.');
-  await expect(page('layout: ""')).rejects.toThrow('front matter layout must be an HTMLKit layout name or false.');
+  await expect(page('layout: ""')).rejects.toThrow('front matter layout must be an MarkupKit layout name or false.');
   await expect(page('aliases: /start/')).rejects.toThrow('front matter aliases must be a list of route paths.');
   await expect(page('order: 1.5')).rejects.toThrow('/docs/01.page.md: front matter order must be a whole number.');
 });
 
 it('orders a page with order, hides it with navigation, and takes default front matter that its own fields override', async () => {
   const ordered = await compileMarkdown('---\norder: 3\nnavigation: hidden\n---\n# Page', { file: '/docs/page.md', pageName: 'page-ordered' });
-  expect(ordered.resource).toContain('<meta name="hk:navigation" content="hidden"><meta name="hk:order" content="3">');
+  expect(ordered.resource).toContain('<meta name="mk:navigation" content="hidden"><meta name="mk:order" content="3">');
   const index = await compileMarkdown('---\norder: 1\n---\n# Forms', { file: '/docs/forms/index.md', pageName: 'page-forms', frontmatter: { title: 'Form controls', order: 4 } });
-  expect(index.resource).toContain('<meta name="hk:label" content="Form controls"><meta name="hk:order" content="1">');
+  expect(index.resource).toContain('<meta name="mk:label" content="Form controls"><meta name="mk:order" content="1">');
   expect(index.frontmatter).toEqual({ title: 'Form controls', order: 1 });
-  // A folder's index page can start the folder collapsed; collapsed emits no HTMLKit metadata of its own.
+  // A folder's index page can start the folder collapsed; collapsed emits no MarkupKit metadata of its own.
   const folded = await compileMarkdown('---\nnavigation: collapsed\n---\n# Forms', { file: '/docs/forms/02.index.md', pageName: 'page-folded' });
   expect(folded.frontmatter.navigation).toBe('collapsed');
-  expect(folded.resource).not.toContain('hk:navigation');
+  expect(folded.resource).not.toContain('mk:navigation');
 });
 
 it('reads front matter whose fields are all lists or mappings', async () => {
@@ -253,7 +253,7 @@ it('lifts authored head elements into the page\'s <defs>, and imports an authore
   const compiled = await compileMarkdown('<title>Own title</title>\n<meta name="keywords" content="docs">\n<link rel="stylesheet" href="./extra.css" media="print">\n<link rel="stylesheet" href="https://cdn.example/x.css">\n\n# Styled',
     { file: '/docs/guide/page.md', pageName: 'page-styled', styles: ['/theme/prose.css'] });
   // An authored title takes the generated title's place, since a definition declares one.
-  expect(compiled.resource).toMatch(/<defs><meta name="hk:label" content="Styled">.*<title>Own title<\/title><meta name="keywords" content="docs"><\/defs>/s);
+  expect(compiled.resource).toMatch(/<defs><meta name="mk:label" content="Styled">.*<title>Own title<\/title><meta name="keywords" content="docs"><\/defs>/s);
   expect(compiled.resource).not.toContain('rel="stylesheet"');
   expect(compiled.resource).toContain('<style>@import "file:///theme/prose.css";@import "file:///docs/guide/extra.css" print;@import "https://cdn.example/x.css";</style>');
 });
@@ -346,7 +346,7 @@ Use them in Markdown.
     '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components"><a href="#components">Components</a></h2><p>Use them in Markdown.</p></ui-card>' +
     '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul>\n<li>Snapshot</li>\n<li>Switch</li>\n</ul></ui-card></ui-grid>');
   for (const name of ['ui-cluster', 'ui-button', 'ui-grid', 'ui-card']) expect(compiled.resource).toContain(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
-  expect(compiled.resource).toContain('<meta name="hk:layout" content="home">');
+  expect(compiled.resource).toContain('<meta name="mk:layout" content="home">');
   // Without an h1 the hero is titled by the page title, and without h2s or actions it has no cards or buttons.
   const plain = await compileMarkdown('---\nlayout: home\ntitle: Welcome\n---\nJust a tagline.', { file: '/project/docs/index.md', pageName: 'page-home' });
   expect(plain.resource).toContain('<article class="markupress-prose"><header class="hero"><div class="hero-text"><h1>Welcome</h1><p>Just a tagline.</p></div></header></article>');

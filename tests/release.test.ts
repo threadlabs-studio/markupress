@@ -71,7 +71,7 @@ describe('merge releases', () => {
       expect(prepared.version).toBe('0.8.1');
       expect(readFileSync(join(root, 'CHANGELOG.md'), 'utf8')).toContain('## 0.8.1');
       expect(readFileSync(join(root, 'CHANGELOG.md'), 'utf8')).not.toContain('## Next release');
-      expect(JSON.parse(readFileSync(join(root, 'packages/create-markupress/template/package.json'), 'utf8')).dependencies.markupress).toBe('^0.8.1');
+      expect(JSON.parse(readFileSync(join(root, 'packages/create-markupress/template/package.json'), 'utf8')).dependencies.markupress).toBe('>=0.8.1 <1');
       expect(() => publishRelease({ root, source, execute })).toThrow(/temporary outage/);
       latest = failure === 'missing-older' ? '0.8.2' : '0.8.1';
       git('checkout', 'main');

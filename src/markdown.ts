@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, type Dirent } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { HtmlKitPlugin, PageContext } from '@nextwebwg/htmlkit';
+import type { MarkupKitPlugin, PageContext } from '@threadlabs/markupkit';
 import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter } from './content.js';
 import { siteLink } from './navigation.js';
 
@@ -23,14 +23,14 @@ export interface MarkdownPluginOptions {
 }
 
 /**
- * An HTMLKit page plugin: each .md file compiles to an HTML Next page, which HTMLKit routes, orders,
+ * An MarkupKit page plugin: each .md file compiles to an HTML Next page, which MarkupKit routes, orders,
  * renders, and builds like an .html page. Links to other .md files and referenced files resolve
- * through HTMLKit, so the plugin holds no routing of its own.
+ * through MarkupKit, so the plugin holds no routing of its own.
  */
-export function markdown(options: MarkdownPluginOptions = {}): HtmlKitPlugin {
+export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
   let base = '/';
   const home = options.home ?? (() => base);
-  return { name: 'markdown', config(htmlkit) { base = htmlkit.base ?? '/'; }, pages: { extensions: ['.md'], async compile(source, page) {
+  return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; }, pages: { extensions: ['.md'], async compile(source, page) {
     const href = page.href(page.file);
     // The URL, not the machine's path, names the page, so builds are reproducible.
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);

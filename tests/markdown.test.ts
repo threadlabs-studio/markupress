@@ -1,14 +1,14 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/markupkit';
 import { expect, it } from 'vitest';
 import { markdown } from '../src/markdown.js';
 import { linkDependencies } from './fixture.js';
 
 async function write(root: string, file: string, text: string) { await mkdir(dirname(join(root, file)), { recursive: true }); await writeFile(join(root, file), text); }
 
-it('adds Markdown pages to any HTMLKit site without Markupress versions or theme', async () => {
+it('adds Markdown pages to any MarkupKit site without Markupress versions or theme', async () => {
   const root = await mkdtemp(join(tmpdir(), 'markupress-markdown-'));
   try {
     await write(root, 'package.json', '{"type":"module"}');

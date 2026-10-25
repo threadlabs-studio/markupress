@@ -1,4 +1,4 @@
-import type { NavigationNode } from '@nextwebwg/htmlkit';
+import type { NavigationNode } from '@threadlabs/markupkit';
 import { expect, it } from 'vitest';
 import { generatedSidebar, type SidebarNode } from '../src/navigation.js';
 

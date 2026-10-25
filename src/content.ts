@@ -27,10 +27,10 @@ export interface FrontMatter {
   readonly title?: string;
   /** `<meta name="description">`, and the page's line in its folder's generated index. */
   readonly description?: string;
-  /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (HTMLKit `hk:order`). */
+  /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (MarkupKit `mk:order`). */
   readonly order?: number;
   /**
-   * `hidden` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). On a folder's index
+   * `hidden` leaves the page out of navigation and keeps its route (MarkupKit `mk:navigation`). On a folder's index
    * page, `collapsed` starts the folder's sidebar group closed.
    */
   readonly navigation?: 'hidden' | 'collapsed';
@@ -38,9 +38,9 @@ export interface FrontMatter {
   readonly sidebar?: boolean;
   readonly id?: string;
   readonly aliases?: readonly string[];
-  /** Old route paths in the page's version, each a redirect page to the page (HTMLKit `hk:redirect-from`). */
+  /** Old route paths in the page's version, each a redirect page to the page (MarkupKit `mk:redirect-from`). */
   readonly redirectFrom?: readonly string[];
-  /** An HTMLKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
+  /** An MarkupKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
   readonly layout?: string | false;
   /** The heading levels the page's outline lists, such as [2, 3], or false for no outline. */
   readonly outline?: false | readonly [number, number];
@@ -92,7 +92,7 @@ export interface CompiledMarkdown {
   readonly sections: readonly SearchSection[];
 }
 const index = /^(?:\d+\.)?index\.md$/;
-/** Whether a Markdown file is its folder's index page, which HTMLKit reads as the folder's own entry. */
+/** Whether a Markdown file is its folder's index page, which MarkupKit reads as the folder's own entry. */
 export const isIndex = (file: string) => index.test(basename(file));
 export function escapeHTML(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -197,7 +197,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   redirectFrom: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
-  layout: [value => value === false || text(value), 'an HTMLKit layout name or false'],
+  layout: [value => value === false || text(value), 'an MarkupKit layout name or false'],
   outline: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
@@ -212,7 +212,7 @@ function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: strin
     if (type === undefined) throw new Error(`${file}: unknown front matter field ${name}. Fields are ${Object.keys(fieldTypes).join(', ')}.`);
     if (!type[0](value)) throw new Error(`${file}: front matter ${name} must be ${type[1]}.`);
   }
-  // HTMLKit reads a folder from its index page, so only an index page can start its folder collapsed.
+  // MarkupKit reads a folder from its index page, so only an index page can start its folder collapsed.
   if (fields.navigation === 'collapsed' && !isIndex(file)) throw new Error(`${file}: front matter navigation collapsed applies to a folder's index page.`);
   return fields as FrontMatter;
 }
@@ -332,16 +332,16 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   for (const name of blocks) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   // A folder's index page with front matter only generates the folder's listing, which the layout's loader supplies.
   const generated = isIndex(options.file) && body.trim() === '';
-  // Front matter becomes head declarations and HTMLKit settings in the page's <defs>: HTMLKit owns navigation labels,
+  // Front matter becomes head declarations and MarkupKit settings in the page's <defs>: MarkupKit owns navigation labels,
   // order, visibility, alias routes, the layout choice, and the document head, where the page's entries win over its layout's.
   const { meta = {}, og = {}, canonical } = fields.head ?? {};
   // An authored <title> takes the place of the generated one, since a definition declares one title.
   const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(options.documentTitle?.(title) ?? title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
-    `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
-    (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
-    aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
-    (fields.redirectFrom ?? []).map(path => `<meta name="hk:redirect-from" content="${escapeHTML(path)}">`).join('') +
-    (fields.layout === undefined ? '' : `<meta name="hk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
+    `<meta name="mk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="mk:navigation" content="hidden">' : '') +
+    (fields.order === undefined ? '' : `<meta name="mk:order" content="${fields.order}">`) +
+    aliases.map(alias => `<meta name="mk:alias" content="${escapeHTML(alias)}">`).join('') +
+    (fields.redirectFrom ?? []).map(path => `<meta name="mk:redirect-from" content="${escapeHTML(path)}">`).join('') +
+    (fields.layout === undefined ? '' : `<meta name="mk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`);
@@ -350,7 +350,7 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const styles = css ? `<style>${stylesheet(css, options.file, true).css}</style>` : '';
   return { title, aliases, generated, sections: searchSections(fragment), ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+    resource: `<meta name="mk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
 }
 
 /**
