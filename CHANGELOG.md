@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.10.0
 
 - Keep header content vertically centered while preserving the wordmark/navigation text baseline. Give home actions an explicit accent and preserve their spacing across component boundaries. Use the text-safe accent for prose links.
 - Allow a home page to place live content beside its story by marking a top-level element `data-hero-media`.
