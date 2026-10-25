@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.8.7
 
 - Accept Looma 0.37 in strict peer-dependency installs, including its document-root theme scale.
 
