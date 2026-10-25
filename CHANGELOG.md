@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Accept Looma 0.36 in strict peer-dependency installs so its documentation generator can use Markupress with relational theme controls.
+
 - Add page and section sidebar visibility so workspace pages can supply contextual tools without a second documentation sidebar.
 - Offer Automatic, Light and Dark appearance choices with standard icons, and keep the outline below the measured header.
 
