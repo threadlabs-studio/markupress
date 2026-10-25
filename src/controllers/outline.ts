@@ -34,7 +34,7 @@ export default function outline(host: ComponentHost): void {
       for (const heading of headings) observer.observe(heading);
     };
     observe();
-    // HTMLKit swaps pages in place through the Navigation API; the outline then lists the new page's headings.
+    // MarkupKit swaps pages in place through the Navigation API; the outline then lists the new page's headings.
     const navigation = (window as Window & { navigation?: EventTarget }).navigation;
     navigation?.addEventListener('navigatesuccess', observe);
     return () => { observer?.disconnect(); navigation?.removeEventListener('navigatesuccess', observe); };

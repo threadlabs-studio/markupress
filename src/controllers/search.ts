@@ -62,7 +62,7 @@ export default function searchController(host: ComponentHost): void {
       const href = target?.closest<HTMLElement>('[data-href]')?.dataset.href;
       if (href === undefined) return;
       host.state.open = false;
-      // HTMLKit renders the page in place through the Navigation API, as it does for a followed link.
+      // MarkupKit renders the page in place through the Navigation API, as it does for a followed link.
       window.location.assign(href);
     };
     const keydown = (event: KeyboardEvent) => {

@@ -8,7 +8,7 @@ date: 2026-10-22
 
 ## Goal
 
-Markupress's content language is [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language). 0.8.0 renders every page with expressmark's `parse` and `renderHtml`, then runs Markupress's existing HTML Next and HTMLKit step on the rendered tree: link, asset and `@/` resolution, head declarations, native component carriers and code highlighting. Looma's markdown-it renderer (`createLoomaMarkdownIt` in `src/content.ts` and `src/navigation.ts`) leaves Markupress.
+Markupress's content language is [Expressive Markdown](https://nextwebwg.org/expressive-markdown/language). 0.8.0 renders every page with expressmark's `parse` and `renderHtml`, then runs Markupress's existing HTML Next and MarkupKit step on the rendered tree: link, asset and `@/` resolution, head declarations, native component carriers and code highlighting. Looma's markdown-it renderer (`createLoomaMarkdownIt` in `src/content.ts` and `src/navigation.ts`) leaves Markupress.
 
 Probed against expressmark 0.1.7, which has footnotes and link references (specs #120 and #121, expressmark #16).
 

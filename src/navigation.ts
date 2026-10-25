@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import type { NavigationNode } from '@nextwebwg/htmlkit';
+import type { NavigationNode } from '@threadlabs/markupkit';
 import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
 import type { Token } from 'markdown-it';
 
@@ -16,7 +16,7 @@ export function siteLink(to: string, home: string): string {
 /** A top navigation link after the sections, shown as its `icon` image (a path starting with `/` is in `public/`) or its label. */
 export type NavItem = Link & { readonly icon?: string };
 
-/** A sidebar entry from HTMLKit, rendered through Looma navigation controls: a page or link with `href`, and a folder or group with `children`. */
+/** A sidebar entry from MarkupKit, rendered through Looma navigation controls: a page or link with `href`, and a folder or group with `children`. */
 export interface SidebarNode {
   readonly label: string;
   readonly href?: string;
@@ -27,7 +27,7 @@ export interface SidebarNode {
 }
 
 /**
- * HTMLKit's navigation tree with Markupress's group policy: a folder stays open unless its index page's front
+ * MarkupKit's navigation tree with Markupress's group policy: a folder stays open unless its index page's front
  * matter says `navigation: collapsed`, and one holding the current page is always open. `collapsed` tells whether
  * a folder's index page URL starts closed.
  */
@@ -39,7 +39,7 @@ export function generatedSidebar(tree: readonly NavigationNode[], collapsed: (hr
 const markdown = createLoomaMarkdownIt();
 
 /**
- * A version's footer, from the `_footer.md` in its content directory (HTMLKit routes no `_` file): each heading
+ * A version's footer, from the `_footer.md` in its content directory (MarkupKit routes no `_` file): each heading
  * starts a column, its list items are links, and a paragraph after them is the copyright line.
  */
 export function footer(file: string): { columns: { title: string; items: Link[] }[]; copyright: string } {

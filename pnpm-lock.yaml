@@ -166,9 +166,9 @@ importers:
 
   .:
     dependencies:
-      '@nextwebwg/htmlkit':
-        specifier: 1.0.0-alpha.69
-        version: 1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit':
+        specifier: '>=0.2.0 <1'
+        version: 0.2.0(@types/node@22.20.1)(yaml@2.9.1)
       parse5:
         specifier: 8.0.1
         version: 8.0.1
@@ -195,7 +195,7 @@ importers:
         specifier: 1.0.0-alpha.69
         version: 1.0.0-alpha.69
       '@threadlabs/looma':
-        specifier: 0.37.1
+        specifier: '>=0.37.1 <1'
         version: 0.37.1(@nextwebwg/html-next@1.0.0-alpha.69)(@nextwebwg/htmlkit@1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))
       '@types/markdown-it':
         specifier: 14.2.0
@@ -341,6 +341,7 @@ packages:
   '@nextwebwg/htmlkit@1.0.0-alpha.69':
     resolution: {integrity: sha512-7Ik5fkUDac47v5GDJFnJ99apPcOGDxQHt9depYKyO5GcRXKekPeRnWFTgGQY0bLU/YYY6sR7qa7Lo8osQMhf4g==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    deprecated: Use @threadlabs/htmlkit.
     hasBin: true
 
   '@oxc-parser/binding-android-arm-eabi@0.137.0':
@@ -859,6 +860,11 @@ packages:
         optional: true
       vue:
         optional: true
+
+  '@threadlabs/markupkit@0.2.0':
+    resolution: {integrity: sha512-Vyb6TebrAIlgQZXodbDWB429H/iMzQP1stdau+5D6b5EnP8vU1z7vJ9R5MlrdLiJ8rV5FKrTn+iHaS7JAMvk/g==}
+    engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
+    hasBin: true
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
@@ -1807,6 +1813,7 @@ snapshots:
       - terser
       - tsx
       - yaml
+    optional: true
 
   '@oxc-parser/binding-android-arm-eabi@0.137.0':
     optional: true
@@ -2093,6 +2100,28 @@ snapshots:
     optionalDependencies:
       '@nextwebwg/htmlkit': 1.0.0-alpha.69(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
+
+  '@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1)':
+    dependencies:
+      '@nextwebwg/html-next': 1.0.0-alpha.69
+      parse5: 8.0.1
+      typescript-compiler: '@typescript/typescript6@6.0.2'
+      vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - '@types/node'
+      - '@vitejs/devtools'
+      - canvas
+      - esbuild
+      - jiti
+      - less
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
   '@tybys/wasm-util@0.10.4':
     dependencies:

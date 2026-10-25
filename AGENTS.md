@@ -4,9 +4,9 @@
 
 - README.md and checked-in plans define the product; threadlabs.config.json defines repository ownership. CLAUDE.md imports this file.
 - Markupress is a public MIT documentation product, published as the unscoped npm package `markupress`.
-- HTMLKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
+- MarkupKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
 - Use the public HTML Next proposal for declarative component semantics. Do not introduce another component parser or runtime.
-- When Markupress exposes an HTMLKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
+- When Markupress exposes an MarkupKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
 - Keep document identity, URL paths, and component names separate. Preserve code examples literally and resolve dependency links relative to their original source.
 
 ## Implementation
@@ -34,3 +34,5 @@
 - Exercise packed installed consumers rather than relying on workspace resolution.
 - Run one foreground Playwright runner per repository with `--workers=1` locally.
 - Merges to main trigger the release workflow automatically. It verifies a source-specific snapshot, advances the patch when no larger version is declared, and publishes through the npm environment with trusted publishing. Do not request per-release human approval or publish locally. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.
+
+- Use minimum-version ranges for compatible Threadlabs dependencies across pre-1.0 minor releases; lockfiles record exact tested resolutions. Raise a minimum or add an exclusion for an actual API requirement or verified incompatibility, and record the reason. Keep experimental upstream artifact pins where required.
