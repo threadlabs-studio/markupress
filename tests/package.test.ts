@@ -455,10 +455,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       };
       expect(await page.locator('html').evaluate(el=>el.scrollWidth <= innerWidth)).toBe(true);
       await assertSeparateTargets();
-      const actionWidth = await page.locator('[data-component~="markupress-header"] > .actions').evaluate(element => element.getBoundingClientRect().width);
+      const actionWidth = async () => { const first=(await searchAction.boundingBox())!,last=(await appearanceAction.boundingBox())!; return last.x+last.width-first.x; };
+      const originalActionWidth = await actionWidth();
       await page.evaluate(() => document.documentElement.style.setProperty('--ui-control-min-block-size', '30px'));
       await assertSeparateTargets();
-      expect(await page.locator('[data-component~="markupress-header"] > .actions').evaluate(element => element.getBoundingClientRect().width)).toBeLessThan(actionWidth);
+      expect(await actionWidth()).toBeLessThan(originalActionWidth);
       await page.evaluate(() => document.documentElement.style.removeProperty('--ui-control-min-block-size'));
 
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
