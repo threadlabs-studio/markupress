@@ -1,6 +1,6 @@
 {
   "name": "create-markupress",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "description": "Start a Markupress documentation site: npm create markupress@latest docs.",
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,9 @@
   "engines": {
     "node": ">=22.22.2 <23 || >=24.15 <25"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/threadlabs-studio/markupress.git",

@@ -120,7 +120,7 @@
   },
   "schemaVersion": "1.0",
   "settings": {
-    "description": "Versioned Markdown documentation built on HTMLKit and native declarative components.",
+    "description": "Versioned Markdown documentation built on MarkupKit and native declarative components.",
     "licenseHolder": "threadlabs-studio",
     "licenseYear": 2026,
     "projectName": "markupress"

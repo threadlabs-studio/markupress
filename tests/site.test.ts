@@ -9,7 +9,7 @@ import { lastUpdated } from '../src/git.js';
 import { markdown } from '../src/markdown.js';
 import { buildSite, siteOptions } from '../src/site.js';
 import { themeScript } from '../src/theme.js';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/markupkit';
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
@@ -23,13 +23,13 @@ async function fixture() {
   return root;
 }
 
-it('routes Markdown pages through HTMLKit with version-local links and served assets', async () => {
+it('routes Markdown pages through MarkupKit with version-local links and served assets', async () => {
   const root = await fixture(); await linkDependencies(root);
   const application = await createApplication(siteOptions({ root, base: '/manual/' }));
   try {
     expect(application.routes.map(route => route.pattern)).toEqual(expect.arrayContaining(['/v/current/', '/v/current/guide/install/', '/', '/guide/install/']));
     expect((await application.render('/manual/')).html).toContain('href="/manual/v/current/guide/install/"');
-    expect((await application.render('/manual/v/current/guide/install/')).html).toMatch(/src="\/manual\/_htmlkit\/files\/[0-9a-f]{16}-mark\.svg"/);
+    expect((await application.render('/manual/v/current/guide/install/')).html).toMatch(/src="\/manual\/_markupkit\/files\/[0-9a-f]{16}-mark\.svg"/);
     expect([...application.files.values()]).toEqual([await realpath(join(root, 'docs/mark.svg'))]);
   } finally { await application.close(); }
   // Markdown compiles in memory; nothing is written beside the content.
@@ -48,7 +48,7 @@ it('rejects missing local document links with the original source location', asy
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/broken\.md.*missing\.md/s);
 });
 
-it('builds a static site using the installed HTMLKit package and native navigation', async () => {
+it('builds a static site using the installed MarkupKit package and native navigation', async () => {
   const root = await fixture();
   // The disposable consumer resolves package resources from the installed dependency tree.
   await linkDependencies(root);
@@ -60,7 +60,7 @@ it('builds a static site using the installed HTMLKit package and native navigati
   expect(page).toMatch(/<nav\b[^>]*aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
-  expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
+  expect((await readdir(join(result.outDir, '_markupkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
 }, 30_000);
 
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
@@ -97,7 +97,7 @@ it('passes the lineNumbers default through to Markdown pages', async () => {
   } finally { await application.close(); }
 }, 30_000);
 
-it('renders front matter head metadata, a named HTMLKit layout, and no layout', async () => {
+it('renders front matter head metadata, a named MarkupKit layout, and no layout', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/seo.md', '---\ndescription: Search engines.\nhead:\n  og: { title: SEO }\n  canonical: https://example.com/seo/\n---\n# SEO');
   await write(root, 'docs/bare.md', '---\nlayout: false\n---\n# Bare');
@@ -290,23 +290,23 @@ it('renders a folder index page with an empty body as a list of its pages and fo
     // The folder is a page at its own URL in the sidebar and the breadcrumbs.
     expect(list((await application.render('/v/current/components/forms/')).html)).toContain('href="/v/current/components/forms/input/"');
     expect(list((await application.render('/components/button/')).html)).toBeUndefined();
-    expect((await application.render('/components/button/')).html).toMatch(/data-component="hk-breadcrumbs".*?<a href="\/v\/current\/components\/"[^>]*>Components<\/a>/s);
+    expect((await application.render('/components/button/')).html).toMatch(/data-component="mk-breadcrumbs".*?<a href="\/v\/current\/components\/"[^>]*>Components<\/a>/s);
   } finally { await application.close(); }
 }, 30_000);
 
-it('composes the site\'s htmlkit.config plugins and options with Markupress', async () => {
+it('composes the site\'s markupkit.config plugins and options with Markupress', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'htmlkit.config.js', "export default { base: '/kit/', plugins: [{ name: 'extra', buildEnd: context => context.writeFile('extra.txt', context.base) }] };");
+  await write(root, 'markupkit.config.js', "export default { base: '/kit/', plugins: [{ name: 'extra', buildEnd: context => context.writeFile('extra.txt', context.base) }] };");
   const result = await buildSite({ root });
   expect(await readFile(join(result.outDir, 'extra.txt'), 'utf8')).toBe('/kit/');
   expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/kit/v/current/guide/install/"');
-  // A Markupress base wins over HTMLKit's, and markupress() is the command's to add.
+  // A Markupress base wins over MarkupKit's, and markupress() is the command's to add.
   expect((await buildSite({ root, base: '/docs/' })).routes).toContain('/docs/guide/install/');
-  await write(root, 'htmlkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
+  await write(root, 'markupkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
   await expect(buildSite({ root })).rejects.toThrow('remove markupress() from its plugins');
 }, 60_000);
 
-it('carries HTMLKit\'s generated Content Security Policy, which hashes the theme script and takes a site\'s csp sources', async () => {
+it('carries MarkupKit\'s generated Content Security Policy, which hashes the theme script and takes a site\'s csp sources', async () => {
   const root = await fixture(); await linkDependencies(root);
   const hash = (script: string) => `'sha256-${createHash('sha256').update(script).digest('base64')}'`;
   const policy = async () => /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(await readFile(join((await buildSite({ root })).outDir, 'index.html'), 'utf8'))?.[1];
@@ -314,7 +314,7 @@ it('carries HTMLKit\'s generated Content Security Policy, which hashes the theme
   // An analytics snippet: app/head.js loads it, and the site's csp option allows its origin.
   const snippet = "document.head.append(Object.assign(document.createElement('script'), { src: 'https://analytics.example/script.js', defer: true }));\n";
   await write(root, 'app/head.js', snippet);
-  await write(root, 'htmlkit.config.js', "export default { csp: { 'script-src': ['https://analytics.example'] } };");
+  await write(root, 'markupkit.config.js', "export default { csp: { 'script-src': ['https://analytics.example'] } };");
   expect(await policy()).toBe(`script-src 'self' ${hash(themeScript)} ${hash(snippet)} https://analytics.example; object-src 'none'; base-uri 'none'`);
 }, 60_000);
 
@@ -327,7 +327,7 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
     const rendered = await application.render('/intro/');
     expect(rendered.status).toBe(200);
     const html = rendered.html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
-    // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
+    // The crumbs and pager items have MarkupKit's group field, which the shell's open item types accept.
     expect(rendered.html).toContain('data-component="ui-disclosure"');
     expect(html).toContain('<span class="summary">Getting started</span>');
     expect(html).toContain('href="/v/current/intro/" aria-current="page"');
@@ -350,7 +350,7 @@ it('renders layout: home in the home layout, with the top navigation and footer 
     expect(html).toMatch(/<a\b(?=[^>]*href="\/v\/current\/guide\/install\/")(?=[^>]*data-component="ui-button")[^>]*>.*Install/s);
     expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
-    for (const absent of ['id="documentation-navigation"', 'data-component="hk-breadcrumbs"', 'data-component="hk-pager"', 'On this page']) expect(html).not.toContain(absent);
+    for (const absent of ['id="documentation-navigation"', 'data-component="mk-breadcrumbs"', 'data-component="mk-pager"', 'On this page']) expect(html).not.toContain(absent);
     // Other pages keep the shell.
     expect((await application.render('/guide/install/')).html).toContain('data-component="markupress-shell"');
   } finally { await application.close(); }
@@ -419,7 +419,7 @@ it('resolves root-relative Markdown links within the site under its base, like t
   const result = await buildSite({ root, base: '/looma-next/', versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] });
   const html = await readFile(join(result.outDir, 'index.html'), 'utf8');
   const links = [...html.matchAll(/<a href="([^"]*)"[^>]*>(?:Install|Install now|Report|Remote)<\/a>/g)].map(match => match[1]);
-  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#install', expect.stringMatching(/^\/looma-next\/_htmlkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
+  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#install', expect.stringMatching(/^\/looma-next\/_markupkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
   // Every root-relative page link reaches a built page under the base, in each version.
   for (const version of ['current', 'v1']) {
     expect(await readFile(join(result.outDir, `v/${version}/index.html`), 'utf8')).toContain(`href="/looma-next/v/${version}/guide/install/"`);
@@ -431,7 +431,7 @@ it('resolves root-relative Markdown links within the site under its base, like t
   try { expect((await plain.render('/kit/')).html).toContain('href="/kit/guide/install/"'); } finally { await plain.close(); }
 }, 60_000);
 
-it('passes origin and robots to HTMLKit, which writes sitemap.xml and robots.txt', async () => {
+it('passes origin and robots to MarkupKit, which writes sitemap.xml and robots.txt', async () => {
   const root = await fixture(); await linkDependencies(root);
   const result = await buildSite({ root, base: '/docs/', origin: 'https://example.com', robots: true });
   // The root serves the default version; its /v/<id>/ copy is an alias, out of the sitemap, that names the root page as canonical.

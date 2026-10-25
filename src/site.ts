@@ -2,8 +2,8 @@ import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type HtmlKitPlugin,
-  type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@nextwebwg/htmlkit';
+import { buildApplication, devApplication, loadConfig, previewApplication, type ApplicationOptions, type ApplicationServer, type BuildResult, type MarkupKitPlugin,
+  type LoadContext, type NavigationItem, type NavigationNode, type PagerLinks, type ServerOptions } from '@threadlabs/markupkit';
 import { isIndex, type FrontMatter, type OutlineItem, type PagerLink, type SearchSection } from './content.js';
 import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
@@ -22,9 +22,9 @@ export interface MarkupressOptions {
   readonly root?: string;
   readonly contentDir?: string;
   readonly base?: string;
-  /** The site's origin, such as https://example.com: HTMLKit writes `sitemap.xml` for it, and `robots.txt` links that sitemap. */
+  /** The site's origin, such as https://example.com: MarkupKit writes `sitemap.xml` for it, and `robots.txt` links that sitemap. */
   readonly origin?: string;
-  /** HTMLKit's `robots.txt`: true allows every crawler, and a string is the file's text. */
+  /** MarkupKit's `robots.txt`: true allows every crawler, and a string is the file's text. */
   readonly robots?: boolean | string;
   readonly outDir?: string;
   readonly title?: string;
@@ -86,23 +86,23 @@ async function versions(options: MarkupressOptions, root: string): Promise<reado
 const shell = fileURLToPath(new URL('../theme/shell.html', import.meta.url));
 const homeLayout = fileURLToPath(new URL('../theme/home.html', import.meta.url));
 const own = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
-// HTMLKit's css option is page-wide: Looma's :root tokens and its light/dark switch, and document defaults.
+// MarkupKit's css option is page-wide: Looma's :root tokens and its light/dark switch, and document defaults.
 // A component's <style> is scoped to its own region, so these would never reach :root from the shell.
-// theme.css also styles HTMLKit's built-in components, which no component's scoped style can reach.
+// theme.css also styles MarkupKit's built-in components, which no component's scoped style can reach.
 const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(file => fileURLToPath(import.meta.resolve(`@threadlabs/looma/${file}`))),
   own('styles/base.css'), own('theme/theme.css')];
 
 /**
- * Versioned documentation as an HTMLKit plugin. Markdown pages come from the markdown plugin, and
- * HTMLKit routes them: each version's directory serves /v/<id>/, and the default version's also
+ * Versioned documentation as an MarkupKit plugin. Markdown pages come from the markdown plugin, and
+ * MarkupKit routes them: each version's directory serves /v/<id>/, and the default version's also
  * serves the site root. Markupress keeps only the version catalog its switcher needs.
  */
-export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
+export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   const defaultVersion = options.defaultVersion ?? 'current';
   let root = resolve(options.root ?? process.cwd());
   let editions: readonly DocumentationVersion[] = [], siteBase = '/';
   const editionOf = (file: string) => editions.find(edition => inside(resolve(root, edition.directory), file));
-  // Compiled documents by version and source file. HTMLKit recompiles every page when it rediscovers, so a
+  // Compiled documents by version and source file. MarkupKit recompiles every page when it rediscovers, so a
   // deleted file's stale entry is filtered by existence rather than cleared.
   const documents = new Map<string, Document>();
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
@@ -166,7 +166,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
       crumbs: await breadcrumbs(within), ...pagerLinks(await pager(within), page?.page), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
       contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
-    // HTMLKit rejects props a layout does not declare, so a layout receives the data its contract names, and
+    // MarkupKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
     // The page's language, else the site's, is the document's <html lang>.
     const lang = page?.page.lang ?? options.lang;
@@ -175,7 +175,7 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   }
   /**
    * A version's search index: each section of its pages, linked under the path the index is served at, so a reader at
-   * the site root finds the root's pages. HTMLKit routes no file whose name starts with `_`, so the path is free.
+   * the site root finds the root's pages. MarkupKit routes no file whose name starts with `_`, so the path is free.
    */
   function searchIndex(selected: string, served: string, base: string): string {
     const own = `/v/${selected}/`;
@@ -223,12 +223,12 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
   if (options.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(options.lang)) throw new Error(`The lang option is a language tag such as fr or pt-BR: ${options.lang}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
   return { ...pages, name: 'markupress',
-    // Each version's search index beside its pages, and the default version's at the root too. HTMLKit runs this once
+    // Each version's search index beside its pages, and the default version's at the root too. MarkupKit runs this once
     // every page has compiled, and again in development after each change.
     generate: ({ base }) => Object.fromEntries([...editions.map(edition => [`/v/${edition.id}/_search.json`, searchIndex(edition.id, `/v/${edition.id}/`, base)]),
       ['/_search.json', searchIndex(defaultVersion, '/', base)]]),
-    async config(htmlkit) {
-    root = resolve(htmlkit.root ?? root); siteBase = htmlkit.base ?? '/';
+    async config(markupkit) {
+    root = resolve(markupkit.root ?? root); siteBase = markupkit.base ?? '/';
     // Conventions first: public/logo.svg, public/logo-dark.svg and public/favicon.svg, which the options override.
     const own = (name: string) => existsSync(join(root, 'public', name)) ? `/${name}` : undefined;
     const light = own('logo.svg');
@@ -249,11 +249,11 @@ export function markupress(options: MarkupressOptions = {}): HtmlKitPlugin {
     if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
     const same = (a: DocumentationVersion, b: DocumentationVersion) => resolve(root, a.directory) === resolve(root, b.directory);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs. A site's
-    // app/layouts/default.html, which HTMLKit gives its other pages, replaces the shell and receives its loader data.
+    // app/layouts/default.html, which MarkupKit gives its other pages, replaces the shell and receives its loader data.
     const replacement = join(root, 'app/layouts/default.html');
     layoutFile = existsSync(replacement) ? replacement : shell;
     const layout = { component: layoutFile, server: { load } };
-    // layout: home names this layout; a site's app/layouts/home.html takes its place, as HTMLKit resolves a name.
+    // layout: home names this layout; a site's app/layouts/home.html takes its place, as MarkupKit resolves a name.
     return { headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       // The root serves the default version's folder as its own; every further mount of a folder, the default's
       // /v/<id>/ included, is an alias, so its pages name the first as canonical and stay out of the sitemap.
@@ -277,7 +277,7 @@ function pagerLinks(links: PagerLinks, page: FrontMatter | undefined): { previou
 }
 
 /**
- * A generated index's entries: the pages and folders directly in its folder, from HTMLKit's navigation tree below
+ * A generated index's entries: the pages and folders directly in its folder, from MarkupKit's navigation tree below
  * the index page, each with its page's description. A folder without an index page (a route group) adds its pages.
  */
 function contents(tree: readonly NavigationNode[], catalog: readonly (DocumentationPage & { readonly page: FrontMatter })[], base: string, self: string) {
@@ -288,22 +288,22 @@ function contents(tree: readonly NavigationNode[], catalog: readonly (Documentat
 }
 
 /**
- * HTMLKit options for a Markupress site, as the CLI runs it: the site's own HTMLKit options (its `htmlkit.config.ts`)
- * with `markupress()` added after their plugins. Markupress's own `base`, `origin`, `robots` and `outDir`, when set, win over HTMLKit's.
+ * MarkupKit options for a Markupress site, as the CLI runs it: the site's own MarkupKit options (its `markupkit.config.ts`)
+ * with `markupress()` added after their plugins. Markupress's own `base`, `origin`, `robots` and `outDir`, when set, win over MarkupKit's.
  */
-export function siteOptions(options: MarkupressOptions = {}, htmlkit: ApplicationOptions = {}): ServerOptions {
-  const root = resolve(options.root ?? htmlkit.root ?? process.cwd());
+export function siteOptions(options: MarkupressOptions = {}, markupkit: ApplicationOptions = {}): ServerOptions {
+  const root = resolve(options.root ?? markupkit.root ?? process.cwd());
   // markupress() already holds the markdown() plugin's pages; a second copy of either would compile .md twice.
-  const listed = htmlkit.plugins?.find(plugin => plugin.name === 'markupress' || plugin.name === 'markdown');
-  if (listed) throw new Error(`htmlkit.config: the markupress command adds markupress(), which includes markdown(); remove ${listed.name}() from its plugins.`);
-  return { ...htmlkit, root, base: options.base ?? htmlkit.base ?? '/', outDir: resolve(root, options.outDir ?? htmlkit.outDir ?? 'site'),
-    plugins: [...htmlkit.plugins ?? [], markupress({ ...options, root })],
+  const listed = markupkit.plugins?.find(plugin => plugin.name === 'markupress' || plugin.name === 'markdown');
+  if (listed) throw new Error(`markupkit.config: the markupress command adds markupress(), which includes markdown(); remove ${listed.name}() from its plugins.`);
+  return { ...markupkit, root, base: options.base ?? markupkit.base ?? '/', outDir: resolve(root, options.outDir ?? markupkit.outDir ?? 'site'),
+    plugins: [...markupkit.plugins ?? [], markupress({ ...options, root })],
     ...(options.origin === undefined ? {} : { origin: options.origin }), ...(options.robots === undefined ? {} : { robots: options.robots }),
     ...(options.host === undefined ? {} : { host: options.host }), ...(options.port === undefined ? {} : { port: options.port }) };
 }
-// Each loads the site's htmlkit.config.ts or .js, as the htmlkit command would, so its plugins compose with Markupress.
+// Each loads the site's markupkit.config.ts or .js, as the markupkit command would, so its plugins compose with Markupress.
 const withConfig = async (options: MarkupressOptions) => siteOptions(options, await loadConfig(resolve(options.root ?? process.cwd())));
 export async function buildSite(options: MarkupressOptions = {}): Promise<BuildResult> { return buildApplication(await withConfig(options)); }
 export async function previewSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return previewApplication(await withConfig(options)); }
-/** HTMLKit's watcher recompiles Markdown and reloads open pages after each edit. */
+/** MarkupKit's watcher recompiles Markdown and reloads open pages after each edit. */
 export async function devSite(options: MarkupressOptions = {}): Promise<ApplicationServer> { return devApplication(await withConfig(options)); }

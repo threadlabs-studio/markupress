@@ -1,4 +1,4 @@
-/* Page-wide defaults, delivered through HTMLKit's css option; components keep their own styles. */
+/* Page-wide defaults, delivered through MarkupKit's css option; components keep their own styles. */
 :root, [data-theme="light"], [data-theme="dark"] {
   /* Keep both palettes in each inherited value: light-dark resolves where a color is used,
      so an opposite-mode subtree also works for roles inherited from its parent. */

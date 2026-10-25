@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium, type Page } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import type { ApplicationServer } from '@nextwebwg/htmlkit';
+import type { ApplicationServer } from '@threadlabs/markupkit';
 
 async function chooseAppearance(page: Page, choice: 'automatic' | 'light' | 'dark') {
   const button = page.getByRole('button', { name: /^Appearance:/ });
@@ -40,7 +40,7 @@ beforeAll(() => {
   // The site's own page-wide stylesheet sets a Markupress theme token.
   mkdirSync(join(workspace, 'app'));
   write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
-  write('htmlkit.config.js', 'export default { css: ["app/site.css"] };');
+  write('markupkit.config.js', 'export default { css: ["app/site.css"] };');
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
@@ -78,7 +78,7 @@ afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
   const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
   expect(html).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>'); expect(html).toContain('id="install-1"');
-  // HTMLKit's generated policy comes before any script, and allows the theme script by its hash.
+  // MarkupKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
   expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
   expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
@@ -109,9 +109,9 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     expect(create('my-docs')).toContain('npm run dev');
     const site = join(created, 'my-docs');
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
-    // The starter pins the same concrete HTML Next and Looma releases qualified by this package.
+    // The starter keeps the required alpha runtime and the same compatible Looma range.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.devDependencies['@threadlabs/looma'], markupress: `^${own.version}` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.devDependencies['@threadlabs/looma'], markupress: `>=${own.version} <1` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);
@@ -151,8 +151,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         Object.assign(window, { load });
         document.addEventListener('securitypolicyviolation', event => (window as unknown as { reportViolation(text: string): void })
           .reportViolation(`${location.pathname}: ${event.violatedDirective} ${event.blockedURI || 'inline'} ${event.sample}`));
-        new MutationObserver(() => { if (document.documentElement.hasAttribute('data-hk-navigating')) load.pending.push(getComputedStyle(document.body, '::before').blockSize); })
-          .observe(document, { subtree: true, attributeFilter: ['data-hk-navigating'] });
+        new MutationObserver(() => { if (document.documentElement.hasAttribute('data-mk-navigating')) load.pending.push(getComputedStyle(document.body, '::before').blockSize); })
+          .observe(document, { subtree: true, attributeFilter: ['data-mk-navigating'] });
         const record = () => {
           if (document.querySelector('[data-action="theme"]')) load.theme = document.documentElement.dataset.theme;
           else requestAnimationFrame(record);
@@ -178,11 +178,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
       await page.emulateMedia({ colorScheme: 'light' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
-      // Navigation uses Looma rows; HTMLKit supplies the breadcrumbs and pager.
+      // Navigation uses Looma rows; MarkupKit supplies the breadcrumbs and pager.
       expect(await page.locator('#documentation-navigation [data-component~="markupress-nav-items"]').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
-      expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
-      expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
-      expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
+      expect(await page.locator('[data-component="mk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
+      expect(await page.locator('[data-component="mk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
+      expect(await page.locator('[data-component="mk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
       // Navigation has a full selectable row, with the same public theme roles as controls.
@@ -233,8 +233,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       logged.length = 0;
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
-      // HTMLKit commits the URL before the page arrives. v1's counter has its own controller, which this
-      // document cannot also define, so HTMLKit loads v1 as a document, at its top, without logging; wait for it before clicking.
+      // MarkupKit commits the URL before the page arrives. v1's counter has its own controller, which this
+      // document cannot also define, so MarkupKit loads v1 as a document, at its top, without logging; wait for it before clicking.
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.waitForLoadState();
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
@@ -252,7 +252,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/guide/new/');
       // The page's imported stylesheet styles its own heading.
       expect(await page.locator('main h1').evaluate(element => getComputedStyle(element).letterSpacing)).toBe('2px');
-      await page.locator('[data-component="hk-pager"] a[rel="next"]').click();
+      await page.locator('[data-component="mk-pager"] a[rel="next"]').click();
       await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
       // The page rendered in place, and the theme drew its pending bar while it did.
       expect(await page.evaluate(() => (window as unknown as { load: { pending: string[] } }).load.pending)).toContain('3px');
@@ -382,8 +382,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       });
       expect(baselineDelta).toBeLessThan(1);
       const headerCenterDelta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
-        const bar = header.getBoundingClientRect(), brand = header.querySelector('.brand')!.getBoundingClientRect();
-        return Math.abs(brand.y + brand.height / 2 - bar.y - bar.height / 2);
+        const bar = header.getBoundingClientRect();
+        const boxes = [...header.querySelectorAll('.brand, .top, .actions')].map(element => element.getBoundingClientRect()).filter(box => box.width && box.height);
+        const top = Math.min(...boxes.map(box => box.top)), bottom = Math.max(...boxes.map(box => box.bottom));
+        return Math.abs((top + bottom) / 2 - bar.y - bar.height / 2);
       });
       expect(headerCenterDelta).toBeLessThan(2);
       await page.evaluate(() => { (window as unknown as {noticeDismissed:boolean}).noticeDismissed=false; window.addEventListener('markupress-header-notice-dismiss',()=>{ (window as unknown as {noticeDismissed:boolean}).noticeDismissed=true; document.documentElement.style.setProperty('--markupress-header-notice-display','none'); }); });
@@ -420,7 +422,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('.features [data-component="ui-card"] h2').allTextContents()).toEqual(['Components', 'Versions']);
       expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
-      expect(await page.locator('#documentation-navigation, [data-component="hk-pager"]').count()).toBe(0);
+      expect(await page.locator('#documentation-navigation, [data-component="mk-pager"]').count()).toBe(0);
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
         // A reload settles the theme, so no color is caught mid-transition.
