@@ -382,6 +382,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       });
       expect(baselineDelta).toBeLessThan(1);
       await page.evaluate(() => { (window as unknown as {noticeDismissed:boolean}).noticeDismissed=false; window.addEventListener('markupress-header-notice-dismiss',()=>{ (window as unknown as {noticeDismissed:boolean}).noticeDismissed=true; document.documentElement.style.setProperty('--markupress-header-notice-display','none'); }); });
+      expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
       await page.getByRole('button',{name:'Remove Custom theme',exact:true}).click();
       expect(await page.evaluate(() => (window as unknown as {noticeDismissed:boolean}).noticeDismissed)).toBe(true);
       await expect.poll(() => page.getByRole('button',{name:'Search',exact:true}).evaluate(el => el === document.activeElement)).toBe(true);
@@ -433,6 +434,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/v1/');
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
+      expect(await page.locator('html').evaluate(element => element.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
+      if(process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({path:join(process.env.MARKUPRESS_SCREENSHOTS,`markupress-${mode}-mobile-notice.png`)});
+      await page.locator('html').evaluate(element=>element.style.setProperty('--markupress-header-notice-display','none'));
       expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const brand = page.getByRole('link', { name: 'Example docs with a deliberately long product title', exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
