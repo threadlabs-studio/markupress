@@ -346,7 +346,7 @@ it('renders layout: home in the home layout, with the top navigation and footer 
     expect(html).toContain('data-component="markupress-home"');
     expect(html).not.toContain('data-component="markupress-shell"');
     expect(html).toMatch(/<nav class="top"[^>]*><ul><li[^>]*><a href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
-    expect(html).toMatch(/<a href="\/v\/current\/guide\/install\/"[^>]*data-component="ui-button"[^>]*>.*Install/s);
+    expect(html).toMatch(/<a\b(?=[^>]*href="\/v\/current\/guide\/install\/")(?=[^>]*data-component="ui-button")[^>]*>.*Install/s);
     expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
     for (const absent of ['id="documentation-navigation"', 'data-component="hk-breadcrumbs"', 'data-component="hk-pager"', 'On this page']) expect(html).not.toContain(absent);

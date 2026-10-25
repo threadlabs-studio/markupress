@@ -1,6 +1,6 @@
 {
   "name": "create-markupress",
-  "version": "0.8.7",
+  "version": "0.9.0",
   "description": "Start a Markupress documentation site: npm create markupress@latest docs.",
   "license": "MIT",
   "type": "module",

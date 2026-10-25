@@ -8,4 +8,5 @@ minimumReleaseAgeExclude:
   - '@nextwebwg/htmlkit@1.0.0-alpha.69'
   - '@threadlabs/looma@0.31.4'
   - '@threadlabs/looma@0.33.0'
+  - '@threadlabs/looma@0.37.1'
   - 'expressmark@0.1.6'

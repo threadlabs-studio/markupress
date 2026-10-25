@@ -1,4 +1,5 @@
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-cycle-button/ui-cycle-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-badge/ui-badge.html">
 <link rel="component" href="./search.html">
 <template component="markupress-header">
@@ -17,13 +18,12 @@
 <nav class="top" $if="$nav.length" aria-label="Main"><ul><li $each="item of $nav">
 <a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
 </li></ul></nav>
-<div class="actions"><markupress-search $if="$search" from:index="$search"></markupress-search><div class="appearance" from:data-ready="$appearanceReady" role="group" aria-label="Appearance"><ui-icon-button label="Automatic appearance" size="sm" variant="outline" tone="neutral" data-action="theme" data-theme-choice="automatic" from:aria-pressed="$appearance = 'automatic'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><path d="M8 21h8m-4-4v4"></path></svg></ui-icon-button><ui-icon-button label="Light appearance" size="sm" variant="outline" tone="neutral" data-action="theme" data-theme-choice="light" from:aria-pressed="$appearance = 'light'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg></ui-icon-button><ui-icon-button label="Dark appearance" size="sm" variant="outline" tone="neutral" data-action="theme" data-theme-choice="dark" from:aria-pressed="$appearance = 'dark'"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6.25 6.25 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg></ui-icon-button></div></div></header>
+<div class="actions" from:data-ready="$appearanceReady"><markupress-search $if="$search" from:index="$search"></markupress-search><ui-cycle-button label="Appearance" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" items='[{"value":"automatic","label":"Automatic","icon":"monitor"},{"value":"light","label":"Light","icon":"sun"},{"value":"dark","label":"Dark","icon":"moon"}]'></ui-cycle-button></div></header>
 <style>
 :host { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ui-space-2) var(--ui-space-4); min-block-size: var(--markupress-header-height, 4.25rem); border-bottom: 1px solid var(--ui-border, #8885); padding: var(--ui-space-2) max(var(--ui-space-4), calc((100vw - var(--markupress-page-width, 90rem)) / 2)); background: var(--ui-surface); }
 .brand { min-inline-size: 0; display: flex; align-items: center; gap: var(--ui-space-3); color: inherit; font-size: 1.15rem; font-weight: 700; text-decoration: none; } .brand-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .logo { flex-shrink: 0; block-size: 2rem; inline-size: auto; }
-.appearance:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
-.appearance { display: flex; gap: var(--ui-space-1); }
-.actions { display: flex; flex-shrink: 0; align-items: center; gap: .5rem; margin-inline-start: auto; }
+.actions:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
+.actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, var(--ui-control-min-block-size)); flex-shrink: 0; align-items: center; justify-items: center; gap: var(--ui-space-2); margin-inline-start: auto; }
 ul { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; margin: 0; padding: 0; list-style: none; }
 a { color: inherit; text-decoration: none; } a:hover, a[aria-current="page"], a[aria-current="true"] { color: var(--ui-accent); } a[aria-current="page"] { font-weight: 700; }
 .top { font-size: var(--ui-font-size-sm); font-weight: var(--ui-font-semibold); }
