@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.37.1 <1",
+    "@threadlabs/looma": ">=0.41.2 <1",
     "markupress": ">=0.10.0 <1"
   }
 }

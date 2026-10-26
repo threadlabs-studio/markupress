@@ -21,7 +21,7 @@ export default function shell(host: ComponentHost): void {
     apply();
     const ready = window.requestAnimationFrame(() => { host.state.appearanceReady = true; });
     // The header can grow with typography, wrapping, or a customized control scale.
-    const header = host.root.querySelector<HTMLElement>('[data-component="markupress-header"]');
+    const header = host.root.querySelector<HTMLElement>('[data-component~="markupress-header"]');
     const measureHeader = () => { if (header) (host.root as HTMLElement).style.setProperty('--_markupress-header-height', `${header.getBoundingClientRect().height}px`); };
     const observer = new window.ResizeObserver(measureHeader);
     if (header) observer.observe(header);

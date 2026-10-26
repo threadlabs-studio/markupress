@@ -399,7 +399,7 @@ function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string
   const outer = (nodes: readonly Node[]) => nodes.map(node => 'tagName' in node ? serializeOuter(node) : '').join('');
   const heading = hero.some(node => element(node, 'h1')) ? '' : `<h1>${literal(escapeHTML(title))}</h1>`;
   const buttons = (actions && 'childNodes' in actions ? actions.childNodes : []).filter(child => element(child, 'a')).map((link, index) =>
-    `<ui-button as="a" href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" tone="${index === 0 ? 'accent' : 'neutral'}" size="lg">${serialize(link)}</ui-button>`).join('');
+    `<ui-button href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" tone="${index === 0 ? 'accent' : 'neutral'}" size="lg">${serialize(link)}</ui-button>`).join('');
   if (buttons) components.add('ui-cluster').add('ui-button');
   if (features.length > 0) components.add('ui-grid').add('ui-card');
   return `<header class="hero"><div class="hero-text">${heading}${outer(hero.filter(node => node !== actions && node !== image))}` +

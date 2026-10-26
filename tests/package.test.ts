@@ -375,15 +375,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await main.getByRole('link', { name: 'Outline' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('header img.logo-light').getAttribute('src')).toBe('/manual/logo.svg');
       const baselineDelta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
-        const probes = [header.querySelector('.brand-title')!, header.querySelector('.top a')!].map(label => {
+        const probes = [header.querySelector('.brand-title')!, header.querySelector('.navigation a')!].map(label => {
           const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; label.append(probe); return probe;
         });
         const delta = Math.abs(probes[0]!.getBoundingClientRect().top - probes[1]!.getBoundingClientRect().top); probes.forEach(probe => probe.remove()); return delta;
       });
       expect(baselineDelta).toBeLessThan(1);
+      for (const height of ['32px', '56px', '72px']) {
+        const style = await page.addStyleTag({ content: `:root { --ui-control-size-sm: ${height}; }` });
+        const delta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
+          const center = (node: Element) => { const box = node.getBoundingClientRect(); return box.y + box.height / 2; };
+          return Math.abs(center(header.querySelector('.identity')!) - center(header.querySelector('.actions')!));
+        });
+        expect(delta).toBeLessThan(1);
+        await style.evaluate(element => element.parentNode?.removeChild(element));
+      }
+
       const headerCenterDelta = await page.locator('[data-component~="markupress-header"]').evaluate(header => {
         const bar = header.getBoundingClientRect();
-        const boxes = [...header.querySelectorAll('.brand, .top, .actions')].map(element => element.getBoundingClientRect()).filter(box => box.width && box.height);
+        const boxes = [...header.querySelectorAll('.brand, .navigation, .actions')].map(element => element.getBoundingClientRect()).filter(box => box.width && box.height);
         const top = Math.min(...boxes.map(box => box.top)), bottom = Math.max(...boxes.map(box => box.bottom));
         return Math.abs((top + bottom) / 2 - bar.y - bar.height / 2);
       });
@@ -500,7 +510,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('#documentation-navigation').isVisible()).toBe(false);
       await page.goto(server.url + 'v/current/guide/outline/');
       const outlineTitle = page.getByText('On this page', { exact: true });
-      const header = page.locator('[data-component="markupress-header"]');
+      const header = page.locator('[data-component~="markupress-header"]');
       expect((await outlineTitle.boundingBox())!.y).toBeGreaterThan((await header.boundingBox())!.y + (await header.boundingBox())!.height + 10);
       await page.locator('html').evaluate(element => element.style.setProperty('--markupress-header-height', '96px'));
       await page.evaluate(() => scrollTo(0, 500));
