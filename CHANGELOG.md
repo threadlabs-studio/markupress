@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.10.1
 
 - Use Looma SiteHeader for the responsive site banner, branding, navigation and action alignment. Markupress supplies documentation content, routes and drawer behavior. Requires Looma 0.41.2 for the shared header’s mobile sizing and separate adjustable action targets; home-page action links use its href-driven native link contract.
 
