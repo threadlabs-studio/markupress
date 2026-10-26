@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Use Looma SiteHeader for the responsive site banner, branding, navigation and action alignment. Markupress supplies documentation content, routes and drawer behavior. Requires Looma 0.41.2 for the shared header’s mobile sizing and separate adjustable action targets; home-page action links use its href-driven native link contract.
+
 - Keep header content vertically centered while preserving the wordmark/navigation text baseline. Give home actions an explicit accent and preserve their spacing across component boundaries. Use the text-safe accent for prose links.
 - Allow a home page to place live content beside its story by marking a top-level element `data-hero-media`.
 - Allow compatible later pre-1.0 minor releases of Threadlabs dependencies instead of restricting consumers to individual minor versions. Lockfiles retain the tested versions.

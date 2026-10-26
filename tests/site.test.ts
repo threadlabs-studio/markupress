@@ -185,14 +185,16 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
     expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg" data-component-head="">');
-    expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
+    expect(html).toMatch(/<a class="brand-link"[^>]* href="\/docs\/"[^>]*><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
     expect(html).toContain('aria-label="Remove Preview"');
     // One version shows no badge.
     expect(html).not.toContain('data-component="ui-badge"');
-    const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
+    const top = /<nav class="navigation"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
-    expect(top).toBe('<ul><li><a href="/docs/v/current/components/" aria-current="false">Components</a></li><li><a href="/docs/v/current/guide/" aria-current="true">Guide</a></li>' +
-      '<li><a href="https://github.com/example" aria-current="false"><img src="/docs/github.svg" alt="GitHub"></a></li></ul>');
+    expect([...top.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*aria-current="([^"]+)"[^>]*>/g)].map(match => [match[1],match[2]])).toEqual([
+      ['/docs/v/current/components/','false'], ['/docs/v/current/guide/','true'], ['https://github.com/example','false'],
+    ]);
+    expect(top).toMatch(/<img[^>]*src="\/docs\/github.svg"[^>]*alt="GitHub"/);
     expect(html).toMatch(/<footer[^>]*>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
     // _footer.md is no page.
     expect((await application.render('/docs/_footer/')).status).toBe(404);
@@ -212,7 +214,7 @@ it('renders no logo, icon or missing pager link when the shell receives null for
     const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     for (const html of [first, last]) {
       expect(html).not.toContain('rel="icon"');
-      expect(html).toMatch(/<a class="brand" href="\/"><span class="brand-title">Documentation<\/span><\/a>/);
+      expect(html).toMatch(/<a class="brand-link"[^>]* href="\/"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
     }
     expect(first).not.toContain('rel="prev"');
     expect(first).toMatch(/<a [^>]*rel="next"/);
@@ -346,7 +348,7 @@ it('renders layout: home in the home layout, with the top navigation and footer 
     const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
     expect(html).toContain('data-component="markupress-home"');
     expect(html).not.toContain('data-component="markupress-shell"');
-    expect(html).toMatch(/<nav class="top"[^>]*><ul><li[^>]*><a href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
+    expect(html).toMatch(/<nav class="navigation"[^>]*><a[^>]*href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
     expect(html).toMatch(/<a\b(?=[^>]*href="\/v\/current\/guide\/install\/")(?=[^>]*data-component="ui-button")[^>]*>.*Install/s);
     expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
