@@ -433,6 +433,21 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       expect(await page.locator('#documentation-navigation, [data-component="mk-pager"]').count()).toBe(0);
+      await page.setViewportSize({ width: 375, height: 812 });
+      const homeHeader = page.locator('[data-component~="markupress-header"]');
+      expect((await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
+      expect(await page.locator('header img.logo-light:visible, header img.logo-dark:visible').count()).toBe(1);
+      expect(await page.getByRole('navigation', { name: 'Main', exact: true }).isVisible()).toBe(false);
+      await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+      const homeNavigation = page.getByRole('navigation', { name: 'Sections', exact: true });
+      await expect.poll(() => homeNavigation.isVisible()).toBe(true);
+      expect(await homeNavigation.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
+      await homeNavigation.getByRole('link', { name: 'Outline', exact: true }).click();
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/outline/');
+      expect(await page.locator('#home-navigation:popover-open').count()).toBe(0);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(server.url + 'v/current/');
+
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
         // A reload settles the theme, so no color is caught mid-transition.
@@ -529,6 +544,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
           await fallback.locator('summary').click();
           expect(await fallback.getAttribute('open')).toBe(null);
           expect(await plain.locator('.enhanced').isVisible()).toBe(false);
+          await plain.setViewportSize({ width: 375, height: 812 });
+          await plain.goto(server.url + 'v/current/');
+          await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
+          const sections = plain.getByRole('navigation', { name: 'Sections', exact: true });
+          expect(await sections.isVisible()).toBe(true);
+          await sections.getByRole('link', { name: 'Outline', exact: true }).click();
+          expect(plain.url()).toBe(server.url + 'v/current/guide/outline/');
         } finally { await noScript.close(); }
       }
       expect(errors).toEqual([]); expect(violations).toEqual([]); await context.close(); await server.close(); server = undefined;

@@ -1,3 +1,5 @@
+<link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-icon/ui-icon.html">
 <link rel="component" href="./chrome.html">
 <!-- The home layout (front matter layout: home): the shell's top navigation and footer around a full-width page, which
      Markupress reads as a hero and feature cards. A site's app/layouts/home.html replaces it. -->
@@ -18,7 +20,9 @@
 <state name="appearance" type="string" value="automatic"></state>
 <state name="appearanceReady" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:appearance="$appearance" from:appearance-ready="$appearanceReady"></markupress-header>
+<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
+<ui-icon-button $if="$nav.length" slot="menu" label="Navigation" variant="ghost" tone="neutral" popovertarget="home-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></markupress-header>
+<nav $if="$nav.length" id="home-navigation" popover aria-label="Sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a></li></ul></nav>
 <main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
@@ -27,5 +31,13 @@
 main { flex: 1; inline-size: 100%; max-inline-size: var(--markupress-home-width, 75rem); margin-inline: auto; padding: 2rem 1.5rem 4rem; }
 .skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-accent); z-index: 3; } .skip:focus { transform: none; }
 :focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+/* The home layout has sections but no documentation sidebar. Native popover owns its mobile drawer. */
+#home-navigation { inset: 0 auto 0 0; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border); background: var(--ui-surface-sunken); color: var(--ui-text); }
+#home-navigation::backdrop { background: rgb(0 0 0 / .4); }
+#home-navigation ul { display: grid; gap: var(--ui-space-1); padding: 0; margin: 0; list-style: none; }
+#home-navigation a { display: block; padding: var(--ui-nav-compact-padding-block) var(--ui-nav-compact-padding-inline); border-radius: var(--ui-selection-radius); color: inherit; text-decoration: none; }
+#home-navigation a:is(:hover, [aria-current="page"], [aria-current="true"]) { background: var(--ui-selection-surface); color: var(--ui-selection-text); }
+.nav-icon { display: block; block-size: 1.25rem; inline-size: auto; }
+@media (min-width: 64rem) { #home-navigation { display: none; } }
 @media (max-width: 768px) { main { padding: 1rem 1rem 3rem; } }
 </style></template>
