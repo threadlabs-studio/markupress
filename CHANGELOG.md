@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.10.2
 
 - Supply a native section-navigation drawer on home pages, keeping the shared site header compact and its logo visible on mobile. Close the home section drawer after following a link.
 
