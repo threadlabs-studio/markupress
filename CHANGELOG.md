@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.12.0
 
 - Render Markdown directly through Expressmark 0.2.2 in standard mode, including footer navigation and version snapshots. External HTML Next component files still own definitions; pages import and consume them with ordinary HTML.
 - Use preferred Expressive Markdown forms throughout the website, examples and starter: bracketed callout titles, adjacent `::: tab [Label]` panels, named tables and standard code attributes. Legacy `== Label` panels are no longer interpreted as tabs; code comments stay literal.
