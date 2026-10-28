@@ -10,6 +10,7 @@ import { markdown } from './markdown.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
 import { themeScript } from './theme.js';
 import { versionLinks } from './versions.js';
+import type { LocalSearchOptions } from './search.js';
 
 export interface DocumentationVersion {
   readonly id: string;
@@ -19,6 +20,8 @@ export interface DocumentationVersion {
   readonly publicDir?: string;
 }
 export interface MarkupressOptions {
+  /** Local search matching options, or false to disable search and its generated indexes. */
+  readonly search?: false | LocalSearchOptions;
   readonly root?: string;
   readonly contentDir?: string;
   readonly base?: string;
@@ -54,7 +57,7 @@ export interface MarkupressOptions {
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -101,6 +104,15 @@ const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(f
  */
 export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   if (options.sidebarNavigation !== undefined && !['tree', 'sections'].includes(options.sidebarNavigation)) throw new Error('sidebarNavigation must be tree or sections.');
+  const localSearch = options.search === false ? undefined : options.search === undefined ? {} : options.search;
+  if (localSearch !== undefined) {
+    if (localSearch === null || typeof localSearch !== 'object' || Array.isArray(localSearch)) throw new Error('search must be false or an object of local search options.');
+    for (const key of Object.keys(localSearch)) if (!['limit', 'fuzzy', 'prefix'].includes(key)) throw new Error(`Unknown search option ${key}.`);
+    if (localSearch.limit !== undefined && (!Number.isSafeInteger(localSearch.limit) || localSearch.limit < 1)) throw new Error('search.limit must be a positive whole number.');
+    if (localSearch.fuzzy !== undefined && localSearch.fuzzy !== false && (typeof localSearch.fuzzy !== 'number' || !Number.isFinite(localSearch.fuzzy) || localSearch.fuzzy < 0 || localSearch.fuzzy > 1)) throw new Error('search.fuzzy must be false or a fraction between 0 and 1.');
+    if (localSearch.prefix !== undefined && typeof localSearch.prefix !== 'boolean') throw new Error('search.prefix must be true or false.');
+  }
+  const searchOptions = { limit: localSearch?.limit ?? 20, fuzzy: localSearch?.fuzzy === false ? 0 : localSearch?.fuzzy ?? 0.2, prefix: localSearch?.prefix ?? true };
   const defaultVersion = options.defaultVersion ?? 'current';
   let root = resolve(options.root ?? process.cwd());
   let editions: readonly DocumentationVersion[] = [], siteBase = '/';
@@ -164,7 +176,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
       (page?.pathname ?? requested).startsWith(doc.pathname) && doc.page.sidebar !== undefined)
       .sort((a, b) => b.pathname.length - a.pathname.length)[0]?.page.sidebar;
     const data: Record<string, unknown> = { sidebarVisible: page?.page.sidebar ?? sidebarDefault ?? true, title: options.title ?? 'Documentation', home: base, navigation: items,
-      search: base + (path.startsWith('/v/') ? `v/${selected}/` : '') + '_search.json',
+      search: options.search === false ? '' : base + (path.startsWith('/v/') ? `v/${selected}/` : '') + '_search.json', searchOptions,
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
       versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
       crumbs: await breadcrumbs(within), ...pagerLinks(await pager(within), page?.page), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
@@ -182,7 +194,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
    */
   function searchIndex(selected: string, served: string, base: string): string {
     const own = `/v/${selected}/`;
-    return JSON.stringify(current().filter(doc => doc.version === selected).flatMap(doc => {
+    return JSON.stringify(current().filter(doc => doc.version === selected && doc.page.search !== false).flatMap(doc => {
       const href = base + served.slice(1) + doc.pathname.slice(own.length);
       return doc.sections.map(section => ({ page: doc.page.title, heading: section.heading || doc.page.title,
         href: section.id ? `${href}#${section.id}` : href, text: section.text }));
@@ -230,7 +242,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   return { ...pages, name: 'markupress',
     // Each version's search index beside its pages, and the default version's at the root too. MarkupKit runs this once
     // every page has compiled, and again in development after each change.
-    generate: ({ base }) => Object.fromEntries([...editions.map(edition => [`/v/${edition.id}/_search.json`, searchIndex(edition.id, `/v/${edition.id}/`, base)]),
+    generate: ({ base }) => options.search === false ? {} : Object.fromEntries([...editions.map(edition => [`/v/${edition.id}/_search.json`, searchIndex(edition.id, `/v/${edition.id}/`, base)]),
       ['/_search.json', searchIndex(defaultVersion, '/', base)]]),
     async config(markupkit) {
     root = resolve(markupkit.root ?? root); siteBase = markupkit.base ?? '/';

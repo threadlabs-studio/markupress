@@ -60,7 +60,8 @@ beforeAll(() => {
   // The current version's home is a home page; v1 keeps the plain one.
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
-  write('docs/03.about.md', '# About');
+  write('docs/03.about.md', '# About\n\n<div data-search-ignore>unindexedsectionquartz</div>');
+  write('docs/excluded.md', '---\nsearch: false\n---\n# Excluded\n\nundiscoverablequartz');
   mkdirSync(join(workspace, 'docs/workspace'));
   write('docs/workspace/index.md', '---\nsidebar: false\n---\n# Workspace');
   write('docs/workspace/edit.md', '# Edit workspace');
@@ -358,14 +359,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The dialog's field takes focus as it opens.
       await expect.poll(() => page.getByRole('searchbox').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       await page.keyboard.type('secnd');
-      await expect.poll(() => dialog.getByRole('status').textContent()).toBe('No results for "secnd"');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
       await page.getByRole('searchbox').fill('second');
       await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
       expect(await dialog.locator('[data-href]').first().textContent()).toContain('Outline');
       const searchAudit = await new AxeBuilder({ page }).include('[data-component="ui-search-shell"]').analyze();
       expect(searchAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      for (const query of ['absentquartz nonexistentquartz', 'undiscoverablequartz', 'unindexedsectionquartz']) {
+        await page.getByRole('searchbox').fill(query);
+        await expect.poll(() => dialog.getByRole('status').textContent()).toBe(`No results for "${query}"`);
+      }
+      await page.getByRole('searchbox').fill('outline');
+      await expect.poll(() => dialog.locator('[data-href]').count()).toBeGreaterThan(1);
+      const secondHref = await dialog.locator('[data-href]').nth(1).getAttribute('data-href');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      const chosen = await page.locator(':focus').evaluate(button => button.closest<HTMLElement>('[data-href]')!.dataset.href);
+      expect(chosen).toBe(secondHref);
       await page.keyboard.press('Enter');
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server.url + 'v/current/guide/outline/#second');
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(new URL(chosen!, server.url).href);
       await expect.poll(() => dialog.isVisible()).toBe(false);
       // Ctrl+K opens it too, Escape closes it, and each version searches its own pages: v1 has no "New document".
       await page.goto(server.url + 'v/v1/guide/install/');

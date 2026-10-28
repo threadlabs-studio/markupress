@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add typo-tolerant and prefix local search with weighted section ranking, native language segmentation, configurable matching and result limits, page and subtree exclusions, keyboard result selection, and retryable index failures. Preserve literal snippets and IME composition.
+
 - Require MarkupKit 0.2.2 or a compatible later release for routing and rendering, alongside Looma 0.44.1, Expressmark 0.2.2 and HTML Next 1.0.0-alpha.69. MarkupKit 0.2.1 regressed to the old `hk:` metadata and `hk-` components; 0.2.2 restores the `mk:` metadata, `mk-` components and browser attributes that Markupress requires.
 
 - Write pipe characters literally in standard named-table examples, so API return unions and the title-template default copy without obsolete GFM escape characters.

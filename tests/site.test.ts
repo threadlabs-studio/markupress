@@ -242,7 +242,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -533,6 +533,34 @@ it('writes each version\'s search index, and the default version\'s at the root,
   // Generated files are no pages: the sitemap and navigation leave them out.
   expect(result.routes.some(route => route.includes('_search'))).toBe(false);
 }, 60_000);
+
+it('omits excluded pages from search while keeping their routes and navigation', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/excluded.md', '---\nsearch: false\n---\n# Excluded\n\nUnindexed phrase.');
+  const result = await buildSite({ root });
+  expect(await readFile(join(result.outDir, '_search.json'), 'utf8')).not.toContain('Unindexed phrase');
+  expect(await readFile(join(result.outDir, 'excluded/index.html'), 'utf8')).toContain('Unindexed phrase');
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/v/current/excluded/"');
+}, 60_000);
+
+it('disables search UI and index generation and passes validated search options to the theme', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const result = await buildSite({ root, search: false });
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).not.toContain('data-component="markupress-search"');
+  await expect(stat(join(result.outDir, '_search.json'))).rejects.toThrow();
+  const application = await createApplication(siteOptions({ root, search: { limit: 5, fuzzy: false, prefix: false } }));
+  try {
+    const html = (await application.render('/')).html;
+    expect(html).toContain('data-markupress-search-prop-options=');
+    expect(html).toContain('&quot;limit&quot;:5');
+  } finally { await application.close(); }
+}, 60_000);
+
+it('rejects invalid search configuration rather than silently ignoring it', () => {
+  for (const search of [true, null, [], { limit: 0 }, { limit: 1.5 }, { fuzzy: 2 }, { fuzzy: true }, { prefix: 'yes' }, { unknown: true }]) {
+    expect(() => siteOptions({ search } as never)).toThrow(/search/);
+  }
+});
 
 it('redirects a page\'s redirectFrom paths to it in each version, with redirect pages in the build', async () => {
   const root = await fixture(); await linkDependencies(root);

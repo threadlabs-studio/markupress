@@ -10,6 +10,6 @@
   "dependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
     "@threadlabs/looma": "0.44.1",
-    "markupress": ">=0.12.0 <1"
+    "markupress": ">=0.13.0 <1"
   }
 }

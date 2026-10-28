@@ -9,3 +9,4 @@ export { buildSite, devSite, markupress, previewSite, siteOptions } from './site
 export type { DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
 export { snapshotVersion, versionLinks } from './versions.js';
 export type { VersionLink } from './versions.js';
+export type { LocalSearchOptions } from './search.js';
