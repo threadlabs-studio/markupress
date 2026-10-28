@@ -23,6 +23,8 @@ export interface MarkdownOptions {
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
+  /** Whether this page appears in search, true by default. */
+  readonly search?: boolean;
   readonly title?: string;
   /** `<meta name="description">`, and the page's line in its folder's generated index. */
   readonly description?: string;
@@ -203,6 +205,7 @@ function pagerLink(value: unknown): boolean {
   return entries.length > 0 && entries.every(([key, item]) => (key === 'label' || key === 'href') && text(item));
 }
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
+  search: [value => typeof value === 'boolean', 'true or false'],
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
@@ -405,11 +408,15 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
 const inline = new Set(['a', 'abbr', 'b', 'code', 'del', 'em', 'i', 'ins', 'kbd', 'mark', 's', 'small', 'span', 'strong', 'sub', 'sup', 'u']);
 function searchSections(fragment: DefaultTreeAdapterMap['documentFragment']): SearchSection[] {
   const sections = [{ id: '', heading: '', text: '' }];
+  const ignored = (node: DefaultTreeAdapterMap['element']) => node.attrs.some(attr => attr.name === 'data-search-ignore');
+  const headingText = (node: DefaultTreeAdapterMap['node']): string => 'value' in node ? node.value
+    : 'tagName' in node && ignored(node) ? ' ' : 'childNodes' in node ? node.childNodes.map(headingText).join('') : '';
   const visit = (node: DefaultTreeAdapterMap['node']): void => {
     if ('value' in node && node.nodeName === '#text') { sections.at(-1)!.text += node.value; return; }
     if (!('tagName' in node) || ['template', 'style', 'script'].includes(node.tagName) || node.attrs.some(attr => attr.name === 'class' && attr.value === 'code-actions')) return;
+    if (ignored(node)) { sections.at(-1)!.text += ' '; return; }
     const id = /^h[1-6]$/.test(node.tagName) ? node.attrs.find(attr => attr.name === 'id')?.value : undefined;
-    if (id !== undefined) { sections.push({ id, heading: textContent(node), text: '' }); return; }
+    if (id !== undefined) { sections.push({ id, heading: headingText(node), text: '' }); return; }
     for (const child of node.childNodes) visit(child);
     // Block boundaries separate words that the HTML runs together.
     if (!inline.has(node.tagName)) sections.at(-1)!.text += ' ';

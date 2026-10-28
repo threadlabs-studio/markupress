@@ -6,6 +6,26 @@ import { compileMarkdown } from '../src/content.js';
 const text = (node: DefaultTreeAdapterMap['node']): string => 'value' in node ? node.value
   : ['content' in node ? [node.content] : [], 'childNodes' in node ? node.childNodes : []].flat().map(text).join('');
 
+it('keeps ignored search content visible while excluding its text and headings from sections', async () => {
+  const compiled = await compileMarkdown('# Public\n\nBefore<div data-search-ignore><h2 id="secret">Secret heading</h2><p>Hidden phrase</p></div>After\n\n```html\n<div data-search-ignore>Literal example</div>\n```', { file: '/project/docs/search.md', pageName: 'page-search' });
+  expect(compiled.resource).toContain('Hidden phrase');
+  expect(compiled.sections.map(section => section.text).join(' ')).toContain('Before After');
+  expect(compiled.sections.map(section => section.text).join(' ')).toContain('Literal example');
+  expect(JSON.stringify(compiled.sections)).not.toMatch(/Secret heading|Hidden phrase|secret/);
+});
+
+it('accepts boolean search front matter and rejects an invalid value with its filename', async () => {
+  expect((await compileMarkdown('---\nsearch: false\n---\n# Private index entry', { file: '/docs/skip.md', pageName: 'skip' })).frontmatter.search).toBe(false);
+  await expect(compileMarkdown('---\nsearch: hidden\n---\n# Invalid', { file: '/docs/invalid.md', pageName: 'invalid' })).rejects.toThrow(/invalid.md.*search.*true or false/);
+});
+
+it('excludes ignored inline text from a heading without removing its visible heading text', async () => {
+  const compiled = await compileMarkdown('# Page\n\n## Public <span data-search-ignore>secretquartz</span> heading\n\nVisible body.', { file: '/docs/inline.md', pageName: 'inline' });
+  expect(compiled.resource).toContain('secretquartz');
+  expect(compiled.sections.map(section => section.heading).join(' ')).toContain('Public heading');
+  expect(compiled.sections.map(section => `${section.heading} ${section.text}`).join(' ')).not.toContain('secretquartz');
+});
+
 it('compiles owned metadata, stable anchors, literal fences, and native resources', async () => {
   const compiled = await compileMarkdown(`---
 title: Products
@@ -90,7 +110,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, sidebar, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, overview, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
