@@ -97,6 +97,16 @@ it('passes the lineNumbers default through to Markdown pages', async () => {
   } finally { await application.close(); }
 }, 30_000);
 
+it('passes the markdownSyntax default through to Markdown pages', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/indented.md', '# Indented\n\n    code');
+  const application = await createApplication(siteOptions({ root, markdownSyntax: 'compatible' }));
+  try {
+    expect((await application.render('/indented/')).html).toContain('<pre');
+  } finally { await application.close(); }
+  expect(() => siteOptions({ root, markdownSyntax: 'commonmark' } as never)).toThrow('The markdownSyntax option is standard or compatible: commonmark.');
+}, 30_000);
+
 it('renders front matter head metadata, a named MarkupKit layout, and no layout', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/seo.md', '---\ndescription: Search engines.\nhead:\n  og: { title: SEO }\n  canonical: https://example.com/seo/\n---\n# SEO');
@@ -242,7 +252,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are locales, defaultLocale, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are locales, defaultLocale, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));

@@ -110,7 +110,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, markdownSyntax, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, overview, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
@@ -190,6 +190,23 @@ it('renders standard bracketed callouts with literal title props and all support
     expect(resource).toContain(callout);
   }
   expect(await page('::: caution [Careful]\nMessage\n:::')).toContain('tone="danger" heading="Careful"');
+});
+
+it('renders a container with no type as a callout in the default tone', async () => {
+  const resource = await page(':::\nPlain\n:::\n\n::: [Heads up]\nTitled\n:::');
+  expect(resource).toContain('<ui-callout><p>Plain</p></ui-callout>');
+  expect(resource).toContain('<ui-callout heading="Heads up"><p>Titled</p></ui-callout>');
+  expect(resource).toContain(callout);
+});
+
+it('reads Markdown in the syntax front matter or the page default names', async () => {
+  const indented = '    code';
+  const read = (source: string, markdownSyntax?: 'standard' | 'compatible') => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index', ...(markdownSyntax ? { markdownSyntax } : {}) }).then(compiled => compiled.resource.includes('<pre'));
+  expect(await read(indented)).toBe(false);
+  expect(await read(indented, 'compatible')).toBe(true);
+  expect(await read(`---\nmarkdownSyntax: compatible\n---\n${indented}`)).toBe(true);
+  expect(await read(`---\nmarkdownSyntax: standard\n---\n${indented}`, 'compatible')).toBe(false);
+  await expect(read('---\nmarkdownSyntax: commonmark\n---\ntext')).rejects.toThrow('/docs/index.md: markdownSyntax must be standard or compatible.');
 });
 
 it('renders Expressmark accepted alerts without adding a second alert parser', async () => {

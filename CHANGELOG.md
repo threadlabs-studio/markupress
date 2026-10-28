@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add a `markdownSyntax` site option and front matter field. `compatible` reads a site or page as CommonMark and GFM; `standard` stays the default.
+- Render a container with no type, such as `::: [Heads up]`, as a callout in Looma's default tone.
+
 - Require Expressmark 0.3.0, which reads Markdown with Parseman and renders the same output faster.
 - Name the header brand link by its visible title and version badge, so speech input can activate it by what it shows.
 
