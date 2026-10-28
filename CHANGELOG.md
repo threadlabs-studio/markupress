@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add locale folders across documentation versions, identity-based language switching, isolated search indexes, and native document language/direction. Existing sites retain their URLs.
+- Keep version switches inside the selected language; missing translated identities link to that language and version’s home with a notice.
+- Require MarkupKit 0.3.0 for document direction through rendering and client navigation.
+
 - Add typo-tolerant and prefix local search with weighted section ranking, native language segmentation, configurable matching and result limits, page and subtree exclusions, keyboard result selection, and retryable index failures. Preserve literal snippets and IME composition.
 
 - Require MarkupKit 0.2.2 or a compatible later release for routing and rendering, alongside Looma 0.44.1, Expressmark 0.2.2 and HTML Next 1.0.0-alpha.69. MarkupKit 0.2.1 regressed to the old `hk:` metadata and `hk-` components; 0.2.2 restores the `mk:` metadata, `mk-` components and browser attributes that Markupress requires.

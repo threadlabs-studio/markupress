@@ -8,6 +8,8 @@
 <!-- A null favicon leaves the link out. -->
 <link rel="icon" from:href="$favicon">
 <prop name="title" type="string" required>Site title</prop>
+<prop name="locales" type="list(object({ href: string, label: string, lang: string, current: string, note: string }))" default="[]">Language links for the selected document and version</prop>
+
 <prop name="home" type="string" required>Home URL</prop>
 <prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string">Site icon URL</prop>
@@ -30,7 +32,7 @@
 <state name="appearance" type="string" value="automatic"></state>
 <state name="appearanceReady" type="boolean" value="false"></state></defs>
 <div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
+<markupress-header from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
 <span class="menu" slot="menu"><ui-icon-button label="Navigation" variant="ghost" tone="neutral" popovertarget="documentation-navigation"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></ui-icon-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation" from:data-sidebar="$sidebarVisible">
 <div class="sidebar-content">
@@ -56,7 +58,7 @@
 @media (max-width: 1199px) { .outline { display: none; } }
 @media (max-width: 63.999rem) { .columns { display: block; padding: 0 var(--ui-space-4); }
   main { padding-inline: 0; }
-  #documentation-navigation { inset: 0 auto 0 0; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border, #8885); background: var(--ui-surface-sunken); color: var(--ui-text); }
+  #documentation-navigation { inset-block: 0; inset-inline: 0 auto; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border, #8885); background: var(--ui-surface-sunken); color: var(--ui-text); }
   #documentation-navigation::backdrop { background: rgb(0 0 0 / .4); } }
 .versions ul { margin: 0; padding: 0; list-style: none; } .versions li { margin: .4rem 0; } .versions { margin-top: 2rem; }
 .mobile-sections ul { display: grid; gap: var(--ui-space-1); padding: 0 0 var(--ui-space-4); margin: 0 0 var(--ui-space-4); list-style: none; border-block-end: var(--ui-border-width) solid var(--ui-border); }
@@ -64,7 +66,7 @@
 .mobile-sections a:is(:hover, [aria-current="page"], [aria-current="true"]) { background: var(--ui-selection-surface); color: var(--ui-selection-text); }
 @media (min-width: 64rem) { .mobile-sections { display: none; } }
 a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } small { display: block; color: var(--ui-text-muted, inherit); line-height: 1.4; } :focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }
-.skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); z-index: 3; } .skip:focus { transform: none; }
+.skip { position: absolute; top: .5rem; inset-inline-start: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); z-index: 3; } .skip:focus { transform: none; }
 .contents { display: grid; gap: .75rem; margin: 1.5rem 0; padding: 0; list-style: none; }
 .contents li { padding: .75rem 1rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
 .contents a { font-weight: 600; } .contents p { margin: .25rem 0 0; color: var(--ui-text-muted, inherit); }

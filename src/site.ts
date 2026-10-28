@@ -19,7 +19,19 @@ export interface DocumentationVersion {
   /** Snapshot-owned public assets; active versions use the project's public directory. */
   readonly publicDir?: string;
 }
+export interface DocumentationLocale {
+  readonly label: string;
+  /** Content folder inside each version's directory; defaults to the locale ID. */
+  readonly directory?: string;
+  /** BCP 47 language tag; defaults to the locale ID. */
+  readonly lang?: string;
+  readonly dir?: 'ltr' | 'rtl' | 'auto';
+}
 export interface MarkupressOptions {
+  /** Translated folders keyed by BCP 47 locale ID. Without this option, content stays directly in contentDir. */
+  readonly locales?: Readonly<Record<string, DocumentationLocale>>;
+  /** The locale served without a language prefix; defaults to the first configured locale. */
+  readonly defaultLocale?: string;
   /** Local search matching options, or false to disable search and its generated indexes. */
   readonly search?: false | LocalSearchOptions;
   readonly root?: string;
@@ -57,16 +69,18 @@ export interface MarkupressOptions {
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['locales', 'defaultLocale', 'search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
+  readonly locale?: string;
   readonly id: string;
   readonly version: string;
   readonly source: string;
-  /** Application-relative URL in its version, such as /v/current/guide/install/. */
+  /** Application-relative URL in its locale and version, such as /fr/v/current/guide/install/. */
   readonly pathname: string;
 }
 
-type Document = DocumentationPage & { readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
+type Edition = DocumentationVersion & { readonly locale: string; readonly prefix: string; readonly home: string; readonly language?: string; readonly direction?: 'ltr' | 'rtl' | 'auto' };
+type Document = DocumentationPage & { readonly locale: string; readonly aliases: readonly string[]; readonly page: FrontMatter & { readonly title: string };
   readonly outline: readonly OutlineItem[]; readonly generated: boolean; readonly sections: readonly SearchSection[] };
 
 function inside(root: string, path: string) {
@@ -115,7 +129,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   const searchOptions = { limit: localSearch?.limit ?? 20, fuzzy: localSearch?.fuzzy === false ? 0 : localSearch?.fuzzy ?? 0.2, prefix: localSearch?.prefix ?? true };
   const defaultVersion = options.defaultVersion ?? 'current';
   let root = resolve(options.root ?? process.cwd());
-  let editions: readonly DocumentationVersion[] = [], siteBase = '/';
+  let versionsList: readonly DocumentationVersion[] = [], editions: readonly Edition[] = [], siteBase = '/';
   const editionOf = (file: string) => editions.find(edition => inside(resolve(root, edition.directory), file));
   // Compiled documents by version and source file. MarkupKit recompiles every page when it rediscovers, so a
   // deleted file's stale entry is filtered by existence rather than cleared.
@@ -134,19 +148,19 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
       return template === false ? title : template.replaceAll(':title', title);
     },
     // A root-relative link is a page of the version the file belongs to.
-    home: file => { const edition = editionOf(file); return edition ? `${siteBase}v/${edition.id}/` : siteBase; },
+    home: file => { const edition = editionOf(file); return edition ? siteBase + edition.prefix.slice(1) : siteBase; },
     onPage(page) {
       const owners = editions.filter(edition => inside(resolve(root, edition.directory), page.file));
       if (owners.length === 0 || page.href === undefined) return;
       // The page's URL is in the first version that serves its directory; others serve the same path.
-      const first = `/v/${owners[0]!.id}/`;
-      const path = page.href.slice(page.href.indexOf(first) + first.length);
+      const first = siteBase + owners[0]!.prefix.slice(1);
+      const path = page.href.slice(first.length);
       const id = page.id ?? (path.slice(0, -1) || 'index');
       for (const edition of owners) {
-        const twin = current().find(doc => doc.source !== page.file && doc.version === edition.id && doc.id === id);
+        const twin = current().find(doc => doc.source !== page.file && doc.version === edition.id && doc.locale === edition.locale && doc.id === id);
         if (twin) throw new Error(`Documentation identity collision: ${twin.source} and ${page.file} (${id}).`);
-        documents.set(`${edition.id}\0${page.file}`, { id, version: edition.id, source: page.file, pathname: `/v/${edition.id}/${path}`,
-          aliases: page.aliases.map(alias => `/v/${edition.id}${alias}`), outline: page.outline, generated: page.generated, sections: page.sections,
+        documents.set(`${edition.locale}\0${edition.id}\0${page.file}`, { id, locale: edition.locale, version: edition.id, source: page.file, pathname: `${edition.prefix}${path}`,
+          aliases: page.aliases.map(alias => edition.prefix + alias.slice(1)), outline: page.outline, generated: page.generated, sections: page.sections,
           page: { ...page.frontmatter, id, title: page.title } });
       }
     },
@@ -162,47 +176,60 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     const date = (await updated).get(file);
     return { ...page, ...(edit === false ? {} : { editLink: edit }), ...(date === undefined ? {} : { lastUpdated: date }) };
   }
-  async function load({ navigation, navigationTree, breadcrumbs, pager, url, base, propNames }: LoadContext) {
+  async function load({ navigation, navigationTree, breadcrumbs, pager, url, base, propNames }: LoadContext, contentLocale?: string) {
     const path = '/' + url.pathname.slice(base.length);
-    const selected = /^\/v\/([^/]+)\//.exec(path)?.[1] ?? defaultVersion;
-    const requested = path.startsWith('/v/') ? path : `/v/${selected}${path}`;
-    const catalog = current();
+    const explicit = editions.find(edition => path.startsWith(edition.prefix));
+    const edition = explicit ?? editions.filter(edition => edition.id === defaultVersion && path.startsWith(edition.home))
+      .sort((a, b) => b.home.length - a.home.length)[0]!;
+    const selected = edition.id;
+    const requested = explicit ? path : edition.prefix + path.slice(edition.home.length);
+    const all = current();
+    const catalog = all.filter(doc => doc.locale === edition.locale);
     const page = catalog.find(doc => doc.pathname === requested || doc.aliases.includes(requested));
     // The default version also serves the root; its entries are marked current under /v/<id>/.
-    const within = { from: `/v/${selected}/`, current: base + (page?.pathname ?? requested).slice(1) };
+    const within = { from: edition.prefix, current: base + (page?.pathname ?? requested).slice(1) };
     const items = await navigation(within);
     // The version's search index is served beside its pages: under /v/<id>/, or at the root for the default version there.
     const sidebarDefault = catalog.filter(doc => doc.version === selected && isIndex(doc.source) &&
       (page?.pathname ?? requested).startsWith(doc.pathname) && doc.page.sidebar !== undefined)
       .sort((a, b) => b.pathname.length - a.pathname.length)[0]?.page.sidebar;
-    const data: Record<string, unknown> = { sidebarVisible: page?.page.sidebar ?? sidebarDefault ?? true, title: options.title ?? 'Documentation', home: base, navigation: items,
-      search: options.search === false ? '' : base + (path.startsWith('/v/') ? `v/${selected}/` : '') + '_search.json', searchOptions,
-      ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), selected, within.current, base),
-      versions: versionLinks(catalog, editions, page?.id ?? 'index', selected, base),
+    const data: Record<string, unknown> = { sidebarVisible: page?.page.sidebar ?? sidebarDefault ?? true, title: options.title ?? 'Documentation', home: base + edition.home.slice(1), navigation: items,
+      search: options.search === false ? '' : base + (explicit ? edition.prefix : edition.home).slice(1) + '_search.json', searchOptions,
+      ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), edition, within.current, base),
+      versions: versionLinks(catalog, versionsList.map(version => ({ ...version, pathname: editions.find(entry => entry.id === version.id && entry.locale === edition.locale)!.prefix })), page?.id ?? 'index', selected, base),
+      locales: Object.entries(options.locales ?? {}).map(([id, locale]) => {
+        const targetEdition = editions.find(entry => entry.id === selected && entry.locale === id)!;
+        const target = all.find(doc => doc.locale === id && doc.version === selected && doc.id === (page?.id ?? 'index'));
+        return { label: locale.label, lang: locale.lang ?? id, href: base + (target?.pathname ?? targetEdition.prefix).slice(1),
+          current: id === edition.locale ? 'page' : 'false', note: target ? '' : `This document is unavailable in ${locale.label}; open its documentation home.` };
+      }),
       crumbs: await breadcrumbs(within), ...pagerLinks(await pager(within), page?.page), outline: page?.outline ?? [], page: page ? await pageData(page) : {},
       contents: page?.generated ? contents(await navigationTree({ ...within, from: page.pathname }), catalog, base, within.current) : [] };
     // MarkupKit rejects props a layout does not declare, so a layout receives the data its contract names, and
     // nested folder layouts' loaders read all of it from parent.markupress.
     // The page's language, else the site's, is the document's <html lang>.
-    const lang = page?.page.lang ?? options.lang;
+    // MarkupKit serves one global 404 from the default locale, even for another locale's URL.
+    const contentEdition = contentLocale === undefined ? edition : editions.find(entry => entry.locale === contentLocale && entry.id === selected) ?? edition;
+    const lang = page?.page.lang ?? contentEdition.language ?? options.lang;
+    const dir = contentEdition.direction;
     return { props: Object.fromEntries(propNames.filter(name => name in data).map(name => [name, data[name]])), data: { markupress: data },
-      ...(lang === undefined ? {} : { head: { lang } }) };
+      ...((lang === undefined && dir === undefined) ? {} : { head: { ...(lang === undefined ? {} : { lang }), ...(dir === undefined ? {} : { dir }) } }) };
   }
   /**
    * A version's search index: each section of its pages, linked under the path the index is served at, so a reader at
    * the site root finds the root's pages. MarkupKit routes no file whose name starts with `_`, so the path is free.
    */
-  function searchIndex(selected: string, served: string, base: string): string {
-    const own = `/v/${selected}/`;
-    return JSON.stringify(current().filter(doc => doc.version === selected && doc.page.search !== false).flatMap(doc => {
+  function searchIndex(edition: Edition, served: string, base: string): string {
+    const own = edition.prefix;
+    return JSON.stringify(current().filter(doc => doc.version === edition.id && doc.locale === edition.locale && doc.page.search !== false).flatMap(doc => {
       const href = base + served.slice(1) + doc.pathname.slice(own.length);
       return doc.sections.map(section => ({ page: doc.page.title, heading: section.heading || doc.page.title,
         href: section.id ? `${href}#${section.id}` : href, text: section.text }));
     }));
   }
   /** The shell around the page: the sections and links of the top navigation, logo, badge, the section's sidebar and the footer. */
-  async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], selected: string, current: string, base: string) {
-    const home = `${base}v/${selected}/`;
+  async function chrome(items: readonly NavigationItem[], navigationTree: LoadContext['navigationTree'], pages: readonly (DocumentationPage & { readonly page: FrontMatter })[], edition: Edition, current: string, base: string) {
+    const home = base + edition.prefix.slice(1);
     const href = (to: string) => siteLink(to, home);
     const file = (path: string) => path.startsWith('/') ? base + path.slice(1) : path;
     // A link is the page itself, or an ancestor section of it (aria-current="true").
@@ -214,16 +241,15 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     const top = /^([^/]+)\//.exec(current.slice(home.length))?.[1];
     const section = top !== undefined && items.some(item => item.href.startsWith(`${home}${top}/`) && item.href !== `${home}${top}/`) ? `/${top}/` : '/';
     // Each top-level folder with an index page is a section, linked from the top navigation by its index page.
-    const sections = (await navigationTree({ from: `/v/${selected}/`, current })).filter(node => node.href !== undefined && node.children.length > 0);
+    const sections = (await navigationTree({ from: edition.prefix, current })).filter(node => node.href !== undefined && node.children.length > 0);
     // Pages recompile after each edit, so a folder's collapsed state follows its index page in development.
     const folded = new Set(pages.filter(doc => doc.page.navigation === 'collapsed').map(doc => base + doc.pathname.slice(1)));
     const collapsed = (page: string) => folded.has(page);
     const overviews = new Set(pages.filter(doc => doc.page.navigation === 'overview').map(doc => base + doc.pathname.slice(1)));
-    const versions = editions.length > 1 ? editions.find(edition => edition.id === selected) : undefined;
-    const edition = editions.find(entry => entry.id === selected)!;
+    const versions = versionsList.length > 1 ? edition : undefined;
     const { columns, copyright } = footer(resolve(root, edition.directory, '_footer.md'));
     return {
-      sidebar: generatedSidebar(await navigationTree({ from: `/v/${selected}${section}`, current }), collapsed, options.sidebarNavigation, overviews),
+      sidebar: generatedSidebar(await navigationTree({ from: edition.prefix + section.slice(1), current }), collapsed, options.sidebarNavigation, overviews),
       sidebarNavigation: options.sidebarNavigation ?? 'tree',
       nav: [...sections.map(node => ({ ...link({ label: node.label, href: '/' + node.href!.slice(home.length) }), icon: '' })),
         ...(options.nav ?? []).map(entry => ({ ...link(entry), icon: entry.icon === undefined ? '' : file(entry.icon) }))],
@@ -242,8 +268,8 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   return { ...pages, name: 'markupress',
     // Each version's search index beside its pages, and the default version's at the root too. MarkupKit runs this once
     // every page has compiled, and again in development after each change.
-    generate: ({ base }) => options.search === false ? {} : Object.fromEntries([...editions.map(edition => [`/v/${edition.id}/_search.json`, searchIndex(edition.id, `/v/${edition.id}/`, base)]),
-      ['/_search.json', searchIndex(defaultVersion, '/', base)]]),
+    generate: ({ base }) => options.search === false ? {} : Object.fromEntries(editions.flatMap(edition => [[edition.prefix + '_search.json', searchIndex(edition, edition.prefix, base)],
+      ...(edition.id === defaultVersion ? [[edition.home + '_search.json', searchIndex(edition, edition.home, base)]] : [])])),
     async config(markupkit) {
     root = resolve(markupkit.root ?? root); siteBase = markupkit.base ?? '/';
     // Conventions first: public/logo.svg, public/logo-dark.svg and public/favicon.svg, which the options override.
@@ -251,31 +277,55 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     const light = own('logo.svg');
     logo = typeof options.logo === 'string' ? { light: options.logo } : options.logo ?? (light === undefined ? undefined : { light, dark: own('logo-dark.svg') ?? light });
     favicon = options.favicon ?? own('favicon.svg');
-    editions = await versions(options, root);
+    versionsList = await versions(options, root);
+    if (options.locales !== undefined && (!options.locales || typeof options.locales !== 'object' || Array.isArray(options.locales))) throw new Error('locales must be an object keyed by locale IDs.');
+    const locales = Object.entries(options.locales ?? {});
+    if (options.locales !== undefined && locales.length === 0) throw new Error('locales must contain at least one locale.');
+    const defaultLocale = options.defaultLocale ?? locales[0]?.[0] ?? '';
+    if ((options.defaultLocale !== undefined || locales.length) && !locales.some(([id]) => id === defaultLocale)) throw new Error(`Unknown defaultLocale: ${defaultLocale}.`);
+    for (const [id, locale] of locales) {
+      if (!/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(id)) throw new Error(`Invalid locale ID: ${id}.`);
+      if (!locale || typeof locale !== 'object' || typeof locale.label !== 'string' || !locale.label.trim()) throw new Error(`Locale ${id} needs a label.`);
+      for (const key of Object.keys(locale)) if (!['label', 'directory', 'lang', 'dir'].includes(key)) throw new Error(`Unknown locale option ${id}.${key}.`);
+      if (locale.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(locale.lang)) throw new Error(`Invalid language tag for locale ${id}.`);
+      if (locale.dir !== undefined && !['ltr', 'rtl', 'auto'].includes(locale.dir)) throw new Error(`Invalid direction for locale ${id}.`);
+      if (locale.directory !== undefined && (typeof locale.directory !== 'string' || !locale.directory)) throw new Error(`Invalid directory for locale ${id}.`);
+    }
+    editions = versionsList.flatMap(version => (locales.length ? locales : [['', undefined] as const]).map(([id, locale]) => {
+      const home = id === defaultLocale || !id ? '/' : `/${id}/`;
+      const directory = locale ? join(version.directory, locale.directory ?? id) : version.directory;
+      if (!inside(resolve(root, version.directory), resolve(root, directory))) throw new Error(`Locale ${id}: directory must stay inside its version.`);
+      return { ...version, directory, locale: id, home, prefix: `${home}v/${version.id}/`,
+        ...(locale ? { language: locale.lang ?? id, ...(locale.dir === undefined ? {} : { direction: locale.dir }) } : {}) };
+    }));
+    for (const edition of editions) {
+      const overlap = editions.find(other => other.locale !== edition.locale && inside(resolve(root, edition.directory), resolve(root, other.directory)));
+      if (overlap) throw new Error(`Locale directories overlap: ${edition.directory} (${edition.locale}) and ${overlap.directory} (${overlap.locale}).`);
+    }
     // One git log dates every page, read once per build or development server.
     updated = lastUpdated(root, editions.map(edition => edition.directory));
     const ids = new Set<string>();
     for (const edition of editions) {
-      if (!/^[A-Za-z0-9_-]+$/.test(edition.id) || ids.has(edition.id)) throw new Error(`Duplicate or invalid documentation version: ${edition.id}.`);
-      ids.add(edition.id);
+      if (!/^[A-Za-z0-9_-]+$/.test(edition.id) || ids.has(`${edition.locale}\0${edition.id}`)) throw new Error(`Duplicate or invalid documentation version: ${edition.id}.`);
+      ids.add(`${edition.locale}\0${edition.id}`);
       const content = resolve(root, edition.directory);
       if (!inside(root, content)) throw new Error(`Version ${edition.id}: directory must be inside the project.`);
       if (!(await readdir(content)).some(isIndex)) throw new Error(`Version ${edition.id}: a root index.md landing page is required.`);
     }
-    const home = editions.find(edition => edition.id === defaultVersion);
-    if (home === undefined) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
+    const homes = editions.filter(edition => edition.id === defaultVersion);
+    if (homes.length === 0) throw new Error(`Unknown defaultVersion: ${defaultVersion}.`);
     const same = (a: DocumentationVersion, b: DocumentationVersion) => resolve(root, a.directory) === resolve(root, b.directory);
     // The shell is the layout of Markupress's own folders only, so a site's other pages keep theirs. A site's
     // app/layouts/default.html, which MarkupKit gives its other pages, replaces the shell and receives its loader data.
     const replacement = join(root, 'app/layouts/default.html');
     layoutFile = existsSync(replacement) ? replacement : shell;
-    const layout = { component: layoutFile, server: { load } };
+    const layout = (edition: Edition) => ({ component: layoutFile, server: { load: (context: LoadContext) => load(context, edition.locale) } });
     // layout: home names this layout; a site's app/layouts/home.html takes its place, as MarkupKit resolves a name.
     return { headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       // The root serves the default version's folder as its own; every further mount of a folder, the default's
       // /v/<id>/ included, is an alias, so its pages name the first as canonical and stay out of the sitemap.
-      pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: `/v/${edition.id}/`, layout,
-        ...(same(edition, home) || editions.slice(0, index).some(earlier => same(earlier, edition)) ? { alias: true } : {}) })), { dir: home.directory, layout }] };
+      pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: edition.prefix, layout: layout(edition),
+        ...(homes.some(home => same(edition, home)) || editions.slice(0, index).some(earlier => same(earlier, edition)) ? { alias: true } : {}) })), ...homes.map(home => ({ dir: home.directory, prefix: home.home, layout: layout(home) }))] };
   } };
 }
 

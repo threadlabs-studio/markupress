@@ -6,7 +6,7 @@ export { markdown } from './markdown.js';
 export type { MarkdownPluginOptions } from './markdown.js';
 export type { Link, NavItem, SidebarNode } from './navigation.js';
 export { buildSite, devSite, markupress, previewSite, siteOptions } from './site.js';
-export type { DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
+export type { DocumentationLocale, DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
 export { snapshotVersion, versionLinks } from './versions.js';
 export type { VersionLink } from './versions.js';
 export type { LocalSearchOptions } from './search.js';
