@@ -36,7 +36,7 @@ export interface MarkupressOptions {
   readonly defaultVersion?: string;
   readonly host?: string;
   readonly port?: number;
-  /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
+  /** Number the lines of every highlighted code block unless its fence says `show-line-numbers=false`. */
   readonly lineNumbers?: boolean;
   /** The logo before the title, in place of `public/logo.svg` and `public/logo-dark.svg`: one image, or one per theme. */
   readonly logo?: string | { readonly light: string; readonly dark?: string };

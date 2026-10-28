@@ -45,8 +45,8 @@ beforeAll(() => {
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
   write('docs/01.index.md', '# Welcome\n\n[Installation](01.guide/02.install.md#install)\n\n![Mark](/mark.svg)');
-  write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="@/components/counter.html">\n\n<demo-counter></demo-counter>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
-  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><div><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
+  write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="@/components/counter.html">\n\n<demo-counter label="From Markdown"></demo-counter>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
+  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><prop name="label" type="string" required>Label</prop><state name="count" type="number" value="0"></state></defs><div><strong $if="$label">{$label}</strong><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
   write('components/counter.css', 'button { border: 2px solid rgb(20, 30, 40); }');
   write('components/counter.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; import { increment } from "./value.js"; export default function(host: ComponentHost) { host.on("connect", () => { const button = host.root.querySelector("button")!; const click = () => { host.state.count = Number(host.state.count) + increment; }; button.addEventListener("click", click); return () => button.removeEventListener("click", click); }); }');
   write('components/value.ts', 'export const increment = 1;');
@@ -68,9 +68,9 @@ beforeAll(() => {
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
-  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
-    '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n\n' +
-    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by @[Ada]#u1, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
+  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::: toc [Contents] {depth=2}\n:::\n\n```ts {highlight="1-2" show-line-numbers title="example.ts"}\nconst first = 1;\nconst second = {braces};\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning [Breaking {x}]\nBack up first.\n:::\n\n::: danger\nAlerts too.\n:::\n\n::: details [More]\nHidden text\n:::\n\n' +
+    '::: tab [pnpm] {group="code-group"}\n```sh\npnpm add markupress\n```\n:::\n\n::: tab [npm] {group="code-group"}\n```sh\nnpm install markupress\n```\n:::\n\nBuild the same project:\n\n::: tab [pnpm] {group="code-group"}\n```sh\npnpm markupress build\n```\n:::\n\n::: tab [npm] {group="code-group"}\n```sh\nnpx markupress build\n```\n:::\n\n' +
+    '::: table\n\n- Field: `redirectFrom`\n  Effect: Old URLs of the page redirect to the page, with status 308 in development and preview, and as a redirect page at the old URL in a build.\n:::\n\n## Über uns\n\nStatus :chip[Ready]{tone=green}, by @[Ada]#u1, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure [The *mark*]\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
@@ -184,6 +184,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('[data-component="mk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
       expect(await page.locator('[data-component="mk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
       expect(await page.locator('[data-component="mk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
+      expect(await page.locator('[data-component="demo-counter"] strong').textContent()).toBe('From Markdown');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
       // Navigation has a full selectable row, with the same public theme roles as controls.
@@ -296,13 +297,21 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.reload();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.first().getByRole('tabpanel').textContent()).toContain('npm install markupress');
-      // Looma Markdown's newer forms: ::toc links reach their headings, a chip takes its hue, and task items are checkboxes.
-      expect(await page.locator('main nav[data-looma-toc] a').evaluateAll(links => links.map(link =>
+      // Standard semantic output: toc links reach headings, chips use their tone, and task status is inert text.
+      expect(await page.locator('main nav[data-type="toc"] a').evaluateAll(links => links.map(link =>
         (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent))).toEqual(['Blocks', 'Über uns']);
-      expect(await page.locator('main [data-looma-chip][data-color="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-      expect(await page.locator('main ul[data-type="taskList"] input[type="checkbox"]').count()).toBe(2);
-      // A footnote reference links to its note, whose section heading is only for assistive technology.
-      expect(await page.locator('main .footnotes h2').evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+      expect(await page.locator('main [data-type="chip"][data-tone="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(await page.locator('main').textContent()).toContain('☑ Read the changelog');
+      expect(await page.locator('main').textContent()).toContain('☐ Run the migration');
+      const identifier = page.locator('main td code').filter({ hasText: 'redirectFrom' });
+      const tableWidths = await identifier.evaluate(element => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        return { text: range.getBoundingClientRect().width, cell: element.closest('td')!.clientWidth, line: parseFloat(getComputedStyle(element).lineHeight), height: element.getBoundingClientRect().height };
+      });
+      expect(tableWidths.cell).toBeGreaterThanOrEqual(tableWidths.text);
+      expect(tableWidths.height).toBeLessThan(tableWidths.line * 2);
+      // Standard footnotes expose a labelled section and linked references.
+      expect(await page.locator('main [data-footnotes]').getAttribute('aria-label')).toBe('Footnotes');
       await page.locator('main [data-footnote-ref]').click();
       await expect.poll(() => page.url()).toContain('#fn:1');
       expect(await page.locator('main [id="fn:1"]').textContent()).toContain('The footnote.');

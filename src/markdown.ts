@@ -12,7 +12,7 @@ export interface MarkdownPluginOptions {
   readonly onPage?: (page: CompiledMarkdown & { readonly file: string; readonly href: string | undefined }) => void;
   /** Stylesheet files every Markdown page component imports, such as a theme's prose styles. */
   readonly styles?: readonly string[];
-  /** Number the lines of every highlighted code block unless its fence says `:no-line-numbers`. */
+  /** Number the lines of every highlighted code block unless its fence says `show-line-numbers=false`. */
   readonly lineNumbers?: boolean;
   /** Front matter for a page that its own fields override, such as a site-wide default. */
   readonly frontmatter?: (file: string) => FrontMatter | undefined;

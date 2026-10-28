@@ -83,7 +83,7 @@ it('freezes only the @/ specifiers whose files a snapshot copies, and warns abou
   try {
     const copied = new Set(['app/components/card.html', 'app/components/card.ts']);
     expect(freezeRootPaths('<link rel="component" href="@/app/components/card.html"><template component="x-y" controller="@/app/components/card.js"></template>' +
-      '<link rel="component" href="@/app/shared/live.html">', 'docs/page.md', 'v2', copied))
+      '<link rel="component" href="@/app/shared/live.html">', 'docs/page.md', 'v2', copied).replace(/>\s+</g, '><').trim())
       .toBe('<link rel="component" href="@/versions/v2/app/components/card.html"><template component="x-y" controller="@/versions/v2/app/components/card.js"></template>' +
         '<link rel="component" href="@/app/shared/live.html">');
     expect(freezeRootPaths("import { a } from '@/app/components/card.js';\n@import url(\"@/app/components/card.html?raw\");", 'app/x.ts', 'v2', copied))
@@ -91,4 +91,25 @@ it('freezes only the @/ specifiers whose files a snapshot copies, and warns abou
     await new Promise(resolve => setImmediate(resolve));
     expect(warnings).toEqual(['docs/page.md: @/app/shared/live.html is outside version v2, so the snapshot reads the project\'s current file.']);
   } finally { process.off('warning', warn); }
+});
+
+it('freezes standard HTML imports while preserving code inside native HTML wrappers', () => {
+  const copied = new Set(['components/card.html']);
+  const source = '<div>\n\n<link rel="component" href="@/components/card.html">\n\n```html\n<link rel="component" href="@/components/card.html">\n```\n\n</div>\n';
+  const frozen = freezeRootPaths(source, 'docs/page.md', 'v1', copied);
+  expect(frozen).toContain('href="@/versions/v1/components/card.html"');
+  expect(frozen).toContain('```html\n<link rel="component" href="@/components/card.html">\n```');
+  // In standard syntax indentation does not turn actual HTML into literal code.
+  expect(freezeRootPaths('    <link rel="component" href="@/components/card.html">', 'docs/page.md', 'v1', copied))
+    .toContain('href="@/versions/v1/components/card.html"');
+});
+
+
+it('freezes native script and style imports while preserving native code examples', () => {
+  const source = '<style>@import "@/components/card.css";</style>\n\n<script>import "@/components/card.js";</script>\n\n<pre><code>href="@/components/card.html"</code></pre>\n\n<code>href="@/components/card.html"</code>\n';
+  const frozen = freezeRootPaths(source, 'docs/page.md', 'v1', new Set(['components/card.css', 'components/card.js', 'components/card.html']));
+  expect(frozen).toContain('@import "@/versions/v1/components/card.css"');
+  expect(frozen).toContain('import "@/versions/v1/components/card.js"');
+  expect(frozen).toContain('<pre><code>href="@/components/card.html"</code></pre>');
+  expect(frozen).toContain('<code>href="@/components/card.html"</code>');
 });

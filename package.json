@@ -1,6 +1,6 @@
 {
   "name": "markupress",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Versioned Markdown documentation built on MarkupKit and native declarative components.",
   "license": "MIT",
   "type": "module",
@@ -50,8 +50,7 @@
     "playwright": "1.64.0",
     "@axe-core/playwright": "4.13.0",
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.43.2 <1",
-    "@types/markdown-it": "14.2.0",
+    "@threadlabs/looma": "0.44.0",
     "jsdom": "30.1.2"
   },
   "publishConfig": {
@@ -66,6 +65,7 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
+    "expressmark": "0.2.2",
     "@threadlabs/markupkit": ">=0.2.0 <1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
@@ -76,7 +76,7 @@
   },
   "peerDependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.43.2 <1"
+    "@threadlabs/looma": ">=0.44.0 <1"
   },
   "bin": {
     "markupress": "./dist/cli.js"
