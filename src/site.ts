@@ -9,6 +9,7 @@ import { lastUpdated } from './git.js';
 import { markdown } from './markdown.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem } from './navigation.js';
 import { themeScript } from './theme.js';
+import type { Syntax } from 'expressmark';
 import { versionLinks } from './versions.js';
 import type { LocalSearchOptions } from './search.js';
 
@@ -53,6 +54,8 @@ export interface MarkupressOptions {
   readonly port?: number;
   /** Number the lines of every highlighted code block unless its fence says `show-line-numbers=false`. */
   readonly lineNumbers?: boolean;
+  /** The Markdown syntax of pages whose front matter sets no `markdownSyntax`: `standard` (the default) or `compatible`. */
+  readonly markdownSyntax?: Syntax;
   /** The logo before the title, in place of `public/logo.svg` and `public/logo-dark.svg`: one image, or one per theme. */
   readonly logo?: string | { readonly light: string; readonly dark?: string };
   /** The site's icon, in place of `public/favicon.svg`. */
@@ -69,7 +72,7 @@ export interface MarkupressOptions {
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['locales', 'defaultLocale', 'search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['locales', 'defaultLocale', 'search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'markdownSyntax', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly locale?: string;
   readonly id: string;
@@ -139,6 +142,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
+    ...(options.markdownSyntax === undefined ? {} : { markdownSyntax: options.markdownSyntax }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
     documentTitle(file, title) {
       const site = options.title ?? 'Documentation', edition = editionOf(file);
@@ -263,6 +267,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   // Config is plain data, so an option from another tool, or a removed one, fails rather than doing nothing.
   for (const name of Object.keys(options)) if (!optionNames.includes(name)) throw new Error(`Unknown Markupress option ${name}. Options are ${optionNames.join(', ')}.`);
   if (typeof options.titleTemplate === 'string' && !options.titleTemplate.includes(':title')) throw new Error(`The titleTemplate option places each page's title with :title: ${options.titleTemplate}.`);
+  if (options.markdownSyntax !== undefined && options.markdownSyntax !== 'standard' && options.markdownSyntax !== 'compatible') throw new Error(`The markdownSyntax option is standard or compatible: ${String(options.markdownSyntax)}.`);
   if (options.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(options.lang)) throw new Error(`The lang option is a language tag such as fr or pt-BR: ${options.lang}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
   return { ...pages, name: 'markupress',

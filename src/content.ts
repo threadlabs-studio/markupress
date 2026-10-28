@@ -1,6 +1,6 @@
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist } from 'expressmark';
+import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist, type Syntax } from 'expressmark';
 import { renderHtml, type HtmlRenderOptions, type HtmlTransformer } from 'expressmark/render';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
@@ -18,6 +18,8 @@ export interface MarkdownOptions {
   readonly lineNumbers?: boolean;
   /** Front matter the page's own fields override, such as a site-wide default. */
   readonly frontmatter?: FrontMatter;
+  /** The Markdown syntax of pages whose front matter sets no `markdownSyntax`; `standard` by default. */
+  readonly markdownSyntax?: Syntax;
   /** The document `<title>` for the page's title, such as `Install | My site`; the page title by default. */
   readonly documentTitle?: (title: string) => string;
 }
@@ -57,6 +59,8 @@ export interface FrontMatter {
   readonly editLink?: string | false;
   /** This page's language, a BCP 47 tag such as `fr`, in place of the site's `lang`. */
   readonly lang?: string;
+  /** How this page's Markdown reads: `standard` Expressive Markdown or `compatible` CommonMark and GFM. */
+  readonly markdownSyntax?: Syntax;
   /** The pager's link to the page before this one: false for none, or a `label` and `href` in place of its own. */
   readonly previous?: PagerLink;
   /** The pager's link to the page after this one: false for none, or a `label` and `href` in place of its own. */
@@ -194,6 +198,7 @@ function frontmatter(source: string, file: string) {
   return { body: source.slice(split[0].length), fields: fields as Record<string, unknown> };
 }
 
+const syntaxes: readonly Syntax[] = ['standard', 'compatible'];
 const text = (value: unknown) => typeof value === 'string' && value !== '';
 const strings = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   Object.values(value).every(item => typeof item === 'string' || typeof item === 'number');
@@ -210,6 +215,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
   sidebar: [value => typeof value === 'boolean', 'true or false'],
+  markdownSyntax: [value => syntaxes.includes(value as Syntax), 'standard or compatible'],
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   redirectFrom: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
@@ -253,9 +259,11 @@ export interface RenderedMarkdown {
  * Expressmark owns standard syntax and native HTML rendering. Markupress supplies component presentation,
  * highlighting and literal text escaping. Its own front matter schema stays in compileMarkdown.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
-  const document = parse(body, { syntax: 'standard', trustedHtml: true });
+  const syntax = fields.markdownSyntax ?? options.markdownSyntax ?? 'standard';
+  if (!syntaxes.includes(syntax as Syntax)) throw new Error(`${options.file}: markdownSyntax must be standard or compatible.`);
+  const document = parse(body, { syntax: syntax as Syntax, trustedHtml: true });
   const highlighted = new Map<MarkdownNode, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
   const anchors = headingAnchors(document);
   const codes: MarkdownNode[] = [];
@@ -289,12 +297,14 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     'container:tab': (node, context) => `<section${attributes(node)} aria-label="${escapeHTML(title(node))}">${context.renderChildren()}</section>`,
     'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary>${literal(escapeHTML(title(node) || 'Details'))}</summary>${context.renderChildren()}</details>`,
   };
-  for (const tone of ['note', 'tip', 'info', 'important', 'warning', 'danger', 'caution', 'success', 'neutral']) {
-    transformers[`container:${tone}`] = (node, context) => {
-      components.add('ui-callout');
-      return `<ui-callout${attributes(node)} tone="${tone === 'caution' ? 'danger' : tone}"${node.title ? ` heading="${escapeHTML(title(node))}"` : ''}>${context.renderChildren()}</ui-callout>`;
-    };
-  }
+  const callout = (tone: string | undefined): HtmlTransformer => (node, context) => {
+    components.add('ui-callout');
+    return `<ui-callout${attributes(node)}${tone ? ` tone="${tone === 'caution' ? 'danger' : tone}"` : ''}${node.title ? ` heading="${escapeHTML(title(node))}"` : ''}>${context.renderChildren()}</ui-callout>`;
+  };
+  for (const tone of ['note', 'tip', 'info', 'important', 'warning', 'danger', 'caution', 'success', 'neutral']) transformers[`container:${tone}`] = callout(tone);
+  // A container with no type is a callout in Looma's default tone.
+  const defaultCallout = callout(undefined);
+  transformers.container = (node, context) => node.subType === undefined ? defaultCallout(node, context) : undefined;
   const toc: HtmlTransformer = (node, context) => {
     const depth = Number(node.attributes?.depth ?? 3), format = String(node.attributes?.format ?? 'plain');
     const list = format === 'numbered' ? 'ol' : format === 'bulleted' ? 'ul' : 'div';
