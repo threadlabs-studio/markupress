@@ -50,7 +50,7 @@
     "playwright": "1.64.0",
     "@axe-core/playwright": "4.13.0",
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": "0.44.0",
+    "@threadlabs/looma": "0.44.1",
     "jsdom": "30.1.2"
   },
   "publishConfig": {
