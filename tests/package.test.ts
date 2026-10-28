@@ -502,7 +502,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       if(process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({path:join(process.env.MARKUPRESS_SCREENSHOTS,`markupress-${mode}-mobile-notice.png`)});
       await page.locator('html').evaluate(element=>element.style.setProperty('--markupress-header-notice-display','none'));
       expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
-      const brand = page.getByRole('link', { name: 'Example docs with a deliberately long product title', exact: true });
+      const brand = page.getByRole('link', { name: /^Example docs with a deliberately long product title /, exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
       for (const label of ['Navigation', 'Search']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
       expect(await page.getByRole('button', { name: /^Appearance:/ }).count()).toBe(1);

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Require Expressmark 0.3.0, which reads Markdown with Parseman and renders the same output faster.
+- Name the header brand link by its visible title and version badge, so speech input can activate it by what it shows.
+
 - Add locale folders across documentation versions, identity-based language switching, isolated search indexes, and native document language/direction. Existing sites retain their URLs.
 - Keep version switches inside the selected language; missing translated identities link to that language and version’s home with a notice.
 - Require MarkupKit 0.3.0 for document direction through rendering and client navigation.
