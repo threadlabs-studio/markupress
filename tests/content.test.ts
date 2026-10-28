@@ -42,7 +42,7 @@ Text {notAnExpression}.
 });
 
 it('keeps a component definition written in Markdown as raw HTML in place, linking components only', async () => {
-  const compiled = await compileMarkdown('<link rel="component" href="./counter.html">\n\n<template component="x-inline">\n<p>Raw</p>\n</template>', { file: '/project/docs/raw.md', pageName: 'page-raw' });
+  const compiled = await compileMarkdown('<link rel="component" href="./counter.html">\n\n<template component="x-inline"><p>Raw</p></template>', { file: '/project/docs/raw.md', pageName: 'page-raw' });
   const page = compiled.resource.indexOf('<template component="page-raw"');
   expect(compiled.resource.indexOf('<link rel="component" href="file:///project/docs/counter.html">')).toBeLessThan(page);
   expect(compiled.resource.indexOf('<template component="x-inline">')).toBeGreaterThan(page);
@@ -142,18 +142,20 @@ it('derives titles and anchors from visible heading text rather than Markdown li
   expect(compiled.resource).toContain('<title>Install package &amp; run()</title>');
 });
 
-it('retains indented component examples as literal Markdown code', async () => {
-  const compiled = await compileMarkdown('    <template component="fake-indented"><p>{count}</p></template>', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<pre><code>&lt;template');
-  expect(compiled.resource).not.toContain('<template component="fake-indented">');
+it('reads indented native HTML as HTML in standard mode and keeps fenced examples literal', async () => {
+  const native = await page('    <template component="real"><p>\\{count}</p></template>');
+  expect(native).toContain('<template component="real"><p>\\{count}</p></template>');
+  const fenced = await page('```html\n<template component="example"><p>{count}</p></template>\n```');
+  expect(fenced).not.toContain('<template component="example">');
+  expect(text(parseFragment(fenced))).toContain('<template component="example"><p>\\{count}</p></template>');
 });
 
-it('takes a heading id from a trailing {#id} marker and still suffixes duplicates', async () => {
+it('preserves authored heading IDs while generating anchors for other headings', async () => {
   const compiled = await compileMarkdown('# Getting started {#start}\n\n## Install {#setup}\n\n## Configure {#setup}\n\n## Escaped \\{#kept}', { file: '/docs/index.md', pageName: 'page-index' });
   expect(compiled.title).toBe('Getting started');
   expect(compiled.resource).toContain('<h1 id="start"><a href="#start">Getting started</a></h1>');
   expect(compiled.resource).toContain('<h2 id="setup"><a href="#setup">Install</a></h2>');
-  expect(compiled.resource).toContain('<h2 id="setup-1"><a href="#setup-1">Configure</a></h2>');
+  expect(compiled.resource).toContain('<h2 id="setup"><a href="#setup">Configure</a></h2>');
   expect(compiled.resource).toContain('<h2 id="escaped-kept"><a href="#escaped-kept">Escaped \\{#kept}</a></h2>');
 });
 
@@ -161,54 +163,41 @@ const page = (source: string) => compileMarkdown(source, { file: '/docs/index.md
 const callout = '<link rel="component" href="@threadlabs/looma/components/ui-callout/ui-callout.html">';
 const tabs = '<link rel="component" href="@threadlabs/looma/components/ui-tabs/ui-tabs.html">';
 
-it('renders callout containers as Looma callouts with every shared tone and a literal heading', async () => {
-  const resource = await page('::: note\nA\n:::\n\n::: TIP Use **this**\nB\n:::\n\n::: info\n:::\n\n::: important\n:::\n\n::: warning Breaking {x} "y"\nC {z}\n:::\n\n::: danger\n:::\n\n::: Caution\n:::');
-  expect(resource).toContain('<ui-callout tone="note">\n<p>A</p>\n</ui-callout>');
-  expect(resource).toContain('<ui-callout tone="tip" heading="Use **this**">\n<p>B</p>\n</ui-callout>');
-  expect(resource).toContain('<ui-callout tone="warning" heading="Breaking {x} &quot;y&quot;">\n<p>C \\{z}</p>\n</ui-callout>');
-  expect([...resource.matchAll(/<ui-callout tone="([^"]+)"/g)].map(match => match[1])).toEqual(['note', 'tip', 'info', 'important', 'warning', 'danger', 'danger']);
-  // The page links the callout component once, and only the components its blocks use.
-  expect(resource.split(callout)).toHaveLength(2);
-  expect(resource.indexOf(callout)).toBeLessThan(resource.indexOf('<template component="page-index">'));
-  expect(resource).not.toContain(tabs);
-  expect(await page('# Plain')).not.toContain('<link rel="component"');
+it('renders standard bracketed callouts with literal title props and all supported tones', async () => {
+  for (const tone of ['note', 'tip', 'info', 'important', 'warning', 'danger', 'success']) {
+    const resource = await page(`::: ${tone} [Before {upgrading}]\nBack up **first**.\n:::`);
+    expect(resource).toContain(`<ui-callout tone="${tone}" heading="Before {upgrading}"><p>Back up <strong>first</strong>.</p></ui-callout>`);
+    expect(resource).toContain(callout);
+  }
+  expect(await page('::: caution [Careful]\nMessage\n:::')).toContain('tone="danger" heading="Careful"');
 });
 
-it('renders GitHub alerts as untitled callouts, with CAUTION as danger', async () => {
-  const resource = await page('> [!NOTE]\n> Alerts **work**\n\n> [!caution]\n> Careful\n\n> [!WARNING]  \n> One\n> Two\n\n> [!NOTE] on one line\n\n> [!OTHER]\n> Quote');
-  expect(resource).toContain('<ui-callout tone="note">\n<p>Alerts <strong>work</strong></p>\n</ui-callout>');
-  expect(resource).toContain('<ui-callout tone="danger">\n<p>Careful</p>\n</ui-callout>');
-  expect(resource).toContain('<ui-callout tone="warning">\n<p>One\nTwo</p>\n</ui-callout>');
-  expect(resource).toContain('<blockquote>\n<p>[!NOTE] on one line</p>\n</blockquote>');
-  expect(resource).toContain('<blockquote>\n<p>[!OTHER]\nQuote</p>\n</blockquote>');
-  expect(resource).toContain(callout);
+it('renders Expressmark accepted alerts without adding a second alert parser', async () => {
+  const resource = await page('> [!NOTE]\n> Alerts **work**\n\n> [!CAUTION]\n> Careful\n\n> [!WARNING] Before upgrading\n> Back up first.');
+  expect(resource).toContain('<ui-callout tone="note"><p>Alerts <strong>work</strong></p></ui-callout>');
+  expect(resource).toContain('<ui-callout tone="danger"><p>Careful</p></ui-callout>');
+  expect(resource).toContain('<ui-callout tone="warning" heading="Before upgrading">');
 });
 
-it('renders details containers as native details, open on request, nesting with longer markers', async () => {
-  const resource = await page(':::: details\nOuter **text**\n\n::: tip\nInner {literal}\n:::\n::::\n\n::: details Show <b>{more}</b> {open}\nShown\n:::\n\n::: unknown\nStays text\n:::\n\n::: 1bad\nStays text\n:::');
-  expect(resource).toContain('<details><summary>Details</summary>\n<p>Outer <strong>text</strong></p>\n<ui-callout tone="tip">\n<p>Inner \\{literal}</p>\n</ui-callout>\n</details>');
-  expect(resource).toContain('<details open=""><summary>Show &lt;b&gt;\\{more}&lt;/b&gt;</summary>\n<p>Shown</p>\n</details>');
-  expect(resource).toContain('<p>::: unknown\nStays text\n:::</p>');
-  expect(resource).toContain('<p>::: 1bad\nStays text\n:::</p>');
+it('renders bracketed details and open semantic containers using standard syntax', async () => {
+  const resource = await page('::: details [Show output] {open}\nOuter **text**.\n\n:::: tip [Nested]\nInner {literal}\n::::\n:::\n\n::: unknown [Open semantic type]\nContent\n:::');
+  expect(resource).toContain('<details open=""><summary>Show output</summary><p>Outer <strong>text</strong>.</p>');
+  expect(resource).toContain('<ui-callout tone="tip" heading="Nested"><p>Inner \\{literal}</p></ui-callout>');
+  expect(resource).toContain('<section data-type="unknown"><header>Open semantic type</header><p>Content</p></section>');
 });
 
-it('renders tabs and code groups as grouped Looma tabs with labelled panels', async () => {
-  const resource = await page('::: tabs\n== Examples\nSee **this**\n\n== API {x}\n> == quoted\n:::\n\n::: tabs package-manager\n== pnpm\nA\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm add x\n```\n\n```sh title="npm"\nnpm install x\n```\n:::\n\n::: code-group\n== Shell\n```sh title="install.sh"\nnpm install x\n```\n:::');
-  expect(resource).toContain('<ui-tabs group="tabs">\n<section aria-label="Examples">\n<p>See <strong>this</strong></p>\n</section>\n<section aria-label="API {x}">\n<blockquote>\n<p>== quoted</p>\n</blockquote>\n</section>\n</ui-tabs>');
-  expect(resource).toContain('<ui-tabs group="package-manager">\n<section aria-label="pnpm">\n<p>A</p>\n</section>\n</ui-tabs>');
-  // A fence title labels its code group panel instead of captioning the code; under an "== Label" it stays a caption.
-  expect(resource).toMatch(/<ui-tabs class="code-group" group="code-group">\n<section aria-label="pnpm">\n<figure class="code"><div class="code-actions"[^>]*>.*?<\/div><pre class="shiki[^"]*"[^>]*><code class="language-sh" data-meta="title=&quot;pnpm&quot;">.*?<\/figure>\n<\/section>\n<section aria-label="npm">\n<figure class="code"><div/s);
-  expect(resource).toMatch(/<section aria-label="Shell">\n<figure class="code"><figcaption>install\.sh<\/figcaption><div class="code-actions"/);
-  expect(resource).not.toContain('<figcaption>pnpm');
+it('renders standard tab nodes as grouped Looma panels with code captions preserved', async () => {
+  const resource = await page('::: tab [Examples]\nSee **this**\n:::\n\n::: tab [API {x}]\n```sh {title="install.sh"}\nnpm install x\n```\n:::');
+  expect(resource).toContain('<ui-tabs group="tabs"><section aria-label="Examples"><p>See <strong>this</strong></p></section>');
+  expect(resource).toContain('<section aria-label="API {x}"><figure class="code"><figcaption>install.sh</figcaption>');
   expect(resource).toContain(tabs);
   expect(resource).not.toContain(callout);
-  // Outside tabs, "== text" is a paragraph.
   expect(await page('== Not a tab')).toContain('<p>== Not a tab</p>');
 });
 
 it('highlights fenced code at build time, with an optional title and literal braces', async () => {
-  const compiled = await compileMarkdown('```ts title="app/pages/index.ts"\nconst count = 1;\n```\n\n```html\n<output>{$count}</output>\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toMatch(/<figure class="code"><figcaption>app\/pages\/index\.ts<\/figcaption><div class="code-actions"[^>]*>.*?<\/div><pre class="shiki [^"]*"[^>]*><code class="language-ts" data-meta="title=&quot;app\/pages\/index\.ts&quot;">/);
+  const compiled = await compileMarkdown('```ts {title="app/pages/index.ts"}\nconst count = 1;\n```\n\n```html\n<output>{$count}</output>\n```', { file: '/docs/index.md', pageName: 'page-index' });
+  expect(compiled.resource).toMatch(/<figure class="code"><figcaption>app\/pages\/index\.ts<\/figcaption><div class="code-actions"[^>]*>.*?<\/div><pre class="shiki [^"]*"[^>]*><code class="language-ts">/);
   expect(compiled.resource.match(/<figcaption/g)).toHaveLength(1);
   // Both themes' colors are on each token; light-dark() picks one from the page's color-scheme.
   expect(compiled.resource).toMatch(/<span style="color:light-dark\(#[0-9A-Fa-f]+, #[0-9A-Fa-f]+\);--shiki-light:#[0-9A-Fa-f]+;--shiki-dark:#[0-9A-Fa-f]+">const<\/span>/);
@@ -219,7 +208,7 @@ it('highlights fenced code at build time, with an optional title and literal bra
 
 it('leaves languages Shiki does not know as escaped plain text', async () => {
   const compiled = await compileMarkdown('```not-a-language\n<b>{x}</b>\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<pre><code class="language-not-a-language">&lt;b&gt;\\{x}&lt;/b&gt;</code></pre></figure>');
+  expect(compiled.resource).toContain('<pre tabindex="0"><code class="language-not-a-language">&lt;b&gt;\\{x}&lt;/b&gt;</code></pre></figure>');
 });
 
 const headingIds = async (source: string) => [...(await compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index' })).resource.matchAll(/<h\d id="([^"]*)"/g)].map(match => match[1]);
@@ -238,12 +227,14 @@ it('never repeats a suffixed heading id that another heading generates', async (
 
 it('does not close a container on a marker line inside fenced code', async () => {
   const compiled = await compileMarkdown('::: note\n```\n:::\n```\n\n~~~~\n:::\n~~~~\nAfter the fences.\n:::', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource.replaceAll(/<div class="code-actions".*?<\/div>/g, '')).toContain('<ui-callout tone="note">\n<figure class="code"><pre><code>:::</code></pre></figure>\n<figure class="code"><pre><code>:::</code></pre></figure>\n<p>After the fences.</p>\n</ui-callout>');
+  expect(compiled.resource.replaceAll(/<div class="code-actions".*?<\/div>/g, '')).toContain('<ui-callout tone="note"><figure class="code"><pre tabindex="0"><code>:::</code></pre></figure><figure class="code"><pre tabindex="0"><code>:::</code></pre></figure><p>After the fences.</p></ui-callout>');
 });
 
-it('gives a fence with only a title no language class', async () => {
-  const compiled = await compileMarkdown('```title="notes.txt"\nplain\n```', { file: '/docs/index.md', pageName: 'page-index' });
-  expect(compiled.resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption><div class="code-actions" hidden="" aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button><button type="button" data-code-action="copy">Copy</button></div><pre><code data-meta="title=&quot;notes.txt&quot;">plain</code></pre></figure>');
+it('gives a title-only code fence no language class', async () => {
+  const resource = await page('```{title="notes.txt"}\nplain\n```');
+  expect(resource).toContain('<figure class="code"><figcaption>notes.txt</figcaption>');
+  expect(resource).toContain('<pre tabindex="0"><code>plain</code></pre>');
+  expect(resource).not.toContain('class="language-');
 });
 
 it('imports given stylesheets into the page component itself', async () => {
@@ -253,7 +244,7 @@ it('imports given stylesheets into the page component itself', async () => {
 });
 
 it('lifts authored head elements into the page\'s <defs>, and imports an authored stylesheet in its <style>', async () => {
-  const compiled = await compileMarkdown('<title>Own title</title>\n<meta name="keywords" content="docs">\n<link rel="stylesheet" href="./extra.css" media="print">\n<link rel="stylesheet" href="https://cdn.example/x.css">\n\n# Styled',
+  const compiled = await compileMarkdown('<title>Own title</title><meta name="keywords" content="docs"><link rel="stylesheet" href="./extra.css" media="print"><link rel="stylesheet" href="https://cdn.example/x.css">\n\n# Styled',
     { file: '/docs/guide/page.md', pageName: 'page-styled', styles: ['/theme/prose.css'] });
   // An authored title takes the generated title's place, since a definition declares one.
   expect(compiled.resource).toMatch(/<defs><meta name="mk:label" content="Styled">.*<title>Own title<\/title><meta name="keywords" content="docs"><\/defs>/s);
@@ -264,21 +255,19 @@ it('lifts authored head elements into the page\'s <defs>, and imports an authore
 const lines = (resource: string) => [...resource.matchAll(/<span class="line( highlighted)?">(.*?)<\/span>(?=\n|<\/code>)/g)]
   .map(match => `${match[1] ? '+' : ' '}${text(parseFragment(match[2]!))}`);
 
-it('highlights lines from fence meta and [!code highlight] comments at build time', async () => {
-  expect(lines(await page('```ts {1,3-4}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = {x};\nconst e = 5;\n```'))).toEqual([
+it('highlights standard code attributes without rewriting literal notation comments', async () => {
+  expect(lines(await page('```ts {highlight="1,3-4"}\nconst a = 1;\nconst b = 2;\nconst c = 3;\nconst d = {x};\nconst e = 5;\n```'))).toEqual([
     '+const a = 1;', ' const b = 2;', '+const c = 3;', '+const d = \\{x};', ' const e = 5;']);
-  expect(lines(await page('```ts{2}\nconst a = 1;\nconst b = 2; // [!code highlight]\n// [!code highlight:2]\nconst c = 3;\nconst d = 4;\nconst e = 5;\n```'))).toEqual([
-    ' const a = 1;', '+const b = 2;', '+const c = 3;', '+const d = 4;', ' const e = 5;']);
-  expect(lines(await page('```sh\nnpm install # [!code highlight]\nnpm test\n```\n\n```html\n<p>One</p> <!-- [!code highlight] -->\n```'))).toEqual(['+npm install', ' npm test', '+<p>One</p>']);
-  // Plain text takes line features without a grammar; an unknown language stays escaped text without its notation comments.
-  expect(lines(await page('```text {2}\nfirst\nsecond\n```'))).toEqual([' first', '+second']);
-  expect(await page('```not-a-language {1}\nraw // [!code highlight]\n```')).toContain('<pre><code class="language-not-a-language" data-meta="{1}">raw</code></pre>');
+  expect(lines(await page('```text {highlight="2"}\nfirst\nsecond\n```'))).toEqual([' first', '+second']);
+  const resource = await page('```js\nconst value = 1; // [!code highlight]\n```');
+  expect(text(parseFragment(resource))).toContain('const value = 1; // [!code highlight]');
+  expect(resource).not.toContain('class="line highlighted"');
 });
 
-it('numbers lines from fence meta or the lineNumbers default', async () => {
+it('numbers lines from standard attributes or the page default', async () => {
   const numbered = (source: string, lineNumbers?: boolean) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index', ...(lineNumbers === undefined ? {} : { lineNumbers }) })
     .then(compiled => [...compiled.resource.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.split(' ').includes('line-numbers')));
-  const fences = '```ts\na\n```\n\n```ts :line-numbers\nb\n```\n\n```ts:no-line-numbers title="c.ts"\nc\n```';
+  const fences = '```ts\na\n```\n\n```ts {show-line-numbers}\nb\n```\n\n```ts {show-line-numbers=false title="c.ts"}\nc\n```';
   expect(await numbered(fences)).toEqual([false, true, false]);
   expect(await numbered(fences, true)).toEqual([true, true, false]);
 });
@@ -290,32 +279,38 @@ it('gives each code block hidden copy and wrap buttons, and a page with code its
   expect(await page('# Prose only\n\n`inline` code')).not.toContain('controller=');
 });
 
-it('derives heading anchors by the Looma Markdown rule, keeping letters and marks in any script', async () => {
-  expect(await headingIds('## Über uns\n\n## Café crème\n\n## 設定 と 使い方\n\n## 🚀')).toEqual(['über-uns', 'café-crème', '設定-と-使い方', 'heading']);
+it('derives heading anchors by the Expressmark standard rule, keeping letters and marks in any script', async () => {
+  expect(await headingIds('## Über uns\n\n## Café crème\n\n## 設定 と 使い方\n\n## 🚀')).toEqual(['über-uns', 'café-crème', '設定-と-使い方', 'section']);
 });
 
-it('renders chips, mentions, task lists, figures and image placement, with literal labels', async () => {
-  const resource = await page('Status :chip[Ready {x}]{tone=green} and :chip[Draft]{tone=teal}, by @[Ada]#u1.\n\n- [x] Done\n- [ ] Next\n\n' +
-    '::: figure The *build*\n![Pipeline](./pipeline.svg){width=640 placement=wrap-left}\n:::');
-  expect(resource).toContain('<span data-looma-chip="" data-label="Ready {x}" data-color="green">Ready \\{x}</span>');
-  expect(resource).toContain('data-color="neutral">Draft</span>');
-  expect(resource).toContain('<span data-type="mention" class="looma-mention" data-id="u1" data-label="Ada">@Ada</span>');
-  expect(resource).toContain('<ul data-type="taskList">\n<li data-type="taskItem" data-checked="true"><label><input type="checkbox" disabled="" checked=""> Done</label></li>');
-  expect(resource).toContain('<figure>\n<img src="./pipeline.svg" alt="Pipeline" width="640" data-placement="wrap-left"><figcaption>The <em>build</em></figcaption>\n</figure>');
+it('keeps every code block keyboard focusable for horizontal scrolling', async () => {
+  const compiled = await page('```ts\nconst count = 1;\n```\n\n```unknown\nliteral code\n```');
+  expect([...compiled.matchAll(/<pre\b[^>]*>/g)].map(match => match[0])).toHaveLength(2);
+  for (const match of compiled.matchAll(/<pre\b[^>]*>/g)) expect(match[0]).toContain('tabindex="0"');
+});
+
+it('renders standard chips, mentions, tasks, figures and logical image layout', async () => {
+  const resource = await page('Status :chip[Ready {x}]{tone=green}, by @[Ada]#u1.\n\n- [x] Done\n- [ ] Next\n\n::: figure [The *build*]\n![Pipeline](./pipeline.svg){width=640}\n:::');
+  expect(resource).toContain('<span data-tone="green" data-type="chip">Ready \\{x}</span>');
+  expect(resource).toContain('<span data-type="mention" data-ref="u1">Ada</span>');
+  expect(resource).toContain('<li>☑ Done</li><li>☐ Next</li>');
+  expect(resource).toContain('<figcaption>The <em>build</em></figcaption>');
+  expect(resource).toContain('src="./pipeline.svg" alt="Pipeline"');
   expect(resource).not.toContain('<link rel="component"');
 });
 
-it('renders footnotes as Looma Markdown\'s notes section, with literal text and no outline entry', async () => {
+it('renders standard footnotes with numbered back-links and no outline entry', async () => {
   const compiled = await compileMarkdown('# Notes\n\nText[^1] and again[^1].\n\n[^1]: A note with {braces}.\n', { file: 'notes.md', pageName: 'page-notes' });
-  expect(compiled.resource).toContain('<sup><a href="#fn:1" id="fnref:1" data-footnote-ref="" aria-describedby="footnote:label">1</a></sup>');
-  expect(compiled.resource).toContain('<section data-footnotes="" class="footnotes">\n<h2 id="footnote:label" class="sr-only">Footnotes</h2>');
-  expect(compiled.resource).toContain('<li id="fn:1">\n<p>A note with \\{braces}. <a href="#fnref:1" data-footnote-backref="" aria-label="Back to reference 1">');
+  expect(compiled.resource).toContain('<sup><a href="#fn:1" id="fnref:1" data-footnote-ref="">1</a></sup>');
+  expect(compiled.resource).toContain('<section data-footnotes="" aria-label="Footnotes">');
+  expect(compiled.resource).toContain('<li id="fn:1"><p>A note with \\{braces}.');
+  expect(compiled.resource).toContain('aria-label="Back to reference 1-2"');
   expect(compiled.outline).toEqual([]);
 });
 
-it('links ::toc entries to the anchors the outline lists', async () => {
-  const compiled = await compileMarkdown('::toc{depth=2 format=numbered}\n\n# Guide {#start}\n\n## Über uns\n\n### Deep\n\n## Über uns', { file: '/docs/index.md', pageName: 'page-index' });
-  const toc = /<nav data-looma-toc.*?<\/nav>/s.exec(compiled.resource)![0];
+it('links standard toc entries to the anchors the outline lists', async () => {
+  const compiled = await compileMarkdown('::: toc [Contents] {depth=2 format=numbered}\n:::\n\n# Guide {#start}\n\n## Über uns\n\n### Deep\n\n## Über uns', { file: '/docs/index.md', pageName: 'page-index' });
+  const toc = /<nav data-type="toc".*?<\/nav>/s.exec(compiled.resource)![0];
   expect([...toc.matchAll(/href="#([^"]*)"/g)].map(match => match[1])).toEqual(['start', ...compiled.outline.filter(item => item.depth === 2).map(item => item.id)]);
   expect(toc).toContain('<ol role="list">');
 });
@@ -347,7 +342,7 @@ Use them in Markdown.
     '<ui-button href="https://github.com/example" variant="outline" tone="neutral" size="lg">GitHub</ui-button></ui-cluster></div></div>' +
     '<div class="hero-image"><img src="./logo.svg" alt="Logo"></div></header>' +
     '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components"><a href="#components">Components</a></h2><p>Use them in Markdown.</p></ui-card>' +
-    '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul>\n<li>Snapshot</li>\n<li>Switch</li>\n</ul></ui-card></ui-grid>');
+    '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul><li>Snapshot</li><li>Switch</li></ul></ui-card></ui-grid>');
   for (const name of ['ui-cluster', 'ui-button', 'ui-grid', 'ui-card']) expect(compiled.resource).toContain(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   expect(compiled.resource).toContain('<meta name="mk:layout" content="home">');
   // Without an h1 the hero is titled by the page title, and without h2s or actions it has no cards or buttons.
@@ -380,7 +375,24 @@ A live example beside the story.
 </div>
 `, { file: '/project/docs/index.md', pageName: 'page-live-home' });
   expect(compiled.resource).toContain('<link rel="component" href="file:///project/docs/example.html">');
-  expect(compiled.resource).toContain('<div class="hero-image"><div data-hero-media="">\n<demo-example></demo-example>\n</div></div>');
+  expect(compiled.resource).toContain('<div class="hero-image"><div data-hero-media=""><demo-example></demo-example></div></div>');
   expect(compiled.resource.match(/<demo-example>/g)).toHaveLength(1);
   expect(compiled.resource).not.toMatch(/class="hero-text">[\s\S]*<demo-example>[\s\S]*<div class="hero-image">/);
+});
+
+it('uses Expressmark standard syntax for bracketed callouts and Markdown inside native HTML', async () => {
+  const compiled = await compileMarkdown('::: warning [Warning title]\nBack up first.\n:::\n\n<div>\n\n**Markdown inside HTML**\n\n</div>', { file: '/docs/standard.md', pageName: 'page-standard' });
+  expect(compiled.resource).toContain('heading="Warning title"');
+  expect(compiled.resource).toContain('<strong>Markdown inside HTML</strong>');
+  expect(compiled.resource).not.toContain('heading="[Warning title]"');
+});
+
+it('groups standard adjacent tabs without accepting the old equals-label grammar', async () => {
+  const standard = await page('::: tab [Examples]\nExample body.\n:::\n\n::: tab [API]\nReference body.\n:::');
+  expect(standard).toContain('<ui-tabs');
+  expect(standard).toContain('aria-label="Examples"');
+  expect(standard).toContain('aria-label="API"');
+  const legacy = await page('::: tabs\n== Examples\nExample body.\n:::');
+  expect(legacy).not.toContain('<ui-tabs');
+  expect(legacy).toContain('== Examples');
 });

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Render Markdown directly through Expressmark 0.2.2 in standard mode, including footer navigation and version snapshots. External HTML Next component files still own definitions; pages import and consume them with ordinary HTML.
+- Use preferred Expressive Markdown forms throughout the website, examples and starter: bracketed callout titles, adjacent `::: tab [Label]` panels, named tables and standard code attributes. Legacy `== Label` panels are no longer interpreted as tabs; code comments stay literal.
+- Keep table identifier columns readable by replacing inline code's `overflow-wrap: anywhere` with emergency wrapping that preserves intrinsic widths.
+
+- Pin Looma 0.44.0 exactly in the project and starter so installations use the verified shared theme and component controls.
+
 - Keep the desktop sidebar background and border continuous to the footer, with its navigation scrolling in a separate sticky panel.
 - Support `navigation: overview` for a route group’s overview page, preserving flat child URLs and avoiding a duplicate overview sub-link.
 
