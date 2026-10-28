@@ -198,8 +198,8 @@ importers:
         specifier: 1.0.0-alpha.69
         version: 1.0.0-alpha.69
       '@threadlabs/looma':
-        specifier: 0.44.0
-        version: 0.44.0(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))
+        specifier: 0.44.1
+        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -826,8 +826,8 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.44.0':
-    resolution: {integrity: sha512-ZIOm+eC8BKsFmndcjZnmtkl4mbD6fh3bn/ekUuTbLrBuG8zspLbjFU+JB7yctaq1kOZYbVpy8KRciqnCkj0nRg==}
+  '@threadlabs/looma@0.44.1':
+    resolution: {integrity: sha512-w70cJc1WP2axEoTxBf9Wao2FUh1EXenMiv93dfnnem+spiWB04YEn1DGorxZrMtcjl3LkHLxgOFmbj7vdN5RbA==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
     peerDependencies:
@@ -836,7 +836,7 @@ packages:
       '@tiptap/core': '>=2 <3'
       '@tiptap/pm': '>=2 <3'
       '@tiptap/vue-3': '>=2 <3'
-      markupress: '>=0.10.3 <1'
+      markupress: '>=0.12.0 <1'
       vite: '>=7.2.7 <9'
       vue: ^3.5.43
     peerDependenciesMeta:
@@ -2050,7 +2050,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.44.0(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.69
       dompurify: 3.4.15
@@ -2059,6 +2059,7 @@ snapshots:
       lowlight: 3.3.0
       lucide: 0.554.0
       markdown-it: 14.3.1
+      parse5: 8.0.1
     optionalDependencies:
       '@threadlabs/markupkit': 0.2.0(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
