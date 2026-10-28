@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.11.0
 
 - Keep the desktop sidebar background and border continuous to the footer, with its navigation scrolling in a separate sticky panel.
 - Support `navigation: overview` for a route group’s overview page, preserving flat child URLs and avoiding a duplicate overview sub-link.
