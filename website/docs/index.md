@@ -1,28 +1,34 @@
 ---
 layout: home
 title: Markupress
-description: Versioned documentation from Markdown, with native HTML Next components and a Looma theme.
+description: Write in Markdown. Publish documentation with versions, search and room for real components.
 ---
-# Markupress
+<p class="eyebrow">Markupress / documentation, published</p>
 
-Versioned documentation from Markdown, with native HTML Next components and a Looma theme.
+# Good docs.<br>Just HTML and Markdown.
 
-![](/logo.svg)
+Turn a folder of Markdown into a documentation site. Versions, search and navigation are ready to use. Bring your own components when words need a little help.
 
-[Get started](01.guide/01.getting-started.md) [Reference](02.reference/01.configuration.md)
+[Build your first site](01.guide/01.getting-started.md) [Explore the guide](01.guide/index.md)
 
-## Components in Markdown
+```sh
+npm create markupress@latest docs
+```
 
-Link an HTML Next component in a page and use it on the next line. Its controller is TypeScript.
+## Write with more than words
 
-## Versions
+Use callouts for the important bits, tabs for alternatives and highlighted code for the details. Add native HTML Next components right in your Markdown.
 
-`markupress snapshot v1` records the docs as they stand. Readers switch versions and keep their place.
+[See what you can write](01.guide/03.writing/03.markdown.md)
 
-## Conventions first
+## Keep every release readable
 
-Folders are sections, an index page labels its folder, and `_footer.md` is the footer. Configuration comes last.
+Snapshot your docs when you release. Readers can switch versions without losing their place, and search stays within the version they are reading.
 
-## Looma Markdown
+[Meet documentation versions](01.guide/05.versions.md)
 
-Callouts, details, tabs and code groups read the same in Markupress, Looma's components and LoomaEditor.
+## A folder is a starting point
+
+Folders become sections. Pages become navigation. Build a portable static site and publish it on the host you already use.
+
+[Go from files to a site](01.guide/02.project-structure.md)
