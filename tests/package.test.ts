@@ -557,3 +557,66 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
     }
   } finally { await server?.close(); await browser.close(); }
 }, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('installed section navigation changes category by following links in dev, production and without JavaScript', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'section-navigation');
+  for (const [file, text] of Object.entries({
+    'docs/index.md': '# Documentation',
+    'docs/_footer.md': '## Project\n\n- [Home](/)\n',
+    'docs/reference/index.md': '# Reference',
+    'docs/reference/01.(Layout)/00.layout.md': '---\nnavigation: overview\n---\n# Layout',
+    'docs/reference/01.(Layout)/01.stack.md': '# Stack\n\n' + 'A long reference paragraph.\n\n'.repeat(100),
+    'docs/reference/01.(Layout)/02.grid.md': '# Grid',
+    'docs/reference/02.forms/index.md': '# Forms',
+    'docs/reference/02.forms/button.md': '# Button',
+  })) { mkdirSync(join(site, file, '..'), { recursive: true }); writeFileSync(join(site, file), text); }
+  const options = { root: site, base: '/manual/', sidebarNavigation: 'sections' as const, port: 0 };
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        for (const javaScriptEnabled of mode === 'preview' ? [true, false] : [true]) {
+          const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1280, height: 900 } });
+          try {
+            const page = await context.newPage();
+            await page.goto(server.url + 'reference/stack/');
+            const nav = page.getByRole('navigation', { name: 'Documentation', exact: true });
+            expect(await nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Stack', 'Grid', 'Forms']);
+            expect(await nav.locator('button, details, summary, [aria-expanded]').count()).toBe(0);
+            expect(await nav.getByRole('link', { name: 'Layout', exact: true }).getAttribute('aria-current')).toBe('location');
+            const sidebarReachesFooter = () => page.evaluate(() => {
+              const sidebar = document.querySelector('#documentation-navigation')!.getBoundingClientRect();
+              const footer = document.querySelector('[data-component~=markupress-footer]')!.getBoundingClientRect();
+              return Math.abs(sidebar.bottom - footer.top) < 2;
+            });
+            expect(await sidebarReachesFooter()).toBe(true);
+            await page.evaluate(() => scrollTo(0, 400));
+            expect(await page.locator('.sidebar-content').evaluate(element => {
+              const header = document.querySelector('[data-component~=markupress-header]')!.getBoundingClientRect();
+              return Math.abs(element.getBoundingClientRect().top - header.bottom) < 2;
+            })).toBe(true);
+            expect(await nav.getByRole('link', { name: 'Stack', exact: true }).getAttribute('aria-current')).toBe('page');
+            await nav.getByRole('link', { name: 'Forms', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/forms/');
+            await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
+            expect(await sidebarReachesFooter()).toBe(true);
+            await page.reload();
+            expect(await nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
+            await nav.getByRole('link', { name: 'Layout', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/layout/');
+            await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Stack', 'Grid', 'Forms']);
+            await page.setViewportSize({ width: 375, height: 812 });
+            await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+            expect(await nav.isVisible()).toBe(true);
+            await nav.getByRole('link', { name: 'Forms', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/forms/');
+            await expect.poll(() => page.locator('#documentation-navigation:popover-open').count()).toBe(0);
+          } finally { await context.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 90_000);

@@ -17,6 +17,7 @@
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
 <prop name="sidebar" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>The section's sidebar: pages and links, and folders and groups with children, as MarkupKit supplies them</prop>
 <prop name="sidebarVisible" type="boolean" default="true">Show documentation navigation on this page.</prop>
+<prop name="sidebarNavigation" type="keyword" values="tree, sections" default="tree">Sidebar navigation presentation.</prop>
 <prop name="contents" type="list(object({ label: string, href: string, description: string }))" required>A generated index's pages and folders</prop>
 <prop name="outline" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
@@ -31,10 +32,11 @@
 <markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
 <span class="menu" slot="menu"><ui-icon-button label="Navigation" variant="ghost" tone="neutral" popovertarget="documentation-navigation"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></ui-icon-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover aria-label="Documentation" from:data-sidebar="$sidebarVisible">
+<div class="sidebar-content">
 <nav class="mobile-sections" $if="$nav.length" aria-label="Sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current">{$item.label}</a></li></ul></nav>
-<markupress-navigation $if="$sidebarVisible" from:items="$sidebar" label="Documentation"></markupress-navigation>
+<markupress-navigation $if="$sidebarVisible" from:items="$sidebar" from:mode="$sidebarNavigation" label="Documentation"></markupress-navigation>
 <nav class="versions" $if="$sidebarVisible and $versions.length > 1" aria-label="Documentation versions"><strong>Versions</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
-</aside><main id="documentation-content" tabindex="-1"><mk-breadcrumbs from:items="$crumbs"></mk-breadcrumbs><slot name="page"></slot>
+</div></aside><main id="documentation-content" tabindex="-1"><mk-breadcrumbs from:items="$crumbs"></mk-breadcrumbs><slot name="page"></slot>
 <ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul>
 <div class="page-meta" $if="$page.editLink or $page.lastUpdated"><a $if="$page.editLink" from:href="$page.editLink">Edit this page</a><p $if="$page.lastUpdated">Last updated <time from:datetime="$page.lastUpdated">{$page.lastUpdated}</time></p></div><mk-pager from:previous="$previous" from:next="$next"></mk-pager></main>
 <aside class="outline" $if="$outline.length" aria-label="On this page"><markupress-outline from:items="$outline"></markupress-outline></aside></div>
@@ -45,9 +47,10 @@
 .columns { display: flex; gap: var(--ui-space-6); flex: 1; inline-size: 100%; max-inline-size: var(--markupress-page-width, 90rem); margin: auto; padding: 0; }
 #documentation-navigation { flex: 0 0 var(--markupress-sidebar-width, 18rem); } main { min-width: 0; flex: 1; padding: var(--ui-space-4) var(--ui-space-5) var(--ui-space-6); max-width: var(--markupress-content-width, 54rem); } .outline { flex: 0 0 var(--markupress-outline-width, 13rem); }
 /* Wide screens show the sidebar in the page; narrow ones open it as a native popover, which needs no script. */
-@media (min-width: 64rem) { #documentation-navigation { display: block; position: static; inset: auto; margin: 0; padding: var(--ui-space-5) var(--ui-space-4); border: 0; border-inline-end: 1px solid var(--ui-border); background: var(--ui-surface-sunken); color: inherit; overflow: visible; }
+@media (min-width: 64rem) { #documentation-navigation { display: block; position: static; inset: auto; margin: 0; padding: 0; align-self: stretch; block-size: auto; max-block-size: none; border: 0; border-inline-end: 1px solid var(--ui-border); background: var(--ui-surface-sunken); color: inherit; overflow: visible; }
   #documentation-navigation:not([data-sidebar]) { display: none; }
-  #documentation-navigation, .outline { position: sticky; top: var(--_markupress-header-height, var(--markupress-header-height, 4.25rem)); align-self: flex-start; max-block-size: calc(100dvh - var(--_markupress-header-height, var(--markupress-header-height, 4.25rem))); overflow: auto; } }
+  .sidebar-content { padding: var(--ui-space-5) var(--ui-space-4); box-sizing: border-box; }
+  .sidebar-content, .outline { position: sticky; top: var(--_markupress-header-height, var(--markupress-header-height, 4.25rem)); align-self: flex-start; max-block-size: calc(100dvh - var(--_markupress-header-height, var(--markupress-header-height, 4.25rem))); overflow: auto; } }
 .outline { padding-block: var(--ui-space-5); padding-inline-end: var(--ui-space-4); }
 @media (max-width: 1199px) { .outline { display: none; } }
 @media (max-width: 63.999rem) { .columns { display: block; padding: 0 var(--ui-space-4); }

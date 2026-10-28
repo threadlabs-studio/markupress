@@ -29,11 +29,39 @@ export interface SidebarNode {
 /**
  * MarkupKit's navigation tree with Markupress's group policy: a folder stays open unless its index page's front
  * matter says `navigation: collapsed`, and one holding the current page is always open. `collapsed` tells whether
- * a folder's index page URL starts closed.
+ * a folder's index page URL starts closed. Section mode instead links every category
+ * to its overview or first page and lists only the current category's descendants.
  */
-export function generatedSidebar(tree: readonly NavigationNode[], collapsed: (href: string) => boolean): SidebarNode[] {
+export function generatedSidebar(tree: readonly NavigationNode[], collapsed: (href: string) => boolean, mode: 'tree' | 'sections' = 'tree', overviews: ReadonlySet<string> = new Set()): SidebarNode[] {
+  if (overviews.size) tree = overviewNodes(tree, overviews);
+  if (mode === 'sections') {
+    const pages = (nodes: readonly NavigationNode[]): SidebarNode[] => nodes.flatMap(node => [
+      ...(node.href === undefined ? [] : [{ ...node, children: [] }]), ...pages(node.children),
+    ]);
+    return tree.flatMap(node => {
+      const children = pages(node.children), href = node.href ?? children[0]?.href;
+      if (href === undefined) return [];
+      // Route groups have no overview URL. Their heading links to the first page,
+      // while current still describes the category separately from that page.
+      return [{ ...node, href, current: node.current === 'page' ? 'page' : node.open ? 'location' : 'false',
+        children: node.open ? children : [] }];
+    });
+  }
   return tree.map(node => ({ ...node, open: node.open || (node.children.length > 0 && !(node.href !== undefined && collapsed(node.href))),
     children: generatedSidebar(node.children, collapsed) }));
+}
+
+/** A route group can have an overview without adding a segment to its children's URLs. */
+function overviewNodes(tree: readonly NavigationNode[], overviews: ReadonlySet<string>): NavigationNode[] {
+  return tree.map(node => {
+    const children = overviewNodes(node.children, overviews);
+    // Match direct authored pages, before a nested group acquires its overview URL.
+    const marked = node.children.filter(child => child.href !== undefined && overviews.has(child.href));
+    if (marked.length > 1 || (marked.length && node.href !== undefined)) throw new Error(`Navigation group ${node.label} must have only one overview, including its folder index.`);
+    const overview = marked[0];
+    return overview === undefined ? { ...node, children } : { ...node, href: overview.href!, current: overview.current,
+      children: children.filter((_, index) => index !== node.children.indexOf(overview)) };
+  });
 }
 
 const markdown = createLoomaMarkdownIt();

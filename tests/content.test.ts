@@ -92,7 +92,7 @@ it('rejects unknown and mistyped front matter fields with the Markdown file', as
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
   await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are title, description, order, navigation, sidebar, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
-  await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, or collapsed on a folder\'s index page.');
+  await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, overview, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
   await expect(page('outline: [3, 2]')).rejects.toThrow('front matter outline must be false or a heading range such as [2, 3].');
   await expect(page('outline: true')).rejects.toThrow('front matter outline must be');
@@ -114,6 +114,9 @@ it('orders a page with order, hides it with navigation, and takes default front 
   const folded = await compileMarkdown('---\nnavigation: collapsed\n---\n# Forms', { file: '/docs/forms/02.index.md', pageName: 'page-folded' });
   expect(folded.frontmatter.navigation).toBe('collapsed');
   expect(folded.resource).not.toContain('mk:navigation');
+  const overview = await compileMarkdown('---\nnavigation: overview\n---\n# Forms', { file: '/docs/(Forms)/forms.md', pageName: 'page-overview' });
+  expect(overview.frontmatter.navigation).toBe('overview');
+  expect(overview.resource).not.toContain('mk:navigation');
 });
 
 it('reads front matter whose fields are all lists or mappings', async () => {

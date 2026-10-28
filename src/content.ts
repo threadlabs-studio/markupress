@@ -31,9 +31,10 @@ export interface FrontMatter {
   readonly order?: number;
   /**
    * `hidden` leaves the page out of navigation and keeps its route (MarkupKit `mk:navigation`). On a folder's index
-   * page, `collapsed` starts the folder's sidebar group closed.
+   * page, `collapsed` starts the folder's sidebar group closed. `overview` makes a
+   * non-index page the containing route group's overview link.
    */
-  readonly navigation?: 'hidden' | 'collapsed';
+  readonly navigation?: 'hidden' | 'collapsed' | 'overview';
   /** Show documentation navigation; a folder index supplies its descendants' default. */
   readonly sidebar?: boolean;
   readonly id?: string;
@@ -192,7 +193,7 @@ function pagerLink(value: unknown): boolean {
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
-  navigation: [value => value === 'hidden' || value === 'collapsed', 'hidden, or collapsed on a folder\'s index page'],
+  navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
   sidebar: [value => typeof value === 'boolean', 'true or false'],
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
@@ -214,6 +215,7 @@ function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: strin
   }
   // MarkupKit reads a folder from its index page, so only an index page can start its folder collapsed.
   if (fields.navigation === 'collapsed' && !isIndex(file)) throw new Error(`${file}: front matter navigation collapsed applies to a folder's index page.`);
+  if (fields.navigation === 'overview' && isIndex(file)) throw new Error(`${file}: a folder index is already its overview; navigation overview applies to a non-index page inside a route group.`);
   return fields as FrontMatter;
 }
 

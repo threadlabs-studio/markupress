@@ -30,6 +30,8 @@ export interface MarkupressOptions {
   readonly title?: string;
   /** A removable status chip before search; dismissal emits markupress-header-notice-dismiss on window. */
   readonly headerNotice?: string;
+  /** Tree disclosures (default), or category links with pages listed only in the current category. */
+  readonly sidebarNavigation?: 'tree' | 'sections';
   readonly versions?: readonly DocumentationVersion[];
   readonly defaultVersion?: string;
   readonly host?: string;
@@ -52,7 +54,7 @@ export interface MarkupressOptions {
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
 }
-const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
 export interface DocumentationPage {
   readonly id: string;
   readonly version: string;
@@ -98,6 +100,7 @@ const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(f
  * serves the site root. Markupress keeps only the version catalog its switcher needs.
  */
 export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
+  if (options.sidebarNavigation !== undefined && !['tree', 'sections'].includes(options.sidebarNavigation)) throw new Error('sidebarNavigation must be tree or sections.');
   const defaultVersion = options.defaultVersion ?? 'current';
   let root = resolve(options.root ?? process.cwd());
   let editions: readonly DocumentationVersion[] = [], siteBase = '/';
@@ -203,11 +206,13 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     // Pages recompile after each edit, so a folder's collapsed state follows its index page in development.
     const folded = new Set(pages.filter(doc => doc.page.navigation === 'collapsed').map(doc => base + doc.pathname.slice(1)));
     const collapsed = (page: string) => folded.has(page);
+    const overviews = new Set(pages.filter(doc => doc.page.navigation === 'overview').map(doc => base + doc.pathname.slice(1)));
     const versions = editions.length > 1 ? editions.find(edition => edition.id === selected) : undefined;
     const edition = editions.find(entry => entry.id === selected)!;
     const { columns, copyright } = footer(resolve(root, edition.directory, '_footer.md'));
     return {
-      sidebar: generatedSidebar(await navigationTree({ from: `/v/${selected}${section}`, current }), collapsed),
+      sidebar: generatedSidebar(await navigationTree({ from: `/v/${selected}${section}`, current }), collapsed, options.sidebarNavigation, overviews),
+      sidebarNavigation: options.sidebarNavigation ?? 'tree',
       nav: [...sections.map(node => ({ ...link({ label: node.label, href: '/' + node.href!.slice(home.length) }), icon: '' })),
         ...(options.nav ?? []).map(entry => ({ ...link(entry), icon: entry.icon === undefined ? '' : file(entry.icon) }))],
       logo: logo === undefined ? null : { light: file(logo.light), dark: file(logo.dark ?? logo.light) },
