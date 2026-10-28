@@ -61,6 +61,10 @@ Breaking changes from 0.7.0:
 
 - A Markdown page links its components with `<link rel="component" href="@/…">`. A `<template component>` written in a page's Markdown is raw HTML under CommonMark's HTML block rules, as any other tag is; component definitions live in component files such as `app/components/counter.html`.
 
+Added:
+
+- The guide's Embeds page builds a YouTube embed as an HTML Next component in `app/components/youtube.html`, with a typed `video` prop and a lazy-loaded `youtube-nocookie.com` frame, and maps dev.to's embed tags, such as `{% codepen %}` and `{% github %}`, to components of the same shape.
+
 ## 0.7.0
 
 - Markupress depends on MarkupKit and HTML Next 1.0.0-alpha.69, and its Looma peer is exactly 0.31.4, the Looma release built with HTML Next 1.0.0-alpha.69. A site's own Looma dependency moves to exactly 0.31.4, and `create-markupress`'s starter depends on both.
