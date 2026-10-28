@@ -26,6 +26,14 @@ export default function searchController(host: ComponentHost): void {
     const input = root.querySelector('input')!;
     root.querySelector<HTMLElement>('.trigger')!.hidden = false;
     let latest = 0;
+    let scope = JSON.stringify([host.props.index!.value, host.props.options!.value]);
+    // MarkupKit keeps this controller across language/version navigation and adopts its new props.
+    const unwatch = host.effect(() => {
+      const next = JSON.stringify([host.props.index!.value, host.props.options!.value]);
+      if (next === scope) return;
+      scope = next; ++latest;
+      host.state.open = false; host.state.results = []; host.state.selected = ''; host.state.status = '';
+    });
     const run = async () => {
       const query = input.value, request = ++latest;
       host.state.results = [];
@@ -68,8 +76,11 @@ export default function searchController(host: ComponentHost): void {
         host.state.selected = buttons[next]!.closest<HTMLElement>('[data-href]')!.dataset.href;
         buttons[next]!.focus(); buttons[next]!.scrollIntoView({ block: 'nearest' });
       }
-      // Enter in the field opens the first result.
-      if (event.key === 'Enter' && target === input) root.querySelector<HTMLElement>('[data-href] button')?.click();
+      // Closing the dialog restores trigger focus; consume Enter so its native action cannot reopen search.
+      if (event.key === 'Enter' && target === input) {
+        event.preventDefault();
+        root.querySelector<HTMLElement>('[data-href] button')?.click();
+      }
     };
     // Looma's dialog reports each close, by Escape, the backdrop or the page.
     const close = () => { ++latest; host.state.open = false; };
@@ -79,7 +90,7 @@ export default function searchController(host: ComponentHost): void {
     root.addEventListener('click', click);
     document.addEventListener('keydown', keydown);
     return () => {
-      ++latest;
+      ++latest; unwatch();
       input.removeEventListener('input', run); shell.removeEventListener('close', close);
       root.removeEventListener('click', click); document.removeEventListener('keydown', keydown);
     };

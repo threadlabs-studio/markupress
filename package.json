@@ -1,6 +1,6 @@
 {
   "name": "markupress",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Versioned Markdown documentation built on MarkupKit and native declarative components.",
   "license": "MIT",
   "type": "module",
@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "expressmark": "0.2.2",
-    "@threadlabs/markupkit": ">=0.2.2 <1",
+    "@threadlabs/markupkit": ">=0.3.0 <1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
     "postcss": "8.5.30",

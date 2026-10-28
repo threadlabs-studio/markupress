@@ -242,7 +242,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are locales, defaultLocale, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -594,3 +594,45 @@ it('lets a section hide documentation navigation while a child page can opt back
     for (const path of ['/workspace/reference/', '/guide/install/']) expect((await app.render(path)).html).toMatch(/<nav[^>]*aria-label="Documentation"/);
   } finally { await app.close(); }
 }, 30_000);
+
+it('isolates locale/version routes and search, and switches renamed translations by identity', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-locales-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const version of ['docs', 'versions/v1/docs']) {
+    await write(root, `${version}/en/index.md`, '# English home');
+    await write(root, `${version}/en/install.md`, '---\nid: setup\n---\n# English installation\n\nEnglish only');
+    await write(root, `${version}/fr/index.md`, '# Accueil');
+    await write(root, `${version}/fr/demarrer.md`, '---\nid: setup\n---\n# Installation française\n\nFrançais seulement');
+    await write(root, `${version}/ar/index.md`, '# البداية');
+  }
+  await write(root, 'docs/en/404.md', '# English not found');
+  const application = await createApplication(siteOptions({ root, base: '/manual/', locales: {
+    en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية', dir: 'rtl' },
+  }, defaultLocale: 'en' }));
+  try {
+    const html = (await application.render('/manual/fr/v/v1/demarrer/')).html;
+    expect(html).toContain('<html lang="fr">');
+    expect(html).toContain('href="/manual/v/v1/install/"');
+    expect(html).toContain('href="/manual/ar/v/v1/"');
+    expect(html).toContain('href="/manual/fr/v/current/demarrer/"');
+    expect(html).toContain('/manual/fr/v/v1/_search.json');
+    expect(html).not.toContain('English installation');
+    expect((await application.render('/manual/ar/')).html).toContain('<html lang="ar" dir="rtl">');
+    expect((await application.render('/manual/ar/absent/')).html).toContain('<html lang="en">');
+    const index = JSON.stringify(application.generated.get('/manual/fr/v/v1/_search.json')?.contents);
+    expect(index).toContain('Français seulement');
+    expect(index).not.toContain('English only');
+    expect(index).toContain('/manual/fr/v/v1/demarrer/');
+    const rootIndex = JSON.stringify(application.generated.get('/manual/fr/_search.json')?.contents);
+    expect(rootIndex).toContain('/manual/fr/demarrer/');
+  } finally { await application.close(); }
+  await write(root, 'docs/fr/autre.md', '---\nid: setup\n---\n# Autre installation');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }))).rejects.toThrow(/identity collision:.*autre\.md.*demarrer\.md|identity collision:.*demarrer\.md.*autre\.md/);
+}, 30_000);
+
+it('rejects ambiguous or escaping locale content folders and unknown defaults', async () => {
+  const root = await fixture();
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English' } }, defaultLocale: 'fr' }))).rejects.toThrow('Unknown defaultLocale: fr');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '..' } } }))).rejects.toThrow('directory must stay inside its version');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '.' }, fr: { label: 'Français' } } }))).rejects.toThrow('Locale directories overlap');
+});
