@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.14.1
 
 - Require Expressmark 0.3.0, which reads Markdown with Parseman and renders the same output faster.
 - Name the header brand link by its visible title and version badge, so speech input can activate it by what it shows.
