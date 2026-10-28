@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.12.1
 
 - Write pipe characters literally in standard named-table examples, so API return unions and the title-template default copy without obsolete GFM escape characters.
 
