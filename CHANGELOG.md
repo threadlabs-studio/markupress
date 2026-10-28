@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.14.3
 
 - Add a `markdownSyntax` site option and front matter field. `compatible` reads a site or page as CommonMark and GFM; `standard` stays the default.
 - Render a container with no type, such as `::: [Heads up]`, as a callout in Looma's default tone.
