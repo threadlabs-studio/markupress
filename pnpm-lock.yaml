@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@threadlabs/markupkit':
-        specifier: '>=0.2.0 <1'
-        version: 0.2.0(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: '>=0.2.2 <1'
+        version: 0.2.2(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
         specifier: 0.2.2
         version: 0.2.2
@@ -199,7 +199,7 @@ importers:
         version: 1.0.0-alpha.69
       '@threadlabs/looma':
         specifier: 0.44.1
-        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))
+        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -855,8 +855,8 @@ packages:
       vue:
         optional: true
 
-  '@threadlabs/markupkit@0.2.0':
-    resolution: {integrity: sha512-Vyb6TebrAIlgQZXodbDWB429H/iMzQP1stdau+5D6b5EnP8vU1z7vJ9R5MlrdLiJ8rV5FKrTn+iHaS7JAMvk/g==}
+  '@threadlabs/markupkit@0.2.2':
+    resolution: {integrity: sha512-XOnhvVHwM6GYE/j96sDKBWSzutXjeLpDMDan22ilVwM07ZB3QKgCuFymeuUTQ/AeShjboNV86Hdm6vIaii034A==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -2050,7 +2050,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.2.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.69
       dompurify: 3.4.15
@@ -2061,10 +2061,10 @@ snapshots:
       markdown-it: 14.3.1
       parse5: 8.0.1
     optionalDependencies:
-      '@threadlabs/markupkit': 0.2.0(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit': 0.2.2(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
 
-  '@threadlabs/markupkit@0.2.0(@types/node@22.20.1)(yaml@2.9.1)':
+  '@threadlabs/markupkit@0.2.2(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.69
       parse5: 8.0.1
