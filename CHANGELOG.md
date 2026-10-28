@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.13.0
 
 - Add typo-tolerant and prefix local search with weighted section ranking, native language segmentation, configurable matching and result limits, page and subtree exclusions, keyboard result selection, and retryable index failures. Preserve literal snippets and IME composition.
 
