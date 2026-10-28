@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.12.2
 
 - Require MarkupKit 0.2.2 or a compatible later release for routing and rendering, alongside Looma 0.44.1, Expressmark 0.2.2 and HTML Next 1.0.0-alpha.69. MarkupKit 0.2.1 regressed to the old `hk:` metadata and `hk-` components; 0.2.2 restores the `mk:` metadata, `mk-` components and browser attributes that Markupress requires.
 
