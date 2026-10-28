@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import type { MarkupKitPlugin, PageContext } from '@threadlabs/markupkit';
 import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter } from './content.js';
 import { siteLink } from './navigation.js';
+import type { Syntax } from 'expressmark';
 
 export interface MarkdownPluginOptions {
   /** Directory that a page's root-relative images and files (/logo.svg) come from; without one they stay site URLs. */
@@ -14,6 +15,8 @@ export interface MarkdownPluginOptions {
   readonly styles?: readonly string[];
   /** Number the lines of every highlighted code block unless its fence says `show-line-numbers=false`. */
   readonly lineNumbers?: boolean;
+  /** The Markdown syntax of pages whose front matter sets no `markdownSyntax`; `standard` by default. */
+  readonly markdownSyntax?: Syntax;
   /** Front matter for a page that its own fields override, such as a site-wide default. */
   readonly frontmatter?: (file: string) => FrontMatter | undefined;
   /** The URL a page's root-relative links (`/guide/`) start from, such as its version's home; the site's base by default. */
@@ -36,7 +39,7 @@ export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     const frontmatter = options.frontmatter?.(page.file);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(frontmatter ? { frontmatter } : {}),
+      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
       ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
     options.onPage?.({ ...compiled, file: page.file, href });
     return compiled.resource;
