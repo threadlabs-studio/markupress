@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.14.0
 
 - Add locale folders across documentation versions, identity-based language switching, isolated search indexes, and native document language/direction. Existing sites retain their URLs.
 - Keep version switches inside the selected language; missing translated identities link to that language and version’s home with a notice.
