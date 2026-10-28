@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Keep the desktop sidebar background and border continuous to the footer, with its navigation scrolling in a separate sticky panel.
+- Support `navigation: overview` for a route group’s overview page, preserving flat child URLs and avoiding a duplicate overview sub-link.
+
+- Add `sidebarNavigation: 'sections'`: keep category links visible, opening the overview or first page, and list only the current category's pages without disclosure controls. Server rendering and native links support the same navigation without JavaScript.
+
 - Supply a native section-navigation drawer on home pages, keeping the shared site header compact and its logo visible on mobile. Close the home section drawer after following a link.
 
 - Use Looma SiteHeader for the responsive site banner, branding, navigation and action alignment. Markupress supplies documentation content, routes and drawer behavior. Requires Looma 0.41.2 for the shared header’s mobile sizing and separate adjustable action targets; home-page action links use its href-driven native link contract.

@@ -24,12 +24,24 @@ li { margin: var(--ui-space-0-5) 0; padding: 0; }
 <defs>
 <prop name="items" type="list(object({ label: string, current: string, depth: number, href?: string, open?: boolean, children?: list(object({ label: string, ... })), ... }))" required>MarkupKit's section navigation, rendered with Looma controls.</prop>
 <prop name="label" type="string" default="Documentation">Accessible name for this navigation region.</prop>
+<prop name="mode" type="keyword" values="tree, sections" default="tree">Tree disclosures or category links with the current category's pages.</prop>
 </defs>
 <div>
+<template $match>
+<nav $when="$mode = 'sections'" class="sections" from:aria-label="$label"><ul><li $each="item of $items">
+<ui-nav-item as="a" density="compact" from:href="$item.href" from:current="$item.current">{$item.label}</ui-nav-item>
+<ul $if="$item.children.length"><li $each="page of $item.children"><ui-nav-item as="a" density="compact" from:href="$page.href" from:current="$page.current">{$page.label}</ui-nav-item></li></ul>
+</li></ul></nav>
+<div $else>
 <nav class="enhanced" from:aria-label="$label"><markupress-nav-items from:items="$items"></markupress-nav-items></nav>
 <div class="native"><mk-nav from:items="$items" from:label="$label"></mk-nav></div>
 </div>
+</template>
+</div>
 <style>
+.sections ul { list-style: none; margin: 0; padding: 0; }
+.sections li { margin: var(--ui-space-0-5) 0; padding: 0; }
+.sections ul ul { padding-inline-start: var(--ui-space-3); }
 .native { display: none; }
 @media (scripting: none) { .enhanced { display: none; } .native { display: block; } }
 </style>
