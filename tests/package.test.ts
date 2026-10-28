@@ -37,9 +37,9 @@ beforeAll(() => {
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
   write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs with a deliberately long product title', headerNotice: 'Custom theme', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
-  // The site's own page-wide stylesheet sets a Markupress theme token.
+  // The site's stylesheet shares Looma typography and sizes the Markupress layout.
   mkdirSync(join(workspace, 'app'));
-  write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
+  write('app/site.css', ':root { --ui-font-sans: Arial, sans-serif; --ui-link-color: light-dark(#6945c2, #cbb9ff); --markupress-sidebar-width: 17rem; }');
   write('markupkit.config.js', 'export default { css: ["app/site.css"] };');
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
@@ -163,7 +163,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
       await page.goto(server.url + 'v/current/guide/install/');
-      expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
+      expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
       // On a wide screen the sidebar is in the page, and the shell's style hides the drawer's Navigation button it projects into the header.
       expect(await page.getByRole('button', { name: 'Navigation', exact: true }).isVisible()).toBe(false);
       // The site's stylesheet sizes the sidebar through --markupress-sidebar-width.
@@ -172,7 +172,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
         shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
         code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
-      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(250, 251, 249)', code: 'rgb(239, 243, 238)' });
+      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(247, 245, 240)', code: 'rgb(254, 254, 254)' });
+      expect(await page.locator('[data-component="mk-breadcrumbs"] a').first().evaluate(element => getComputedStyle(element).color)).toBe('rgb(105, 69, 194)');
       await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
       await page.emulateMedia({ colorScheme: 'dark' });
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
@@ -199,16 +200,16 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         const result = [outer, inner, nested].map(read); outer.remove(); return result;
       });
       expect(scopes).toEqual([
-        { background: 'rgb(25, 34, 31)', color: 'rgb(237, 244, 237)', scheme: 'dark' },
-        { background: 'rgb(250, 251, 249)', color: 'rgb(36, 52, 44)', scheme: 'light' },
-        { background: 'rgb(25, 34, 31)', color: 'rgb(237, 244, 237)', scheme: 'dark' },
+        { background: 'rgb(15, 14, 11)', color: 'rgb(235, 236, 238)', scheme: 'dark' },
+        { background: 'rgb(247, 245, 240)', color: 'rgb(36, 42, 58)', scheme: 'light' },
+        { background: 'rgb(15, 14, 11)', color: 'rgb(235, 236, 238)', scheme: 'dark' },
       ]);
       // Highlighted code follows the theme's color-scheme through light-dark().
       const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
       const light = await color();
       await chooseAppearance(page, 'dark');
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(25, 34, 31)', code: 'rgb(19, 28, 24)' });
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(15, 14, 11)', code: 'rgb(8, 7, 5)' });
       await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
@@ -270,6 +271,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => example.getByRole('button', { name: 'Wrap' }).getAttribute('aria-pressed')).toBe('true');
       expect(await scrolls()).toBe(false);
       const callout = page.getByRole('note').filter({ hasText: 'Breaking {x}' });
+      expect(await example.getByRole('button', { name: 'Wrap' }).evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
       expect(await callout.getAttribute('data-ui-callout-prop-tone')).toBe('warning');
       const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-ui-callout-prop-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
       expect(await surface('warning')).not.toBe(await surface('danger'));
@@ -282,7 +284,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => groups.nth(1).getByRole('tab').count()).toBe(2);
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('pnpm markupress build');
       // The theme's global block styles reach the Markdown projected into Looma's components.
-      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(19, 28, 24)');
+      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(8, 7, 5)');
       await groups.first().getByRole('tab', { name: 'npm', exact: true }).click();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('npx markupress build');

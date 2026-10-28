@@ -1,0 +1,348 @@
+/* Looma shared semantic theme. */
+/* Always includes light and dark.
+   Set data-theme="light" or "dark" on any element to fix that subtree's mode.
+   Leave the root attribute unset to follow the system; a switch can set/remove it. */
+/* Optional shared recipe. Load after tokens.css and the chosen palette.
+   Existing public roles remain the customization interface; no component selectors. */
+/* Resolve shared geometry once where it is declared, rather than once per consuming
+   control's font. Palette roles remain unregistered so light-dark resolves locally. */
+/* Reserve the same order when the remembered theme arrives before baseline CSS. */
+@layer tokens, base, theme, components;
+
+/* Keep the root font seed unregistered: a registered rem length used by root
+   font-size creates a dependency cycle (CSS Properties and Values API 2.7.2). */
+@property --ui-control-size { syntax: "<length>"; inherits: true; initial-value: 40px; }
+@property --_ui-root-font-unit { syntax: "<length>"; inherits: true; initial-value: 16px; }
+@property --ui-radius-md { syntax: "<length>"; inherits: true; initial-value: 8px; }
+@property --ui-border-width { syntax: "<length>"; inherits: true; initial-value: 1px; }
+
+@layer theme {
+  :root {
+    /* Resolve once on the root: WebKit can resolve registered rem lengths against the initial font size. */
+    --_ui-root-font-unit: 1em;
+    --ui-spacing: 1;
+    --ui-rhythm: 1;
+    --ui-control-roominess: 2.5;
+    --ui-scale-ratio: 1.2;
+    --ui-space-curve: 1;
+    --ui-outer-depth: 0.6;
+    --ui-inner-depth: 0.3;
+    --ui-edge-light: 0;
+    --ui-overlay-translucency: 0;
+    --ui-glassiness: 0;
+    --ui-surface-separation: 0;
+    --ui-finish: 0;
+    --ui-glow: 0;
+    --ui-light-x: 0.5;
+    --ui-light-y: 0;
+    --ui-light-spread: 0.5;
+    --ui-light-strength: 0.65;
+  }
+
+  :where(:root, [data-theme], [data-contrast]) {
+    /* Controls use a ratio. Spacing uses an independent curve, so increasing the size
+       contrast cannot unexpectedly turn linear spacing into quadratic spacing. */
+    --ui-control-size: calc(var(--_ui-root-font-unit) * var(--ui-control-roominess));
+    --_ui-theme-ratio: max(1, var(--ui-scale-ratio));
+    --_ui-theme-unit: calc(1rem * 0.25 * max(0, var(--ui-spacing)));
+    --ui-line-height-tight: clamp(1.1, calc(1.2 + (var(--ui-rhythm) - 1) * 0.2), 1.3);
+    --ui-line-height: clamp(1.35, calc(1.4 + (var(--ui-rhythm) - 1) * 0.4), 1.6);
+    --ui-line-height-md: var(--ui-line-height);
+    --ui-line-height-relaxed: calc(var(--ui-line-height) * 1.15);
+    --_ui-theme-curve: max(0, var(--ui-space-curve));
+    --ui-control-size-sm: calc(var(--ui-control-size) / var(--_ui-theme-ratio));
+    --ui-control-size-md: var(--ui-control-size);
+    --ui-control-size-lg: calc(var(--ui-control-size) * var(--_ui-theme-ratio));
+    /* Bend the interior of the family while keeping its endpoints stable. */
+    --ui-space-1: var(--_ui-theme-unit);
+    --ui-space-2: calc(var(--_ui-theme-unit) * (1 + 7 * pow(1 / 7, var(--_ui-theme-curve))));
+    --ui-space-3: calc(var(--_ui-theme-unit) * (1 + 7 * pow(2 / 7, var(--_ui-theme-curve))));
+    --ui-space-4: calc(var(--_ui-theme-unit) * (1 + 7 * pow(3 / 7, var(--_ui-theme-curve))));
+    --ui-space-0-5: calc(var(--ui-space-1) * 0.5);
+    --ui-space-5: calc(var(--_ui-theme-unit) * (1 + 7 * pow(5 / 7, var(--_ui-theme-curve))));
+    --ui-space-6: calc(var(--_ui-theme-unit) * (1 + 7 * pow(7 / 7, var(--_ui-theme-curve))));
+    /* Vertical editing/action insets fit the shared box instead of growing with the
+       page spacing curve. Multi-line content can still grow intrinsically. */
+    --ui-control-inset-block-sm: max(0px, calc((var(--ui-control-size-sm) - var(--ui-font-size-sm) * var(--ui-line-height-tight) - 2 * var(--ui-border-width)) / 2));
+    --ui-control-inset-block-md: max(0px, calc((var(--ui-control-size-md) - var(--ui-font-size-md) * var(--ui-line-height-tight) - 2 * var(--ui-border-width)) / 2));
+    --ui-control-inset-block-lg: max(0px, calc((var(--ui-control-size-lg) - var(--ui-font-size-md) * var(--ui-line-height-tight) - 2 * var(--ui-border-width)) / 2));
+    --ui-font-size-xs: max(12px, calc(1rem * 0.75));
+    --ui-action-inset-sm: max(var(--ui-space-2), var(--ui-control-inset-block-sm));
+    --ui-action-inset-md: max(var(--ui-space-3), var(--ui-control-inset-block-md));
+    --ui-action-inset-lg: max(var(--ui-space-4), var(--ui-control-inset-block-lg));
+
+    --ui-radius-sm: calc(var(--ui-radius-md) * 0.5);
+    --ui-radius-lg: calc(var(--ui-radius-md) * 1.5);
+    --ui-action-radius: var(--ui-radius-md);
+    --ui-field-radius: var(--ui-radius-md);
+    --ui-overlay-radius: calc(var(--ui-radius-md) * 1.75);
+
+    /* Depth changes elevation and recession, not motion amplitude. Neutral shadows
+       work across palettes without an extra ornamental brand colour. */
+    --_ui-theme-outer: max(0, var(--ui-outer-depth));
+    --_ui-theme-inner: max(0, var(--ui-inner-depth));
+    --_ui-theme-edge: clamp(0, var(--ui-edge-light), 1);
+    --_ui-light-inline: calc((0.5 - var(--ui-light-x)) * 2px);
+    --_ui-shadow-x: calc((0.5 - var(--ui-light-x)) * 2);
+    --_ui-shadow-y: calc((0.5 - var(--ui-light-y)) * 2);
+    --_ui-light-block: calc((0.5 - var(--ui-light-y)) * 2px);
+    /* Catch light at the silhouette, not as a second frame inside the border. */
+    --_ui-theme-edge-paint: calc(-1 * var(--_ui-light-inline)) calc(-1 * var(--_ui-light-block)) 0 rgb(255 255 255 / calc(var(--_ui-theme-edge) * var(--ui-light-strength) * 0.3)), var(--_ui-light-inline) var(--_ui-light-block) 0 rgb(0 0 0 / calc(var(--_ui-theme-edge) * 0.1));
+    --ui-action-edge: var(--_ui-theme-edge-paint);
+    --ui-shadow-xs: calc(1px * var(--_ui-theme-outer) * var(--_ui-shadow-x)) calc(1px * var(--_ui-theme-outer) * var(--_ui-shadow-y)) calc(2px * var(--_ui-theme-outer)) rgb(0 0 0 / 0.08);
+    --ui-shadow-sm: calc(1px * var(--_ui-theme-outer) * var(--_ui-shadow-x)) calc(1px * var(--_ui-theme-outer) * var(--_ui-shadow-y)) calc(3px * var(--_ui-theme-outer)) rgb(0 0 0 / 0.12), calc(4px * var(--_ui-theme-outer) * var(--_ui-shadow-x)) calc(4px * var(--_ui-theme-outer) * var(--_ui-shadow-y)) calc(12px * var(--_ui-theme-outer)) rgb(0 0 0 / 0.06);
+    --ui-shadow-md: var(--ui-shadow-sm);
+    --ui-shadow-lg: calc(8px * var(--_ui-theme-outer) * var(--_ui-shadow-x)) calc(8px * var(--_ui-theme-outer) * var(--_ui-shadow-y)) calc(24px * var(--_ui-theme-outer)) rgb(0 0 0 / 0.12), calc(4px * var(--_ui-theme-outer) * var(--_ui-shadow-x)) calc(4px * var(--_ui-theme-outer) * var(--_ui-shadow-y)) calc(8px * var(--_ui-theme-outer)) rgb(0 0 0 / 0.06);
+    --ui-shadow-xl: var(--ui-shadow-lg);
+    --ui-action-shadow: var(--ui-action-edge), var(--ui-shadow-sm);
+    --ui-raised: var(--ui-shadow-sm);
+    --ui-elevation-tooltip: var(--ui-shadow-sm);
+    --ui-elevation-overlay: var(--ui-shadow-lg);
+    --ui-elevation-dialog: var(--ui-shadow-lg);
+    --ui-control-inset: inset calc(var(--_ui-light-inline) * var(--_ui-theme-inner)) calc(var(--_ui-light-block) * var(--_ui-theme-inner)) calc(3px * var(--_ui-theme-inner)) rgb(0 0 0 / 0.15), inset calc(-1 * var(--_ui-light-inline)) calc(-1 * var(--_ui-light-block)) 0 rgb(255 255 255 / calc(var(--_ui-theme-edge) * var(--ui-light-strength) * 0.18)), var(--ui-material-glow);
+    --ui-pressed: inset calc(2 * var(--_ui-light-inline) * var(--_ui-theme-inner)) calc(2 * var(--_ui-light-block) * var(--_ui-theme-inner)) calc(4px * var(--_ui-theme-inner)) rgb(0 0 0 / 0.2);
+    /* Overlay surface is an optional group override; each surface owns its semantic fallback. */
+    /* Decorative outer material is allowed to transmit the scene. Content keeps
+       its own opaque plane; changing the scene cannot undermine text contrast. */
+    --ui-material-content: var(--ui-surface-raised);
+    --ui-material-glass: color-mix(in srgb, var(--ui-surface-raised) calc((1 - clamp(0, var(--ui-overlay-translucency), 1)) * 100%), transparent);
+    --ui-material-edge: color-mix(in srgb, var(--ui-surface-raised) 80%, var(--ui-text));
+    /* Each role has a bounded reflection colour. Shared source coordinates are
+       relative to each surface, so size and position never change the lighting. */
+    --ui-surface-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-surface-specular, var(--ui-surface-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-surface-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-surface-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-neutral-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-neutral-specular, var(--ui-neutral-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-neutral-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-neutral-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-knob-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-knob-specular, var(--ui-knob-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-knob-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-knob-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-knob-on-accent-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-knob-on-accent-specular, var(--ui-knob-on-accent-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-knob-on-accent-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-knob-on-accent-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-accent-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-accent-specular, var(--ui-accent-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-accent-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-accent-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-accent-secondary-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-accent-secondary-specular, var(--ui-accent-secondary-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-accent-secondary-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-accent-secondary-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-accent-tertiary-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-accent-tertiary-specular, var(--ui-accent-tertiary-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-accent-tertiary-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-accent-tertiary-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-danger-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-danger-specular, var(--ui-danger-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-danger-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-danger-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-success-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-success-specular, var(--ui-success-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-success-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-success-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-warning-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-warning-specular, var(--ui-warning-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-warning-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-warning-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    --ui-info-highlight: radial-gradient(ellipse calc(35% + var(--ui-light-spread) * 165%) calc(55% + var(--ui-light-spread) * 200%) at calc(var(--ui-light-x) * 100%) calc(var(--ui-light-y) * 100%) in srgb, color-mix(in srgb, var(--ui-info-specular, var(--ui-info-reflection, var(--ui-surface-raised))) calc(var(--ui-finish) * var(--ui-light-strength) * 100%), transparent), color-mix(in srgb, var(--ui-info-reflection, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 75%), transparent) 8%, transparent 28%, color-mix(in srgb, var(--ui-info-shade, var(--ui-surface-raised)) calc(var(--ui-finish) * var(--ui-light-strength) * 35%), transparent) 100%);
+    /* Keep the low end gentle; the upper range deliberately reaches beyond restrained ornament. */
+    --_ui-theme-glow: calc(clamp(0, var(--ui-glow), 1) + 2 * pow(clamp(0, var(--ui-glow), 1), 4));
+    --ui-material-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-accent) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-neutral-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-text) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-accent-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-accent) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-accent-secondary-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-accent-secondary) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-accent-tertiary-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-accent-tertiary) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-danger-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-danger) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-success-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-success) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-warning-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-warning) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-info-glow: 0 0 calc(18px * var(--_ui-theme-glow)) color-mix(in srgb, var(--ui-info) calc(var(--_ui-theme-glow) * var(--ui-light-strength) * 18%), transparent);
+    --ui-raised-highlight: var(--ui-surface-highlight);
+
+    /* Existing timing and easing names stay canonical. */
+    --ui-motion-press: var(--ui-motion-fast);
+    --ui-motion-base: calc(var(--ui-motion-fast) * 1.5);
+    --ui-motion-ease-out: var(--ui-motion-ease);
+    --ui-press-scale: 0.98;
+  }
+
+  @media (pointer: coarse) {
+    :where(:root, [data-theme], [data-contrast]) {
+      /* Small native fields use body-size text on touch to avoid focus zoom. */
+      --ui-control-inset-block-sm: max(0px, calc((var(--ui-control-size-sm) - var(--ui-font-size-md) * var(--ui-line-height-tight) - 2 * var(--ui-border-width)) / 2));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(:root, [data-theme], [data-contrast]) {
+      --ui-motion-press: 0ms;
+      --ui-motion-base: 0ms;
+      --ui-press-scale: 1;
+    }
+  }
+  @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+    :where(:root, [data-theme], [data-contrast]) {
+      --ui-finish: 0;
+      --ui-glow: 0;
+    }
+  }
+}
+
+:root {
+  --ui-font-sans: system-ui, sans-serif;
+  --ui-font-display: Georgia, serif;
+  --ui-font-size: 16px;
+  --ui-field-label-font-size: inherit;
+  --ui-font-medium: 500;
+  --ui-control-roominess: 2.5;
+  --ui-rhythm: 1.08;
+  --ui-spacing: 1.05;
+  --ui-scale-ratio: 1.2;
+  --ui-space-curve: 1;
+  --ui-radius-md: 8px;
+  --ui-border-width: 1px;
+  --ui-outer-depth: 0;
+  --ui-inner-depth: 0;
+  --ui-glassiness: 0;
+  --ui-surface-separation: 0;
+  --ui-overlay-translucency: 0;
+  --ui-edge-light: 0;
+  --ui-finish: 0;
+  --ui-glow: 0;
+  --ui-light-x: 0.5;
+  --ui-light-y: 0;
+  --ui-light-spread: 0.5;
+  --ui-light-strength: 0.65;
+  --ui-motion-fast: 100ms;
+  --ui-motion-ease: cubic-bezier(0.2,0,0.2,1);
+  --ui-tonal-opacity: 1;
+  --ui-focus-width: max(2px, calc(var(--ui-border-width) * 2));
+}
+:root, [data-theme], [data-contrast] {
+  --ui-accent: light-dark(#3859d6, #3859d6);
+  --ui-surface: light-dark(#f7f5f0, #0f0e0b);
+  --ui-surface-raised: light-dark(#ffffff, #202020);
+  --ui-text: light-dark(#242a3a, #ebecee);
+  --ui-light-color: light-dark(#ffffff, #ffffff);
+  --ui-surface-sunken: light-dark(#fefefe, #080705);
+  --ui-on-accent: light-dark(#ffffff, #ffffff);
+  --ui-accent-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-accent-reflection: light-dark(#496de6, #496de6);
+  --ui-accent-shade: light-dark(#304dbb, #304dbb);
+  --ui-accent-specular: light-dark(#496de6, #496de6);
+  --ui-accent-hover: light-dark(#2c47af, #2c47af);
+  --ui-accent-active: light-dark(#22398e, #22398e);
+  --ui-accent-soft: light-dark(#ecf2ff, #2b3345);
+  --ui-accent-secondary: light-dark(#a64c35, #a64c35);
+  --ui-on-accent-secondary: light-dark(#ffffff, #ffffff);
+  --ui-accent-secondary-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-accent-secondary-reflection: light-dark(#b45c45, #b45c45);
+  --ui-accent-secondary-shade: light-dark(#91412d, #91412d);
+  --ui-accent-secondary-specular: light-dark(#b45d46, #b45d46);
+  --ui-accent-secondary-hover: light-dark(#873d29, #873d29);
+  --ui-accent-secondary-active: light-dark(#6e3020, #6e3020);
+  --ui-accent-secondary-soft: light-dark(#ffede9, #432d27);
+  --ui-accent-tertiary: light-dark(#3859d6, #3859d6);
+  --ui-on-accent-tertiary: light-dark(#ffffff, #ffffff);
+  --ui-accent-tertiary-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-accent-tertiary-reflection: light-dark(#496de6, #496de6);
+  --ui-accent-tertiary-shade: light-dark(#304dbb, #304dbb);
+  --ui-accent-tertiary-specular: light-dark(#496de6, #496de6);
+  --ui-accent-tertiary-hover: light-dark(#2c47af, #2c47af);
+  --ui-accent-tertiary-active: light-dark(#22398e, #22398e);
+  --ui-accent-tertiary-soft: light-dark(#ecf2ff, #2b3345);
+  --ui-danger: light-dark(#a4584c, #a4584c);
+  --ui-on-danger: light-dark(#ffffff, #ffffff);
+  --ui-danger-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-danger-reflection: light-dark(#ac6155, #ac6155);
+  --ui-danger-shade: light-dark(#904c42, #904c42);
+  --ui-danger-specular: light-dark(#ac6155, #ac6155);
+  --ui-danger-hover: light-dark(#85463d, #85463d);
+  --ui-danger-active: light-dark(#6c3830, #6c3830);
+  --ui-danger-soft: light-dark(#faefed, #3d2f2c);
+  --ui-success: light-dark(#347543, #347543);
+  --ui-on-success: light-dark(#ffffff, #ffffff);
+  --ui-success-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-success-reflection: light-dark(#448351, #448351);
+  --ui-success-shade: light-dark(#2c6539, #2c6539);
+  --ui-success-specular: light-dark(#448351, #448351);
+  --ui-success-hover: light-dark(#295e35, #295e35);
+  --ui-success-active: light-dark(#1f4c2a, #1f4c2a);
+  --ui-success-soft: light-dark(#ecf4ed, #2b362d);
+  --ui-warning: light-dark(#a77a44, #a77a44);
+  --ui-on-warning: light-dark(#000000, #000000);
+  --ui-warning-on-strong: light-dark(#000000, #000000);
+  --ui-warning-reflection: light-dark(#b98d5b, #b98d5b);
+  --ui-warning-shade: light-dark(#976e3d, #976e3d);
+  --ui-warning-specular: light-dark(#dfccb5, #dfccb5);
+  --ui-warning-hover: light-dark(#b38c5f, #b38c5f);
+  --ui-warning-active: light-dark(#be9c75, #be9c75);
+  --ui-warning-soft: light-dark(#f7f1e9, #483b2c);
+  --ui-info: light-dark(#3859d6, #3859d6);
+  --ui-on-info: light-dark(#ffffff, #ffffff);
+  --ui-info-on-strong: light-dark(#ffffff, #ffffff);
+  --ui-info-reflection: light-dark(#496de6, #496de6);
+  --ui-info-shade: light-dark(#304dbb, #304dbb);
+  --ui-info-specular: light-dark(#496de6, #496de6);
+  --ui-info-hover: light-dark(#2c47af, #2c47af);
+  --ui-info-active: light-dark(#22398e, #22398e);
+  --ui-info-soft: light-dark(#ecf2ff, #2b3345);
+  --ui-accent-subtle-text: light-dark(#3655c4, #a2bcff);
+  --ui-accent-soft-border: light-dark(#bfcbf0, #495574);
+  --ui-accent-secondary-subtle-text: light-dark(#9b432c, #ffa28a);
+  --ui-accent-secondary-soft-border: light-dark(#e6c3ba, #724a40);
+  --ui-accent-tertiary-subtle-text: light-dark(#3655c4, #a2bcff);
+  --ui-accent-tertiary-soft-border: light-dark(#bfcbf0, #495574);
+  --ui-danger-subtle-text: light-dark(#93493e, #f9a596);
+  --ui-danger-soft-border: light-dark(#e0c6c1, #6c4d47);
+  --ui-success-subtle-text: light-dark(#2a6b3a, #8ed199);
+  --ui-success-soft-border: light-dark(#bcd2c0, #445d48);
+  --ui-warning-subtle-text: light-dark(#80551d, #e4b47d);
+  --ui-warning-soft-border: light-dark(#d9cab6, #6f5940);
+  --ui-info-subtle-text: light-dark(#3655c4, #a2bcff);
+  --ui-info-soft-border: light-dark(#bfcbf0, #495574);
+  --ui-field-danger: light-dark(#93493e, #f9a596);
+  --ui-editor-code-keyword: light-dark(#3655c4, #a2bcff);
+  --ui-editor-link-color: light-dark(#3655c4, #a2bcff);
+  --ui-editor-toolbar-active-text: light-dark(#3655c4, #a2bcff);
+  --ui-editor-mention-color: light-dark(#3655c4, #a2bcff);
+  --ui-text-secondary: light-dark(#595e6b, #b8b9ba);
+  --ui-text-muted: light-dark(#595e6b, #b8b9ba);
+  --ui-accent-border: light-dark(#3859d6, #3859d6);
+  --ui-accent-hover-border: light-dark(#2c47af, #2c47af);
+  --ui-accent-active-border: light-dark(#22398e, #22398e);
+  --ui-accent-secondary-border: light-dark(#a64c35, #a64c35);
+  --ui-accent-secondary-hover-border: light-dark(#873d29, #873d29);
+  --ui-accent-secondary-active-border: light-dark(#6e3020, #6e3121);
+  --ui-accent-tertiary-border: light-dark(#3859d6, #3859d6);
+  --ui-accent-tertiary-hover-border: light-dark(#2c47af, #2c47af);
+  --ui-accent-tertiary-active-border: light-dark(#22398e, #22398e);
+  --ui-danger-border: light-dark(#a4584c, #a4584c);
+  --ui-danger-hover-border: light-dark(#85463d, #85463d);
+  --ui-danger-active-border: light-dark(#6c3830, #6c3830);
+  --ui-success-border: light-dark(#347543, #347543);
+  --ui-success-hover-border: light-dark(#295e35, #295e35);
+  --ui-success-active-border: light-dark(#1f4c2a, #234d2d);
+  --ui-warning-border: light-dark(#a77a44, #a77a44);
+  --ui-warning-hover-border: light-dark(#b38c5f, #b38c5f);
+  --ui-warning-active-border: light-dark(#be9c75, #be9c75);
+  --ui-info-border: light-dark(#3859d6, #3859d6);
+  --ui-info-hover-border: light-dark(#2c47af, #2c47af);
+  --ui-info-active-border: light-dark(#22398e, #22398e);
+  --ui-neutral-surface: light-dark(#f4f4f5, #313232);
+  --ui-neutral-hover: light-dark(#eaebed, #424242);
+  --ui-neutral-active: light-dark(#e0e1e4, #525353);
+  --ui-control-border: light-dark(#a5a6a8, #6f6f6f);
+  --ui-control-border-hover: light-dark(#8d8e8f, #9d9d9d);
+  --ui-border: light-dark(#e6e7e9, #313131);
+  --ui-border-strong: light-dark(#d3d5d8, #3f3f40);
+  --ui-surface-reflection: light-dark(#ffffff, #3e3e3e);
+  --ui-surface-shade: light-dark(#eeeeee, #151515);
+  --ui-surface-specular: light-dark(#ffffff, #494949);
+  --ui-neutral-reflection: light-dark(#f6f6f7, #4f4e4e);
+  --ui-neutral-shade: light-dark(#e3e3e4, #252626);
+  --ui-neutral-specular: light-dark(#fbfbfb, #6b6a6a);
+  --ui-knob-reflection: light-dark(#707683, #c3c4c5);
+  --ui-knob-shade: light-dark(#4c505c, #a8a9aa);
+  --ui-knob-specular: light-dark(#838894, #e4e4e5);
+  --ui-knob-on-accent-reflection: light-dark(#ffffff, #ffffff);
+  --ui-knob-on-accent-shade: light-dark(#eeeeee, #eeeeee);
+  --ui-knob-on-accent-specular: light-dark(#ffffff, #ffffff);
+  --ui-link-color: light-dark(#3655c4, #a2bcff);
+  --ui-selection-surface: light-dark(#e9effd, #3a3f4b);
+  --ui-selection-text: light-dark(#3655c4, #c1d3ff);
+  --ui-selection-border: light-dark(#d4dffa, #55607a);
+  --ui-control-surface: light-dark(#ffffff, #202020);
+  --ui-control-placeholder: light-dark(#72767e, #878788);
+  --ui-disabled-text: light-dark(#9498a1, #737475);
+  --ui-disabled-surface: light-dark(#fefefe, #080705);
+  --ui-disabled-border: light-dark(#ced0d4, #434343);
+  --ui-focus-ring: light-dark(#3859d6, #7594e8);
+}
+:root { --ui-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23595e6b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme]) { --ui-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b8b9ba' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); } }
+[data-theme="light"] { --ui-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23595e6b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+[data-theme="dark"] { --ui-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b8b9ba' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); }
+:root:not([data-theme]) { color-scheme: light dark; }
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-reduced-motion: reduce) {
+  :root, [data-theme], [data-contrast] { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; --ui-motion-press: 0ms; --ui-press-scale: 1; }
+}
+@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
+  :root, [data-theme], [data-contrast] { --ui-finish: 0; --ui-glow: 0; }
+}

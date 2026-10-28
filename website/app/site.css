@@ -1,0 +1,27 @@
+/* Site identity comes from theme/looma.theme.json, exported by Looma's customizer.
+   These rules compose Markupress's own layouts; Looma controls keep their own styles. */
+:root {
+  --markupress-page-width: 88rem;
+  --markupress-content-width: 48rem;
+  --markupress-sidebar-width: 17rem;
+  --markupress-home-width: 76rem;
+}
+/* Retain the text baseline for Looma's header alignment while the SVG supplies the visible wordmark. */
+[data-component~="markupress-header"] .brand-title { inline-size: 0; max-inline-size: 0; overflow: hidden; white-space: nowrap; clip-path: inset(50%); }
+.markupress-prose h1 { font-weight: 500; letter-spacing: -.035em; }
+.markupress-prose h2 { font-weight: 500; letter-spacing: -.025em; }
+.markupress-prose .hero { padding-block: clamp(2rem, 7vw, 6rem) 3.5rem; }
+.markupress-prose .hero-text { max-inline-size: 56rem; }
+.markupress-prose .hero h1 { max-inline-size: 18ch; font-size: clamp(3.25rem, 7vw, 5.75rem); line-height: 1.02; margin-block: 1rem 1.5rem; }
+.markupress-prose .hero p { max-inline-size: 42rem; font-size: clamp(1.05rem, 2vw, 1.3rem); }
+.markupress-prose .hero .eyebrow { color: var(--ui-link-color); font: 600 .75rem/1.5 var(--ui-font-sans); letter-spacing: .12em; text-transform: uppercase; }
+.markupress-prose .hero .actions { gap: .75rem; }
+.markupress-prose .hero pre { inline-size: fit-content; margin-block: 1.75rem 0; padding: .85rem 1.1rem; border: 1px solid var(--ui-border); background: var(--ui-surface-raised); }
+.markupress-prose .features { border-block-start: 1px solid var(--ui-border); padding-block-start: 2rem; }
+.markupress-prose .features h2 { font: 500 1.65rem/1.2 var(--ui-font-display); }
+.markupress-prose .features p { font-size: .95rem; line-height: 1.65; }
+.markupress-prose .features a { font-weight: 500; }
+@media (max-width: 640px) {
+  .markupress-prose .hero { padding-block: 2.5rem 2rem; }
+  .markupress-prose .hero h1 { font-size: clamp(3rem, 14vw, 4.5rem); }
+}

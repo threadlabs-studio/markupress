@@ -1,24 +1,6 @@
-/* Page-wide defaults, delivered through MarkupKit's css option; components keep their own styles. */
-:root, [data-theme="light"], [data-theme="dark"] {
-  /* Keep both palettes in each inherited value: light-dark resolves where a color is used,
-     so an opposite-mode subtree also works for roles inherited from its parent. */
-  --ui-surface: light-dark(#fafbf9, #19221f);
-  --ui-surface-raised: light-dark(#ffffff, #222e29);
-  --ui-surface-sunken: light-dark(#eff3ee, #131c18);
-  --ui-text: light-dark(#24342c, #edf4ed);
-  --ui-text-secondary: light-dark(#506257, #bdcec2);
-  --ui-text-muted: light-dark(#586a5e, #adbfb3);
-  --ui-accent: light-dark(#286749, #95d5ac);
-  --ui-on-accent: light-dark(#ffffff, #15291c);
-  --ui-danger: light-dark(#ba302d, #ff9890);
-  --ui-on-danger: light-dark(#ffffff, #351513);
-  --ui-success: light-dark(#246c42, #8ed9a5);
-  --ui-warning: light-dark(#92501b, #efbb76);
-  --ui-info: light-dark(#286398, #9acbf7);
-}
-:root { color-scheme: light dark; }
-[data-theme="light"] { color-scheme: light; }
-[data-theme="dark"] { color-scheme: dark; }
+/* The exported Looma design system is the default; site themes override its base layer. */
+@import "../theme/looma.theme.css" layer(base);
+
 html { background: var(--ui-surface); }
-body { margin: 0; color: var(--ui-text); font-family: var(--markupress-font, var(--ui-font-sans)); }
+body { margin: 0; color: var(--ui-text); font-family: var(--ui-font-sans); }
 *, *::before, *::after { box-sizing: border-box; }

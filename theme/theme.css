@@ -1,6 +1,6 @@
 /* Global, so it reaches MarkupKit's built-in navigation, breadcrumbs and pager inside the shell; the shell's own <style> is scoped and stops at them. */
 [data-component~="markupress-shell"] :is([data-component="mk-breadcrumbs"], [data-component="mk-pager"]) a {
-  color: var(--ui-accent); text-underline-offset: .2em;
+  color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em;
 }
 [data-component~="markupress-shell"] [data-component="mk-breadcrumbs"] a[aria-current="page"] { font-weight: 700; }
 [data-component~="markupress-shell"] [data-component="mk-breadcrumbs"] ol { display: flex; flex-wrap: wrap; gap: .25rem .5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; font-size: .875rem; }
@@ -12,8 +12,8 @@
 /* Shared blocks. Markdown inside a callout or tabs is projected into a Looma component, where the page's scoped
    prose styles never reach (HTML Next styling: a page's rules stop at every nested component), so these global
    rules space the blocks and repeat the prose code styles inside them. Details is native and needs no script. */
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"], details) { margin-block: 1rem; }
-.markupress-prose details { padding: .5rem 1rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
+.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"], details) { margin-block: 1.5rem; }
+.markupress-prose details { padding: 1rem 1.25rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
 .markupress-prose summary { cursor: pointer; font-weight: 600; }
 .markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details) { margin-block: .5rem; }
 .markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):first-child { margin-block-start: 0; }
@@ -33,8 +33,8 @@
 .markupress-prose .code-actions[hidden] { display: none; }
 .markupress-prose figure.code:is(:hover, :focus-within) .code-actions { opacity: 1; }
 @media (hover: none) { .markupress-prose .code-actions { opacity: 1; } }
-.markupress-prose .code-actions button { padding: .3rem .5rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-sm, .25rem); background: var(--ui-surface); color: var(--ui-text); font: .75rem/1 var(--markupress-font, system-ui, sans-serif); cursor: pointer; }
-.markupress-prose .code-actions button[aria-pressed="true"] { border-color: var(--ui-accent); }
+.markupress-prose .code-actions button { padding: .3rem .5rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-sm, .25rem); background: var(--ui-surface); color: var(--ui-text); font: .75rem/1 var(--ui-font-sans); cursor: pointer; }
+.markupress-prose .code-actions button[aria-pressed="true"] { border-color: var(--ui-link-color, var(--ui-accent)); }
 .markupress-prose pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 .markupress-prose pre .line.highlighted { display: inline-block; box-sizing: content-box; min-inline-size: 100%; margin-inline: -1rem; padding-inline: 1rem; background: color-mix(in srgb, var(--ui-accent) 10%, var(--ui-surface)); box-shadow: inset 2px 0 var(--ui-accent); }
 .markupress-prose pre.line-numbers code { counter-reset: line; }
@@ -53,7 +53,7 @@
 .markupress-prose .features h2 { font-size: 1.15rem; line-height: 1.3; }
 .markupress-prose .features h2 a { color: inherit; text-decoration: none; }
 .markupress-prose .features p { color: var(--ui-text-secondary, inherit); }
-.markupress-prose .features a { color: var(--ui-accent); text-underline-offset: .2em; }
+.markupress-prose .features a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; }
 /* MarkupKit sets data-mk-navigating on <html> while a page renders in place: a bar along the top shows it, after a
    moment, so a quick navigation never flashes. */
 html[data-mk-navigating] body::before {

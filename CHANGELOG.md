@@ -8,6 +8,11 @@ All notable changes to this project will be documented in this file.
 - Support `navigation: overview` for a route group’s overview page, preserving flat child URLs and avoiding a duplicate overview sub-link.
 
 - Add `sidebarNavigation: 'sections'`: keep category links visible, opening the overview or first page, and list only the current category's pages without disclosure controls. Server rendering and native links support the same navigation without JavaScript.
+- Adopt the printer's monogram and outlined wordmark for the documentation site, with transparent light/dark SVG lockups, a standalone mark and an adaptive favicon. Preserve the approved artwork's letterforms and use Looma's serif display font for large headings.
+- Replace the default green palette with the complete ink-and-paper design system exported from Looma's customizer. Keep its editable recipe alongside the CSS, and load defaults in the base cascade layer so site themes can override them.
+- Use Looma's body, display and monospace font properties throughout. Replace `--markupress-font` overrides with `--ui-font-sans`.
+- Refresh the documentation home page and reading styles, and reorganize the setup, theme and layout guides with callouts, code groups and expandable reference details.
+- Require Looma 0.43.2 for contextual SiteHeader navigation colors.
 
 - Supply a native section-navigation drawer on home pages, keeping the shared site header compact and its logo visible on mobile. Close the home section drawer after following a link.
 
