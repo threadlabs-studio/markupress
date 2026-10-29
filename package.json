@@ -65,7 +65,7 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "expressmark": "0.3.0",
+    "expressmark": "0.4.0",
     "@threadlabs/markupkit": ">=0.3.0 <1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
@@ -77,7 +77,7 @@
   },
   "peerDependencies": {
     "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.44.0 <1"
+    "@threadlabs/looma": ">=0.44.0 <0.45"
   },
   "bin": {
     "markupress": "./dist/cli.js"
