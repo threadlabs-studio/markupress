@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Next release
 
 - Require Expressmark 0.4.0, which reads block quotes and lists with Parseman 0.56.0 and renders the same output. A rewritten page or snapshot keeps the source's final line ending, and keeps the source of the list items and table cells it leaves alone.
+- Accept Looma 0.44 as the theme peer. The Markupress header supplies its own Navigation button, and Looma 0.45's SiteHeader replaces it with its own mobile navigation.
 
 - Add a `markdownSyntax` site option and front matter field. `compatible` reads a site or page as CommonMark and GFM; `standard` stays the default.
 - Render a container with no type, such as `::: [Heads up]`, as a callout in Looma's default tone.
