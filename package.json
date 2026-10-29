@@ -65,7 +65,7 @@
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   },
   "dependencies": {
-    "expressmark": "0.3.0",
+    "expressmark": "0.4.0",
     "@threadlabs/markupkit": ">=0.3.0 <1",
     "parse5": "8.0.1",
     "yaml": "2.9.1",
