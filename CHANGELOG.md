@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Accept compatible future Looma and Expressmark minor versions, and give generated starters the same Looma range. Keep the qualified lockfile unchanged. Looma 0.44 remains supported; 0.45 and the unfixed 0.46.0 header are excluded because their desktop dialog role and mobile custom navigation fail installed-site checks. Looma 0.46.1 fixes those behaviors and later compatible minors are admitted.
+- Project the custom documentation menu through a live element so the shared header can show it on mobile.
+
 - Require Expressmark 0.4.0, which reads block quotes and lists with Parseman 0.56.0 and renders the same output. A rewritten page or snapshot keeps the source's final line ending, and keeps the source of the list items and table cells it leaves alone.
 - Accept Looma 0.44 as the theme peer. The Markupress header supplies its own Navigation button, and Looma 0.45's SiteHeader replaces it with its own mobile navigation.
 
