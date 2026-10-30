@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.14.5
 
 - Accept compatible future Looma and Expressmark minor versions, and give generated starters the same Looma range. Keep the qualified lockfile unchanged. Looma 0.44 remains supported; 0.45 and the unfixed 0.46.0 header are excluded because their desktop dialog role and mobile custom navigation fail installed-site checks. Looma 0.46.1 fixes those behaviors and later compatible minors are admitted.
 - Project the custom documentation menu through a live element so the shared header can show it on mobile.
