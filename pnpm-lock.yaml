@@ -170,7 +170,7 @@ importers:
         specifier: '>=0.3.0 <1'
         version: 0.3.0(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
-        specifier: 0.4.0
+        specifier: '>=0.4.0 <1'
         version: 0.4.0
       minisearch:
         specifier: 7.2.0
@@ -201,7 +201,7 @@ importers:
         specifier: 1.0.0-alpha.69
         version: 1.0.0-alpha.69
       '@threadlabs/looma':
-        specifier: 0.44.1
+        specifier: '>=0.44.0 <0.45 || >=0.46.1 <1'
         version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.69)(@threadlabs/markupkit@0.3.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1

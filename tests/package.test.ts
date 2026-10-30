@@ -33,6 +33,10 @@ beforeAll(() => {
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
+  if (process.env.MARKUPRESS_EXPECT_LOOMA) {
+    const actual = JSON.parse(readFileSync(join(workspace, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+    expect(actual.version, 'The installed compatibility probe must use its intended Looma release').toBe(process.env.MARKUPRESS_EXPECT_LOOMA);
+  }
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
@@ -112,7 +116,7 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
     // The starter keeps the required alpha runtime and the same compatible Looma range.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.devDependencies['@threadlabs/looma'], markupress: `>=${own.version} <1` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'], markupress: `>=${own.version} <1` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);
