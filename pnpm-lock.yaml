@@ -168,7 +168,7 @@ importers:
     dependencies:
       '@threadlabs/markupkit':
         specifier: '>=0.4.2'
-        version: 0.4.3(@types/node@22.20.1)(yaml@2.9.1)
+        version: 0.4.3(@types/node@26.6.3)(yaml@2.9.1)
       expressmark:
         specifier: '>=0.4.0'
         version: 0.4.0
@@ -189,7 +189,7 @@ importers:
         version: 4.5.0
       vite:
         specifier: 8.3.5
-        version: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
+        version: 8.3.5(@types/node@26.6.3)(yaml@2.9.1)
       yaml:
         specifier: 2.9.1
         version: 2.9.1
@@ -202,10 +202,10 @@ importers:
         version: 1.0.0-alpha.74
       '@threadlabs/looma':
         specifier: '>=0.49.4'
-        version: 0.49.4(@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        version: 0.49.4(@threadlabs/markupkit@0.4.3(@types/node@26.6.3)(yaml@2.9.1))(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1))
       '@types/node':
-        specifier: 22.20.1
-        version: 22.20.1
+        specifier: 26.6.3
+        version: 26.6.3
       jsdom:
         specifier: 30.1.3
         version: 30.1.3
@@ -220,7 +220,7 @@ importers:
         version: 7.0.2
       vitest:
         specifier: 5.0.5
-        version: 5.0.5(@types/node@22.20.1)(jsdom@30.1.3)(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        version: 5.0.5(@types/node@26.6.3)(jsdom@30.1.3)(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1))
 
 packages:
 
@@ -879,8 +879,8 @@ packages:
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
 
-  '@types/node@22.20.1':
-    resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+  '@types/node@26.6.3':
+    resolution: {integrity: sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -1490,8 +1490,8 @@ packages:
   uc.micro@3.0.0:
     resolution: {integrity: sha512-U3PppEkleoTnIfi8BozMx3yju3qc/L6SwqWo2Sw+54PX+PX0q9I+r1Um5HCmqD7n9VDX5/v3vQH/AjA6deDdtw==}
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
   undici@8.12.3:
     resolution: {integrity: sha512-+fdndUTwBP86cVjihTp21hZHo7d6oj1c/47XPA3lL8mM0XHs+C4EkcjmgRsFnFk2f/UONGDy9ItBItmXsLOQHw==}
@@ -2094,7 +2094,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.49.4(@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.49.4(@threadlabs/markupkit@0.4.3(@types/node@26.6.3)(yaml@2.9.1))(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1))':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       dompurify: 3.4.15
@@ -2104,18 +2104,18 @@ snapshots:
       lucide: 0.554.0
       parse5: 8.0.1
     optionalDependencies:
-      '@threadlabs/markupkit': 0.4.3(@types/node@22.20.1)(yaml@2.9.1)
-      vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit': 0.4.3(@types/node@26.6.3)(yaml@2.9.1)
+      vite: 8.3.5(@types/node@26.6.3)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
 
-  '@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1)':
+  '@threadlabs/markupkit@0.4.3(@types/node@26.6.3)(yaml@2.9.1)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       parse5: 8.0.1
       typescript-compiler: '@typescript/typescript6@6.0.2'
-      vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)
+      vite: 8.3.4(@types/node@26.6.3)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@noble/hashes'
       - '@types/node'
@@ -2154,9 +2154,9 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
-  '@types/node@22.20.1':
+  '@types/node@26.6.3':
     dependencies:
-      undici-types: 6.21.0
+      undici-types: 8.9.0
 
   '@types/trusted-types@2.0.7':
     optional: true
@@ -2229,14 +2229,14 @@ snapshots:
 
   '@ungap/structured-clone@1.4.0': {}
 
-  '@vitest/mocker@5.0.5(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@vitest/mocker@5.0.5(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.5
       estree-walker: 3.0.3
       magic-string: 1.4.3
     optionalDependencies:
-      vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
+      vite: 8.3.5(@types/node@26.6.3)(yaml@2.9.1)
 
   '@vitest/spy@5.0.5': {}
 
@@ -2794,7 +2794,7 @@ snapshots:
 
   uc.micro@3.0.0: {}
 
-  undici-types@6.21.0: {}
+  undici-types@8.9.0: {}
 
   undici@8.12.3: {}
 
@@ -2837,7 +2837,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.3.4(@types/node@22.20.1)(yaml@2.9.1):
+  vite@8.3.4(@types/node@26.6.3)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -2845,11 +2845,11 @@ snapshots:
       rolldown: 1.2.15
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.6.3
       fsevents: 2.3.3
       yaml: 2.9.1
 
-  vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1):
+  vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -2857,14 +2857,14 @@ snapshots:
       rolldown: 1.2.15
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.6.3
       fsevents: 2.3.3
       yaml: 2.9.1
 
-  vitest@5.0.5(@types/node@22.20.1)(jsdom@30.1.3)(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1)):
+  vitest@5.0.5(@types/node@26.6.3)(jsdom@30.1.3)(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.5(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+      '@vitest/mocker': 5.0.5(vite@8.3.5(@types/node@26.6.3)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -2875,10 +2875,10 @@ snapshots:
       tinybench: 6.2.2
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
+      vite: 8.3.5(@types/node@26.6.3)(yaml@2.9.1)
       why-is-node-running: 3.2.1
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.6.3
       jsdom: 30.1.3
     transitivePeerDependencies:
       - msw
