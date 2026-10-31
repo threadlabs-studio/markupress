@@ -43,7 +43,7 @@
     "prepack": "pnpm build"
   },
   "devDependencies": {
-    "@types/node": "22.20.1",
+    "@types/node": "26.6.3",
     "oxlint": "1.90.0",
     "typescript": "7.0.2",
     "vitest": "5.0.5",
