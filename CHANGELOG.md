@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Qualify HTML Next alpha.74 so projected search rows receive their destination bindings on their first update. Generate starters from the public runtime peer range rather than the development compiler minimum, preserving installations alongside supported Looma releases. Dependency ranges retain no speculative upper ceiling.
+
+- Require MarkupKit 0.4.2 so component consumers can share the corrected HTML Next projection and hydration runtime.
+
+- Admit newer HTML Next runtimes and remove speculative 1.0 ceilings from Looma, MarkupKit and Expressmark compatibility ranges, including generated starters. Retain the exclusions for verified header/navigation incompatibilities; the lockfile records exact tested versions.
+
+- Accept compatible future Looma and Expressmark minor versions, and give generated starters the same Looma range. Keep the qualified lockfile unchanged. Looma 0.44 remains supported; 0.45 and the unfixed 0.46.0 header are excluded because their desktop dialog role and mobile custom navigation fail installed-site checks. Looma 0.46.1 fixes those behaviors and later compatible minors are admitted.
+- Project the custom documentation menu through a live element so the shared header can show it on mobile.
+
+- Require Expressmark 0.4.0, which reads block quotes and lists with Parseman 0.56.0 and renders the same output. A rewritten page or snapshot keeps the source's final line ending, and keeps the source of the list items and table cells it leaves alone.
+- Accept Looma 0.44 as the theme peer. The Markupress header supplies its own Navigation button, and Looma 0.45's SiteHeader replaces it with its own mobile navigation.
+
 - Add a `markdownSyntax` site option and front matter field. `compatible` reads a site or page as CommonMark and GFM; `standard` stays the default.
 - Render a container with no type, such as `::: [Heads up]`, as a callout in Looma's default tone.
 

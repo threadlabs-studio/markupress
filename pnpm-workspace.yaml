@@ -1,5 +1,7 @@
-# Exact exceptions for the pinned release set; other releases retain pnpm's age gate.
+# Exact age exceptions for verified releases; other releases retain pnpm's age gate.
 minimumReleaseAgeExclude:
+  - '@threadlabs/markupkit@0.4.2'
+  - '@nextwebwg/html-next@1.0.0-alpha.74'
   - '@vitest/mocker@5.0.0'
   - '@vitest/spy@5.0.0'
   - 'postcss@8.5.28'
@@ -7,5 +9,5 @@ minimumReleaseAgeExclude:
   - '@nextwebwg/html-next@1.0.0-alpha.69'
   - '@threadlabs/markupkit@0.3.0'
   - '@threadlabs/looma@0.31.4 || 0.33.0 || 0.37.1 || 0.41.2 || 0.43.2 || 0.44.0 || 0.44.1'
-  - 'expressmark@0.1.6 || 0.2.0 || 0.2.1 || 0.2.2 || 0.3.0'
-  - 'parseman@0.55.3'
+  - 'expressmark@0.1.6 || 0.2.0 || 0.2.1 || 0.2.2 || 0.3.0 || 0.4.0'
+  - 'parseman@0.55.3 || 0.56.0'

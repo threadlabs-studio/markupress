@@ -33,6 +33,10 @@ beforeAll(() => {
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
   const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
+  if (process.env.MARKUPRESS_EXPECT_LOOMA) {
+    const actual = JSON.parse(readFileSync(join(workspace, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+    expect(actual.version, 'The installed compatibility probe must use its intended Looma release').toBe(process.env.MARKUPRESS_EXPECT_LOOMA);
+  }
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
@@ -112,7 +116,7 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
     // The starter keeps the required alpha runtime and the same compatible Looma range.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.devDependencies['@threadlabs/looma'], markupress: `>=${own.version} <1` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.peerDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'], markupress: `>=${own.version}` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);
@@ -458,7 +462,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('#documentation-navigation, [data-component="mk-pager"]').count()).toBe(0);
       await page.setViewportSize({ width: 375, height: 812 });
       const homeHeader = page.locator('[data-component~="markupress-header"]');
-      expect((await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
+      // Media-query events apply the drawer state during the next rendering pass.
+      await expect.poll(async () => (await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
       expect(await page.locator('header img.logo-light:visible, header img.logo-dark:visible').count()).toBe(1);
       expect(await page.getByRole('navigation', { name: 'Main', exact: true }).isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
@@ -501,7 +506,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
       if(process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({path:join(process.env.MARKUPRESS_SCREENSHOTS,`markupress-${mode}-mobile-notice.png`)});
       await page.locator('html').evaluate(element=>element.style.setProperty('--markupress-header-notice-display','none'));
-      expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
+      await expect.poll(() => page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const brand = page.getByRole('link', { name: /^Example docs with a deliberately long product title /, exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
       for (const label of ['Navigation', 'Search']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
