@@ -34,9 +34,9 @@ th { background: var(--ui-surface-sunken); font-weight: var(--ui-font-semibold, 
 [data-type="chip"][data-tone="purple"] { --_chip-surface: var(--ui-accent-soft); --_chip-text: var(--ui-accent-subtle-text); }
 [data-type="mention"] { padding: .08em .28em; border-radius: var(--ui-radius-sm, 4px); background: var(--ui-accent-soft); color: var(--ui-accent-subtle-text); font-weight: var(--ui-font-medium, 500); white-space: nowrap; }
 nav[data-type="toc"] { margin: 1rem 0; }
-nav[data-type="toc"] :is(ol, ul, div)[role="list"] { margin: .25rem 0; padding-left: 1.25rem; }
-nav[data-type="toc"] > [role="list"] { padding-left: 0; }
-nav[data-type="toc"][data-format="numbered"] > ol, nav[data-type="toc"][data-format="bulleted"] > ul { padding-left: 1.25rem; }
+nav[data-type="toc"] :is(ol, ul, div)[role="list"] { margin: .25rem 0; padding-inline-start: 1.25rem; }
+nav[data-type="toc"] > [role="list"] { padding-inline-start: 0; }
+nav[data-type="toc"][data-format="numbered"] > ol, nav[data-type="toc"][data-format="bulleted"] > ul { padding-inline-start: 1.25rem; }
 figure:not(.code) { margin: 1.5rem 0; }
 figure:not(.code) > figcaption { margin-top: .5rem; font-size: .9rem; color: var(--ui-text-muted, inherit); }
 img[data-placement="center"] { display: block; margin-inline: auto; }
@@ -53,3 +53,7 @@ img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
 [data-footnotes] li:target { background: var(--ui-accent-soft); }
 [data-footnote-ref] { text-decoration: none; }
 :is([id^="fn:"], [id^="fnref:"]) { scroll-margin-top: 5rem; }
+
+/* Code retains its program order within a document of either reading direction. */
+pre { direction: ltr; unicode-bidi: isolate; text-align: start; }
+code { unicode-bidi: isolate; }

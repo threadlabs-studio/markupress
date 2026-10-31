@@ -41,7 +41,7 @@ export default function shell(host: ComponentHost): void {
       const notice = target.closest<HTMLElement>('[data-action="dismiss-header-notice"]');
       if (notice) {
         window.dispatchEvent(new window.CustomEvent('markupress-header-notice-dismiss'));
-        if (!notice.checkVisibility()) host.root.querySelector<HTMLElement>('[aria-label="Search"], [data-action="theme"] button')?.focus();
+        if (!notice.checkVisibility()) host.root.querySelector<HTMLElement>('[data-action="search"], [data-action="theme"] button')?.focus();
       }
       if (target.closest('a[href]')) {
         host.root.querySelector<HTMLElement>('#documentation-navigation:popover-open, #home-navigation:popover-open')?.hidePopover();

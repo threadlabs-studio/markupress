@@ -96,7 +96,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   expect(html).not.toContain('controller="');
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
-  expect(html).not.toContain('Last updated');
+  expect(html).not.toContain('<time ');
   expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
   expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
@@ -167,7 +167,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         requestAnimationFrame(record);
         document.addEventListener('transitionrun', event => { if (event.target instanceof Element && event.target.closest('[data-action="theme"]')) load.transitions.push(event.propertyName); }, true);
       });
-      const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+      const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(`${page.url()}: ${error.stack ?? error.message}`));
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
       await page.goto(server.url + 'v/current/guide/install/');
       expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
@@ -662,13 +662,20 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
   const site = join(workspace, 'localized');
   for (const version of ['docs']) for (const [file, text] of Object.entries({
     'en/index.md': '# English home', 'en/setup.md': '---\nid: setup\n---\n# Setup\n\nEnglishquartz',
-    'fr/index.md': '# Accueil', 'fr/demarrer.md': '---\nid: setup\n---\n# Installation française\n\nFrançaisquartz\n\n![Marque](./mark.svg)',
+    'fr/index.md': '# Accueil', 'fr/demarrer.md': '---\nid: setup\n---\n# Installation française\n\nFrançaisquartz\n\n![Marque](./mark.svg)\n\n```js\nconst value = { text: "Français" };\n```\n\n::: details\nTexte masqué\n:::',
     'fr/mark.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10"/></svg>',
-    'ar/index.md': '# البداية', 'ar/install.md': '---\nid: setup\n---\n# التثبيت\n\nعربي',
+    'ar/index.md': '# البداية', 'ar/install.md': '---\nid: setup\n---\n# التثبيت\n\nعربي\n\n```js\nconst value = { text: "عربي" };\n```',
   })) { mkdirSync(join(site, version, file, '..'), { recursive: true }); writeFileSync(join(site, version, file), text); }
-  const options = { root: site, base: '/manual/', port: 0, locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية', dir: 'rtl' as const } }, defaultLocale: 'en' };
+  mkdirSync(join(site, 'public'), { recursive: true });
+  writeFileSync(join(site, 'public/logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="80"><rect width="600" height="80" fill="teal"/></svg>');
+  const options = { root: site, base: '/manual/', origin: 'https://docs.example', port: 0, locales: { en: { label: 'English' }, fr: { label: 'Français', title: 'Documentation française',
+    editLink: 'https://example.fr/edit/', translations: { codeCopied: 'Copié avec succès', codeCopyFailed: 'Copie impossible' } }, ar: { label: 'العربية' } }, defaultLocale: 'en' };
   await product.snapshotVersion('v1', options);
   writeFileSync(join(site, 'docs/fr/demarrer.md'), readFileSync(join(site, 'docs/fr/demarrer.md'), 'utf8') + '\n\ncourantseulement');
+  execFileSync('git', ['init', '--quiet'], { cwd: site });
+  execFileSync('git', ['add', 'docs', 'versions'], { cwd: site });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Documentation'],
+    { cwd: site, env: { ...process.env, GIT_AUTHOR_DATE: '2026-10-28T12:00:00Z', GIT_COMMITTER_DATE: '2026-10-28T12:00:00Z' } });
   await product.buildSite(options);
   const browser = await chromium.launch({ headless: true });
   try {
@@ -678,10 +685,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
         for (const javaScriptEnabled of mode === 'preview' ? [true, false] : [true]) {
           const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1280, height: 900 } });
           try {
-            const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+            const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(`${page.url()}: ${error.stack ?? error.message}`));
             await page.goto(server.url + 'fr/v/v1/demarrer/');
+            const logoAndMenuSeparate = () => page.locator('[data-component~="ui-site-header"]').evaluate(header => {
+              const logo = header.querySelector('.logo-light')!.getBoundingClientRect();
+              const menu = header.querySelector('[popovertarget="documentation-navigation"]')!.getBoundingClientRect();
+              return logo.width > 0 && menu.width > 0 && (logo.right <= menu.left || logo.left >= menu.right);
+            });
+            const alternates = () => page.locator('head link[rel="alternate"]').evaluateAll(links => links.map(link => [link.getAttribute('hreflang'), link.getAttribute('href')]));
+            const versionOne = [['en', 'https://docs.example/manual/v/v1/setup/'], ['fr', 'https://docs.example/manual/fr/v/v1/demarrer/'],
+              ['ar', 'https://docs.example/manual/ar/v/v1/install/'], ['x-default', 'https://docs.example/manual/v/v1/setup/']];
+            expect(await alternates()).toEqual(versionOne);
             expect(await page.getByRole('img', { name: 'Marque' }).evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(24);
-            const languages = page.getByRole('navigation', { name: 'Languages', exact: true });
+            expect(await page.locator('time').textContent()).toBe('28 octobre 2026');
+            expect(await page.locator('time').getAttribute('datetime')).toBe('2026-10-28');
+            expect(await page.getByRole('link', { name: 'Modifier cette page', exact: true }).getAttribute('href')).toContain('https://example.fr/edit/');
+            expect(await page.locator('summary').filter({ hasText: 'Détails' }).count()).toBe(1);
+            expect(await page.getByRole('button', { name: /^Apparence:/ }).count()).toBe(1);
+            expect(await page.getByRole('button', { name: /^Apparence:/ }).getAttribute('aria-description')).toBe('Activer pour choisir l’apparence suivante.');
+            const languages = page.getByRole('navigation', { name: /^(Languages|Langues|اللغات)$/, exact: true });
             await languages.locator('summary').click();
             await languages.getByRole('link', { name: 'العربية', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
@@ -690,20 +712,36 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             await languages.getByRole('link', { name: 'Français', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
             await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
-            await expect.poll(() => page.locator('html').getAttribute('dir')).toBeNull();
+            await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('ltr');
+            await expect.poll(alternates).toEqual(versionOne);
             if (javaScriptEnabled) {
-              await page.getByRole('button', { name: 'Search', exact: true }).click();
-              const input = page.getByRole('searchbox', { name: 'Search the documentation' });
+              const example = page.locator('figure.code');
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { Object.assign(window, { copiedCode: value }); } } }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).press('Enter');
+              await expect.poll(() => example.getByRole('button', { name: 'Copié avec succès', exact: true }).count()).toBe(1);
+              expect(await page.evaluate(() => (window as unknown as { copiedCode: string }).copiedCode)).toBe('const value = { text: "Français" };');
+              await expect.poll(() => example.getByRole('button', { name: 'Copier', exact: true }).count(), { timeout: 5000 }).toBe(1);
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Clipboard denied'); } } }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).click();
+              await expect.poll(() => example.getByRole('button', { name: 'Copie impossible', exact: true }).count()).toBe(1);
+              await expect.poll(() => example.getByRole('button', { name: 'Copier', exact: true }).count(), { timeout: 5000 }).toBe(1);
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).click();
+              await expect.poll(() => example.getByRole('button', { name: 'Copie impossible', exact: true }).count()).toBe(1);
+              await example.getByRole('button', { name: 'Retour à la ligne', exact: true }).press('Space');
+              expect(await example.locator('pre').getAttribute('class')).toContain('wrap');
+              await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+              const input = page.getByRole('searchbox', { name: 'Rechercher dans la documentation' });
               await input.fill('courantseulement');
-              await expect.poll(() => page.getByRole('status').textContent()).toContain('No results');
+              await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
               await input.fill('Englishquartz');
-              await expect.poll(() => page.getByRole('status').textContent()).toContain('No results');
+              await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
               await input.fill('Françaisquartz');
               await expect.poll(() => page.locator('[data-component~="ui-search-result-row"]').count()).toBeGreaterThan(0);
               await input.press('Enter');
               await expect.poll(() => input.isVisible()).toBe(false);
               await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
-              await page.getByRole('button', { name: 'Search', exact: true }).click();
+              await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
               await page.evaluate(() => location.assign('/manual/v/v1/setup/'));
               await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
               await expect.poll(() => input.isVisible()).toBe(false);
@@ -716,6 +754,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
               await page.screenshot({ path: join(root, '.context/locales-desktop.png') });
             }
             await page.setViewportSize({ width: 375, height: 812 });
+            await expect.poll(logoAndMenuSeparate).toBe(true);
+            await languages.locator('summary').click();
+            await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+            await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
+            expect(await page.locator('pre').evaluate(element => getComputedStyle(element).direction)).toBe('ltr');
+            await expect.poll(logoAndMenuSeparate).toBe(true);
+            await page.getByRole('button', { name: 'التنقل', exact: true }).click();
+            const drawer = page.locator('#documentation-navigation');
+            expect(await drawer.isVisible()).toBe(true);
+            expect(await drawer.evaluate(element => Math.abs(element.getBoundingClientRect().right - innerWidth))).toBeLessThan(1);
+            await page.keyboard.press('Escape');
+            await page.getByRole('button', { name: 'التنقل', exact: true }).click();
+            await drawer.getByRole('link', { name: 'الحالية', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+            // MarkupKit commits the URL before its layers and head finish rendering.
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            await expect.poll(alternates).toEqual([['en', 'https://docs.example/manual/setup/'], ['fr', 'https://docs.example/manual/fr/demarrer/'],
+              ['ar', 'https://docs.example/manual/ar/install/'], ['x-default', 'https://docs.example/manual/setup/']]);
+            expect(await page.locator('head link[rel="canonical"]').getAttribute('href')).toBe('https://docs.example/manual/ar/install/');
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
             if (mode === 'preview' && javaScriptEnabled) await page.screenshot({ path: join(root, '.context/locales-mobile.png') });
             expect(errors).toEqual([]);

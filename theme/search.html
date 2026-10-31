@@ -1,18 +1,22 @@
+<link rel="component" href="@threadlabs/looma/components/ui-icon/ui-icon.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-search-shell/ui-search-shell.html">
 <link rel="component" href="@threadlabs/looma/components/ui-search-result-row/ui-search-result-row.html">
 <!-- The search button and dialog. The button stays hidden until the controller runs, since search needs it. -->
 <template component="markupress-search" controller="../dist/controllers/search.js">
 <defs>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="lang" type="string" default="en">Language for feedback and number formatting</prop>
+
 <prop name="index" type="string" required>The URL of the version's search index</prop>
 <prop name="options" type="object({ limit: number, fuzzy: number, prefix: boolean })" default='{"limit":20,"fuzzy":0.2,"prefix":true}'>Local matching options</prop>
 <state name="open" type="boolean" value="false"></state>
 <state name="selected" type="string" value=""></state>
 <state name="status" type="string" value=""></state>
 <state name="results" type="list(object({ href: string, page: string, heading: string, excerpt: string }))" value="[]"></state></defs>
-<div class="search"><span class="trigger" hidden><ui-icon-button label="Search" variant="ghost" tone="neutral" data-action="search" aria-keyshortcuts="/ Control+K Meta+K"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg></ui-icon-button></span>
-<ui-search-shell from:open="$open" modal dismissible label="Search the documentation">
-<input slot="search" type="search" aria-label="Search the documentation" placeholder="Search" autocomplete="off" spellcheck="false">
+<div class="search"><span class="trigger" hidden><ui-icon-button from:label="$ui.search" variant="ghost" tone="neutral" data-action="search" aria-keyshortcuts="/ Control+K Meta+K"><ui-icon name="search"></ui-icon></ui-icon-button></span>
+<ui-search-shell from:open="$open" modal dismissible from:label="$ui.searchLabel">
+<input slot="search" type="search" from:aria-label="$ui.searchLabel" from:placeholder="$ui.search" autocomplete="off" spellcheck="false">
 <p slot="status" role="status">{$status}</p>
 <div slot="body"><div $each="result of $results" from:data-href="$result.href"><ui-search-result-row from:selected="$result.href = $selected"><span slot="title">{$result.heading}</span><span slot="meta">{$result.page}</span><span slot="excerpt">{$result.excerpt}</span></ui-search-result-row></div></div>
 </ui-search-shell></div>

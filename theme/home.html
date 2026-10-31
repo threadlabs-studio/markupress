@@ -5,6 +5,10 @@
      Markupress reads as a hero and feature cards. A site's app/layouts/home.html replaces it. -->
 <template component="markupress-home" controller="../dist/controllers/shell.js">
 <defs>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="uiLang" type="string" default="en">Language of the reader interface</prop>
+<prop name="noticeLabel" type="string" default="">Accessible name for dismissing the header notice</prop>
+
 <title>{$title}</title>
 <!-- A null favicon leaves the link out. -->
 <link rel="icon" from:href="$favicon">
@@ -22,10 +26,10 @@
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
 <state name="appearance" type="string" value="automatic"></state>
 <state name="appearanceReady" type="boolean" value="false"></state></defs>
-<div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
-<ui-icon-button $if="$nav.length" slot="menu" label="Navigation" variant="ghost" tone="neutral" popovertarget="home-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></markupress-header>
-<nav $if="$nav.length" id="home-navigation" popover aria-label="Sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a></li></ul></nav>
+<div class="site" from:lang="$uiLang"><a class="skip" href="#documentation-content">{$ui.skipToContent}</a>
+<markupress-header from:ui="$ui" from:ui-lang="$uiLang" from:notice-label="$noticeLabel" from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
+<ui-icon-button $if="$nav.length" slot="menu" from:label="$ui.navigation" variant="ghost" tone="neutral" popovertarget="home-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></markupress-header>
+<nav $if="$nav.length" id="home-navigation" popover from:aria-label="$ui.sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a></li></ul></nav>
 <main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>

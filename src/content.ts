@@ -6,8 +6,17 @@ import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } 
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
 import { stylesheet } from './styles.js';
+import { english, resolveTranslations, textDirection, type TranslationOverrides, type Translations } from './i18n.js';
 
+export interface LanguageAlternate {
+  readonly hreflang: string;
+  readonly href: string;
+}
 export interface MarkdownOptions {
+  /** Declarative alternate-language links in this page's head. */
+  readonly alternates?: readonly LanguageAlternate[];
+  /** Reader labels for code actions and unlabelled details blocks. */
+  readonly translations?: TranslationOverrides;
   readonly file: string;
   readonly pageName: string;
   /** Resolve authored document links and assets from their original source. */
@@ -61,6 +70,8 @@ export interface FrontMatter {
   readonly lang?: string;
   /** How this page's Markdown reads: `standard` Expressive Markdown or `compatible` CommonMark and GFM. */
   readonly markdownSyntax?: Syntax;
+  /** Native page direction, overriding the locale's configured or inferred direction. */
+  readonly dir?: 'ltr' | 'rtl' | 'auto';
   /** The pager's link to the page before this one: false for none, or a `label` and `href` in place of its own. */
   readonly previous?: PagerLink;
   /** The pager's link to the page after this one: false for none, or a `label` and `href` in place of its own. */
@@ -134,8 +145,9 @@ const lineClasses = (marked: ReadonlySet<number>, numbers: boolean, meta: string
   line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
 });
 // Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
-const codeActions = '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button>' +
-  '<button type="button" data-code-action="copy">Copy</button></div>';
+const codeActions = (ui: Translations) => '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">' +
+  literal(escapeHTML(ui.codeWrap)) + '</button><button type="button" data-code-action="copy"' +
+  ` data-code-label-copy="${literal(escapeHTML(ui.codeCopy))}" data-code-label-copied="${literal(escapeHTML(ui.codeCopied))}" data-code-label-failed="${literal(escapeHTML(ui.codeCopyFailed))}">${literal(escapeHTML(ui.codeCopy))}</button></div>`;
 
 function textContent(node: DefaultTreeAdapterMap['node']): string {
   if ('value' in node) return node.value;
@@ -150,7 +162,7 @@ const walkMarkdown = (node: MarkdownNode, visit: (node: MarkdownNode) => void): 
   if (typeof node.title === 'object') walkMarkdown(node.title, visit);
   for (const child of node.body ?? node.children ?? []) walkMarkdown(child, visit);
 };
-const codeFigure = (pre: string, title = '') => `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions}${pre}</figure>`;
+const codeFigure = (pre: string, title = '', ui: Translations = english) => `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions(ui)}${pre}</figure>`;
 const codeLines = (value: string): ReadonlySet<number> => new Set(value.split(',').flatMap(part => {
   const match = /^(\d+)(?:-(\d+))?$/.exec(part.trim());
   if (!match) return [];
@@ -224,6 +236,7 @@ const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => b
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
+  dir: [value => value === 'ltr' || value === 'rtl' || value === 'auto', 'ltr, rtl, or auto'],
   lang: [value => text(value) && /^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(value as string), 'a language tag such as fr or pt-BR'],
   previous: [pagerLink, 'false, or a mapping of label and href'],
   next: [pagerLink, 'false, or a mapping of label and href'],
@@ -238,6 +251,11 @@ function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: strin
   if (fields.navigation === 'collapsed' && !isIndex(file)) throw new Error(`${file}: front matter navigation collapsed applies to a folder's index page.`);
   if (fields.navigation === 'overview' && isIndex(file)) throw new Error(`${file}: a folder index is already its overview; navigation overview applies to a non-index page inside a route group.`);
   return fields as FrontMatter;
+}
+
+/** Read the same validated metadata used by compilation, without rendering the document body. */
+export function readFrontMatter(source: string, file: string): FrontMatter {
+  return validFrontMatter(frontmatter(source, file).fields, file);
 }
 
 /** A Markdown document rendered by Expressmark and Markupress's presentation, before Markupress's page layer. */
@@ -259,8 +277,9 @@ export interface RenderedMarkdown {
  * Expressmark owns standard syntax and native HTML rendering. Markupress supplies component presentation,
  * highlighting and literal text escaping. Its own front matter schema stays in compileMarkdown.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
+  const ui = options.translations === undefined ? english : resolveTranslations('en', options.translations);
   const syntax = fields.markdownSyntax ?? options.markdownSyntax ?? 'standard';
   if (!syntaxes.includes(syntax as Syntax)) throw new Error(`${options.file}: markdownSyntax must be standard or compatible.`);
   const document = parse(body, { syntax: syntax as Syntax, trustedHtml: true });
@@ -276,7 +295,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     const known = language && (Object.hasOwn(bundledLanguages, language) || plain.has(language));
     const pre = known ? await highlight(code, language, lineClasses(marked, numbers, meta))
       : `<pre tabindex="0"${numbers ? ' class="line-numbers"' : ''}><code${language ? ` class="language-${escapeHTML(language)}"` : ''}${meta ? ` data-meta="${escapeHTML(meta)}"` : ''}>${literal(escapeHTML(code))}</code></pre>`;
-    highlighted.set(node, codeFigure(pre, markdownText(node.title)));
+    highlighted.set(node, codeFigure(pre, markdownText(node.title), ui));
   }
   const trustedHtml = hostHtml(document);
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
@@ -295,7 +314,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
       return `<ui-tabs${attributes(node)} group="${escapeHTML(String(node.attributes?.group ?? node.body[0]?.attributes?.group ?? 'tabs'))}">${context.renderChildren()}</ui-tabs>`;
     },
     'container:tab': (node, context) => `<section${attributes(node)} aria-label="${escapeHTML(title(node))}">${context.renderChildren()}</section>`,
-    'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary>${literal(escapeHTML(title(node) || 'Details'))}</summary>${context.renderChildren()}</details>`,
+    'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary>${literal(escapeHTML(title(node) || ui.details))}</summary>${context.renderChildren()}</details>`,
   };
   const callout = (tone: string | undefined): HtmlTransformer => (node, context) => {
     components.add('ui-callout');
@@ -402,13 +421,16 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
     (fields.layout === undefined ? '' : `<meta name="mk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
-    (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`);
+    (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`) +
+    (options.alternates ?? []).map(link => `<link rel="alternate" hreflang="${literal(escapeHTML(link.hreflang))}" href="${literal(escapeHTML(link.href))}">`).join('');
   const [from, to] = fields.outline === false ? [0, -1] : fields.outline ?? [2, 3];
   const css = [...(options.styles ?? []).map(file => `@import "${pathToFileURL(file).href}";`), ...imports].join('');
   const styles = css ? `<style>${stylesheet(css, options.file, true).css}</style>` : '';
+  const lang = fields.lang, dir = fields.dir ?? (lang === undefined ? undefined : textDirection(lang));
+  const language = (lang === undefined ? '' : ` lang="${escapeHTML(lang)}"`) + (dir === undefined ? '' : ` dir="${dir}"`);
   return { title, aliases, generated, sections: searchSections(fragment), ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="mk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+    resource: `<meta name="mk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose"${language}>${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
 }
 
 /**

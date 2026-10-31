@@ -110,7 +110,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, markdownSyntax, id, aliases, redirectFrom, layout, outline, head, editLink, lang, previous, next.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, markdownSyntax, id, aliases, redirectFrom, layout, outline, head, editLink, dir, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, overview, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
@@ -312,7 +312,7 @@ it('numbers lines from standard attributes or the page default', async () => {
 it('gives each code block hidden copy and wrap buttons, and a page with code its code controller', async () => {
   const resource = await page('# Code\n\n```js\nlet a = 1;\n```');
   expect(resource).toContain('<template component="page-index" controller="markupress/controllers/code.js">');
-  expect(resource).toMatch(/<figure class="code"><div class="code-actions" hidden="" aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap<\/button><button type="button" data-code-action="copy">Copy<\/button><\/div><pre class="shiki/);
+  expect(resource).toMatch(/<figure class="code"><div class="code-actions" hidden="" aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap<\/button><button type="button" data-code-action="copy" data-code-label-copy="Copy" data-code-label-copied="Copied" data-code-label-failed="Copy failed">Copy<\/button><\/div><pre class="shiki/);
   expect(await page('# Prose only\n\n`inline` code')).not.toContain('controller=');
 });
 

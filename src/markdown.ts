@@ -2,15 +2,20 @@ import { createHash } from 'node:crypto';
 import { readdirSync, type Dirent } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MarkupKitPlugin, PageContext } from '@threadlabs/markupkit';
-import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter } from './content.js';
+import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter, type LanguageAlternate } from './content.js';
 import { siteLink } from './navigation.js';
 import type { Syntax } from 'expressmark';
+import type { TranslationOverrides } from './i18n.js';
 
 export interface MarkdownPluginOptions {
+  /** Alternate links known before this page compiles; native context supplies the source mounts. */
+  readonly alternates?: (page: PageContext) => readonly LanguageAlternate[] | Promise<readonly LanguageAlternate[]>;
+  /** Reader labels selected from the original Markdown source file. */
+  readonly translations?: (file: string) => TranslationOverrides | undefined;
   /** Directory that a page's root-relative images and files (/logo.svg) come from; without one they stay site URLs. */
   readonly publicDir?: (file: string) => string | undefined;
   /** Called with each compiled page and its URL, for example to catalog documents. */
-  readonly onPage?: (page: CompiledMarkdown & { readonly file: string; readonly href: string | undefined }) => void;
+  readonly onPage?: (page: CompiledMarkdown & { readonly file: string; readonly href: string | undefined }, context: PageContext) => void;
   /** Stylesheet files every Markdown page component imports, such as a theme's prose styles. */
   readonly styles?: readonly string[];
   /** Number the lines of every highlighted code block unless its fence says `show-line-numbers=false`. */
@@ -38,10 +43,13 @@ export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
     // The URL, not the machine's path, names the page, so builds are reproducible.
     const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
     const frontmatter = options.frontmatter?.(page.file);
+    const translations = options.translations?.(page.file);
+    const alternates = await options.alternates?.(page);
     const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
       ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
+      ...(translations === undefined ? {} : { translations }), ...(alternates === undefined ? {} : { alternates }),
       ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
-    options.onPage?.({ ...compiled, file: page.file, href });
+    options.onPage?.({ ...compiled, file: page.file, href }, page);
     return compiled.resource;
   } } };
 }
