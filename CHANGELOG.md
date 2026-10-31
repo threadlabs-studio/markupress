@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.14.6
 
 - Qualify HTML Next alpha.74 so projected search rows receive their destination bindings on their first update. Generate starters from the public runtime peer range rather than the development compiler minimum, preserving installations alongside supported Looma releases. Dependency ranges retain no speculative upper ceiling.
 
