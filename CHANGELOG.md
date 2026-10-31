@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.15.0
 
 - Require Looma 0.49.4 for localized CycleButton instructions, safe deferred choices, RTL search-row alignment and wide logos that fit beside mobile navigation. Align the shared runtime minimum with HTML Next alpha.74, already required by this Looma release.
 
