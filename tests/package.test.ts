@@ -351,6 +351,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/guide/outline/');
       const outline = page.getByRole('navigation', { name: 'On this page' });
       expect(await outline.getByRole('link').allTextContents()).toEqual(['First', 'Second', 'Third']);
+      // Page-local navigation stays smaller than the documentation's links and section labels.
+      const navigationSizes = await page.locator('#documentation-navigation :is([data-component~="ui-nav-item"] .label, [data-component~="ui-disclosure"] .trigger)').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      const outlineSizes = await outline.locator('strong, a').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      expect(Math.max(...outlineSizes), 'On this page must be smaller than the main navigation').toBeLessThan(Math.min(...navigationSizes));
       await page.locator('#second').evaluate(element => element.scrollIntoView());
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
