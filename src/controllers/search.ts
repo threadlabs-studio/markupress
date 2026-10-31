@@ -88,7 +88,7 @@ export default function searchController(host: ComponentHost): void {
     };
     // Looma's dialog reports each close, by Escape, the backdrop or the page.
     const close = () => { ++latest; host.state.open = false; };
-    const shell = root.querySelector('[data-component="ui-search-shell"]')!;
+    const shell = root.querySelector(':is([component="ui-search-shell"], [data-component="ui-search-shell"]:not([component]))')!;
     input.addEventListener('input', run);
     shell.addEventListener('close', close);
     root.addEventListener('click', click);

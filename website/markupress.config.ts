@@ -4,6 +4,7 @@ export default defineConfig({
   title: 'Markupress',
   locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } },
   defaultLocale: 'en',
+  localeFallback: 'source',
   base: '/markupress/',
   origin: 'https://threadlabs-studio.github.io',
   robots: true,

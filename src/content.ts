@@ -13,6 +13,10 @@ export interface LanguageAlternate {
   readonly href: string;
 }
 export interface MarkdownOptions {
+  /** Site policy's resolved canonical, including the source owner of a fallback page. */
+  readonly canonical?: string;
+  /** Language of generated reader controls when it differs from the article language. */
+  readonly uiLanguage?: string;
   /** Declarative alternate-language links in this page's head. */
   readonly alternates?: readonly LanguageAlternate[];
   /** Reader labels for code actions and unlabelled details blocks. */
@@ -145,7 +149,7 @@ const lineClasses = (marked: ReadonlySet<number>, numbers: boolean, meta: string
   line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
 });
 // Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
-const codeActions = (ui: Translations) => '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">' +
+const codeActions = (ui: Translations, lang?: string) => '<div class="code-actions"' + (lang === undefined ? '' : ` lang="${escapeHTML(lang)}" dir="${textDirection(lang)}"`) + ' hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">' +
   literal(escapeHTML(ui.codeWrap)) + '</button><button type="button" data-code-action="copy"' +
   ` data-code-label-copy="${literal(escapeHTML(ui.codeCopy))}" data-code-label-copied="${literal(escapeHTML(ui.codeCopied))}" data-code-label-failed="${literal(escapeHTML(ui.codeCopyFailed))}">${literal(escapeHTML(ui.codeCopy))}</button></div>`;
 
@@ -162,7 +166,7 @@ const walkMarkdown = (node: MarkdownNode, visit: (node: MarkdownNode) => void): 
   if (typeof node.title === 'object') walkMarkdown(node.title, visit);
   for (const child of node.body ?? node.children ?? []) walkMarkdown(child, visit);
 };
-const codeFigure = (pre: string, title = '', ui: Translations = english) => `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions(ui)}${pre}</figure>`;
+const codeFigure = (pre: string, title = '', ui: Translations = english, lang?: string) => `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions(ui, lang)}${pre}</figure>`;
 const codeLines = (value: string): ReadonlySet<number> => new Set(value.split(',').flatMap(part => {
   const match = /^(\d+)(?:-(\d+))?$/.exec(part.trim());
   if (!match) return [];
@@ -277,7 +281,7 @@ export interface RenderedMarkdown {
  * Expressmark owns standard syntax and native HTML rendering. Markupress supplies component presentation,
  * highlighting and literal text escaping. Its own front matter schema stays in compileMarkdown.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations' | 'uiLanguage'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
   const ui = options.translations === undefined ? english : resolveTranslations('en', options.translations);
   const syntax = fields.markdownSyntax ?? options.markdownSyntax ?? 'standard';
@@ -295,7 +299,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     const known = language && (Object.hasOwn(bundledLanguages, language) || plain.has(language));
     const pre = known ? await highlight(code, language, lineClasses(marked, numbers, meta))
       : `<pre tabindex="0"${numbers ? ' class="line-numbers"' : ''}><code${language ? ` class="language-${escapeHTML(language)}"` : ''}${meta ? ` data-meta="${escapeHTML(meta)}"` : ''}>${literal(escapeHTML(code))}</code></pre>`;
-    highlighted.set(node, codeFigure(pre, markdownText(node.title), ui));
+    highlighted.set(node, codeFigure(pre, markdownText(node.title), ui, options.uiLanguage));
   }
   const trustedHtml = hostHtml(document);
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
@@ -314,7 +318,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
       return `<ui-tabs${attributes(node)} group="${escapeHTML(String(node.attributes?.group ?? node.body[0]?.attributes?.group ?? 'tabs'))}">${context.renderChildren()}</ui-tabs>`;
     },
     'container:tab': (node, context) => `<section${attributes(node)} aria-label="${escapeHTML(title(node))}">${context.renderChildren()}</section>`,
-    'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary>${literal(escapeHTML(title(node) || ui.details))}</summary>${context.renderChildren()}</details>`,
+    'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary${!title(node) && options.uiLanguage ? ` lang="${escapeHTML(options.uiLanguage)}" dir="${textDirection(options.uiLanguage)}"` : ''}>${literal(escapeHTML(title(node) || ui.details))}</summary>${context.renderChildren()}</details>`,
   };
   const callout = (tone: string | undefined): HtmlTransformer => (node, context) => {
     components.add('ui-callout');
@@ -411,7 +415,8 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   const generated = isIndex(options.file) && body.trim() === '';
   // Front matter becomes head declarations and MarkupKit settings in the page's <defs>: MarkupKit owns navigation labels,
   // order, visibility, alias routes, the layout choice, and the document head, where the page's entries win over its layout's.
-  const { meta = {}, og = {}, canonical } = fields.head ?? {};
+  const { meta = {}, og = {} } = fields.head ?? {};
+  const canonical = options.canonical ?? fields.head?.canonical;
   // An authored <title> takes the place of the generated one, since a definition declares one title.
   const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(options.documentTitle?.(title) ?? title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
     `<meta name="mk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="mk:navigation" content="hidden">' : '') +

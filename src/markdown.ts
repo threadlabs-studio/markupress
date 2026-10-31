@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, type Dirent } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import type { MarkupKitPlugin, PageContext } from '@threadlabs/markupkit';
-import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter, type LanguageAlternate } from './content.js';
+import { compileMarkdown, isIndex, type CompiledMarkdown, type FrontMatter, type LanguageAlternate, type MarkdownOptions } from './content.js';
 import { siteLink } from './navigation.js';
 import type { Syntax } from 'expressmark';
 import type { TranslationOverrides } from './i18n.js';
@@ -37,21 +37,27 @@ export interface MarkdownPluginOptions {
  */
 export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
   let base = '/';
-  const home = options.home ?? (() => base);
   return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; }, pages: { extensions: ['.md'], async compile(source, page) {
-    const href = page.href(page.file);
-    // The URL, not the machine's path, names the page, so builds are reproducible.
-    const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
-    const frontmatter = options.frontmatter?.(page.file);
-    const translations = options.translations?.(page.file);
-    const alternates = await options.alternates?.(page);
-    const compiled = await compileMarkdown(source, { file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
-      ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
-      ...(translations === undefined ? {} : { translations }), ...(alternates === undefined ? {} : { alternates }),
-      ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
-    options.onPage?.({ ...compiled, file: page.file, href }, page);
-    return compiled.resource;
+    return compilePage(source, page, options, base);
   } } };
+}
+
+/** Shared page compilation; site policy may supply a resolved canonical and interface language. */
+export async function compilePage(source: string, page: PageContext, options: MarkdownPluginOptions, base: string,
+  presentation: Pick<MarkdownOptions, 'canonical' | 'uiLanguage'> = {}): Promise<string> {
+  const home = options.home ?? (() => base);
+  const href = page.href(page.file);
+  // The URL, not the machine's path, names the page, so builds are reproducible.
+  const pageName = 'page-md-' + createHash('sha256').update(href ?? page.file).digest('hex').slice(0, 20);
+  const frontmatter = options.frontmatter?.(page.file);
+  const translations = options.translations?.(page.file);
+  const alternates = await options.alternates?.(page);
+  const compiled = await compileMarkdown(source, { ...presentation, file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
+    ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
+    ...(translations === undefined ? {} : { translations }), ...(alternates === undefined ? {} : { alternates }),
+    ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
+  options.onPage?.({ ...compiled, file: page.file, href }, page);
+  return compiled.resource;
 }
 
 function link(href: string, kind: 'link' | 'asset', page: PageContext, options: MarkdownPluginOptions, home: string): string {

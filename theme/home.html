@@ -1,3 +1,4 @@
+<link rel="component" href="@threadlabs/looma/components/ui-callout/ui-callout.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon/ui-icon.html">
 <link rel="component" href="./chrome.html">
@@ -5,7 +6,8 @@
      Markupress reads as a hero and feature cards. A site's app/layouts/home.html replaces it. -->
 <template component="markupress-home" controller="../dist/controllers/shell.js">
 <defs>
-<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, untranslatedContent: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="fallbackNotice" type="string" default="">Notice for source content in the selected locale</prop>
 <prop name="uiLang" type="string" default="en">Language of the reader interface</prop>
 <prop name="noticeLabel" type="string" default="">Accessible name for dismissing the header notice</prop>
 
@@ -30,7 +32,7 @@
 <markupress-header from:ui="$ui" from:ui-lang="$uiLang" from:notice-label="$noticeLabel" from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
 <ui-icon-button $if="$nav.length" slot="menu" from:label="$ui.navigation" variant="ghost" tone="neutral" popovertarget="home-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></markupress-header>
 <nav $if="$nav.length" id="home-navigation" popover from:aria-label="$ui.sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a></li></ul></nav>
-<main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
+<main id="documentation-content" tabindex="-1"><ui-callout $if="$fallbackNotice" tone="note">{$fallbackNotice}</ui-callout><slot name="page"></slot></main>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
 :host { display: block; background: var(--ui-surface); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--ui-font-sans); min-height: 100vh; }
