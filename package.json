@@ -1,6 +1,6 @@
 {
   "name": "markupress",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Versioned Markdown documentation built on MarkupKit and native declarative components.",
   "license": "MIT",
   "type": "module",
@@ -50,7 +50,7 @@
     "playwright": "1.64.1",
     "@axe-core/playwright": "4.14.0",
     "@nextwebwg/html-next": ">=1.0.0-alpha.74",
-    "@threadlabs/looma": ">=0.44.0 <0.45 || >=0.46.1",
+    "@threadlabs/looma": ">=0.49.4",
     "jsdom": "30.1.3"
   },
   "publishConfig": {
@@ -76,8 +76,8 @@
     "minisearch": "7.2.0"
   },
   "peerDependencies": {
-    "@nextwebwg/html-next": ">=1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.44.0 <0.45 || >=0.46.1"
+    "@nextwebwg/html-next": ">=1.0.0-alpha.74",
+    "@threadlabs/looma": ">=0.49.4"
   },
   "bin": {
     "markupress": "./dist/cli.js"

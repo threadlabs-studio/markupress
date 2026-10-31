@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Require Looma 0.49.4 for localized CycleButton instructions, safe deferred choices, RTL search-row alignment and wide logos that fit beside mobile navigation. Align the shared runtime minimum with HTML Next alpha.74, already required by this Looma release.
+
+- Translate the reader interface through built-in English, French and Arabic dictionaries and typed partial overrides. Locale-specific branding, navigation, notices, edit links and title templates follow the selected documentation language.
+- Format visible update dates with the selected locale while preserving machine-readable timestamps. Localize code actions, appearance controls, search status and fallback notices; infer document direction and isolate code in RTL pages.
+- Emit reciprocal alternate-language links for available translations of the same document and version, including x-default. Preserve native URL ownership, relative canonical URLs and fresh metadata after development rediscovery.
+
 - Qualify HTML Next alpha.74 so projected search rows receive their destination bindings on their first update. Generate starters from the public runtime peer range rather than the development compiler minimum, preserving installations alongside supported Looma releases. Dependency ranges retain no speculative upper ceiling.
 
 - Require MarkupKit 0.4.2 so component consumers can share the corrected HTML Next projection and hydration runtime.

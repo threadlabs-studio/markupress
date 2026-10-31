@@ -168,7 +168,7 @@ importers:
     dependencies:
       '@threadlabs/markupkit':
         specifier: '>=0.4.2'
-        version: 0.4.2(@types/node@22.20.1)(yaml@2.9.1)
+        version: 0.4.3(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
         specifier: '>=0.4.0'
         version: 0.4.0
@@ -201,8 +201,8 @@ importers:
         specifier: '>=1.0.0-alpha.74'
         version: 1.0.0-alpha.74
       '@threadlabs/looma':
-        specifier: '>=0.44.0 <0.45 || >=0.46.1'
-        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.74)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        specifier: '>=0.49.4'
+        version: 0.49.4(@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -834,19 +834,16 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.44.1':
-    resolution: {integrity: sha512-w70cJc1WP2axEoTxBf9Wao2FUh1EXenMiv93dfnnem+spiWB04YEn1DGorxZrMtcjl3LkHLxgOFmbj7vdN5RbA==}
+  '@threadlabs/looma@0.49.4':
+    resolution: {integrity: sha512-aBpKZnabF1ISUKM0j9+COet511S48Cc4L85uuRH31fLqTyIcYlsda/Eb7Hj1ZBu0KJ9mwcMh65VgvaNAl54O6g==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
     peerDependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.69
-      '@threadlabs/markupkit': '>=0.2.0 <1'
+      '@threadlabs/markupkit': '>=0.4.2'
       '@tiptap/core': '>=2 <3'
       '@tiptap/pm': '>=2 <3'
-      '@tiptap/vue-3': '>=2 <3'
-      markupress: '>=0.12.0 <1'
+      markupress: '>=0.14.6'
       vite: '>=7.2.7 <9'
-      vue: ^3.5.43
     peerDependenciesMeta:
       '@threadlabs/markupkit':
         optional: true
@@ -854,17 +851,13 @@ packages:
         optional: true
       '@tiptap/pm':
         optional: true
-      '@tiptap/vue-3':
-        optional: true
       markupress:
         optional: true
       vite:
         optional: true
-      vue:
-        optional: true
 
-  '@threadlabs/markupkit@0.4.2':
-    resolution: {integrity: sha512-9qK3+pP6fT+kBReMXducUb/Ib7BkzwZGiQpp+BFOWYelefunM6ikXalGAmRaWUstwZyhL80GKh/CS5L6yd1fjQ==}
+  '@threadlabs/markupkit@0.4.3':
+    resolution: {integrity: sha512-v82MOdNJNxniVbHO20VdBpEMnlo0uFqgbwa9zN57x8qptxU+ZYfaUCt4tV1igDPq4+C8gMjrYwd4MexKzg/JQg==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1036,9 +1029,6 @@ packages:
   '@vitest/spy@5.0.5':
     resolution: {integrity: sha512-lwJRExuH417257Q5wv9QYugN9IMJkoxcrKrYxGPQkBzl7wlNpTUxD/5yNX4ESKVUIShKPgkGchYPFMWOOk0wzw==}
 
-  argparse@2.0.1:
-    resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
-
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
@@ -1116,10 +1106,6 @@ packages:
   dprint-plugin-markup@0.27.5:
     resolution: {integrity: sha512-kvydX+uwpqVddbC18VJDG8baC6BB4Kdi2GONX3xbMws8ebyy9FL4m7WecJ207eB7oqtFJNdEOw93EklkuJCqag==}
 
-  entities@4.5.0:
-    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
-    engines: {node: '>=0.12'}
-
   entities@8.1.0:
     resolution: {integrity: sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==}
     engines: {node: '>=20.19.0'}
@@ -1140,6 +1126,10 @@ packages:
 
   expressmark@0.4.0:
     resolution: {integrity: sha512-tYYgC+qsSsetAU8gA5COLExOFezNGH+EFtaFAfZ19Isj8yIqEYpQUKiU2Xo2LKeT0Wiw8IoMFw1OwW4v7RsWgg==}
+    engines: {node: '>=22.13 <23 || >=24 <25'}
+
+  expressmark@0.5.2:
+    resolution: {integrity: sha512-Z18NzEsNz69mZ/6cEvoupWgNp7KJ9pPuvizuNn7exi064nx7ngapwjBOJkBAWlsjYnZNCdp+ZikIC1G6N2Z4Cw==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
 
   fdir@6.5.0:
@@ -1283,9 +1273,6 @@ packages:
     resolution: {integrity: sha512-soXv8qKLqsAA3Ws9HDwrf6VlLUHHKBqLplHVJ/HVhWH5Oakgr5iZmsiKX7eC2VMdZxFaxhLxDsAmiCjLvKPZlQ==}
     engines: {node: '>=18.0.0'}
 
-  linkify-it@5.0.2:
-    resolution: {integrity: sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q==}
-
   lowlight@3.3.0:
     resolution: {integrity: sha512-0JNhgFoPvP6U6lE/UdVsSq99tn6DhjjpAj5MxG49ewd2mOBVtwWYIT8ClyABhq198aXXODMU6Ox8DrGy/CpTZQ==}
 
@@ -1301,10 +1288,6 @@ packages:
 
   magic-string@1.4.3:
     resolution: {integrity: sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ==}
-
-  markdown-it@14.3.1:
-    resolution: {integrity: sha512-4Ej49aYTDFIQ+uBkfX8GBvJGccoARxxPep+7aWTs55ozbjQJpW9M26Fe53vnGgvLeVzva/amzjQQaQu9w0vMhA==}
-    hasBin: true
 
   mdast-util-to-hast@13.2.1:
     resolution: {integrity: sha512-cctsq2wp5vTsLIcaymblUriiTcZd0CwWtCbLvrOzYCDZoWyMNV8sZ7krj09FSnsiJi3WVsHLM4k6Dq/yaPyCXA==}
@@ -1503,9 +1486,6 @@ packages:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
     engines: {node: '>=16.20.0'}
     hasBin: true
-
-  uc.micro@2.1.0:
-    resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
   uc.micro@3.0.0:
     resolution: {integrity: sha512-U3PppEkleoTnIfi8BozMx3yju3qc/L6SwqWo2Sw+54PX+PX0q9I+r1Um5HCmqD7n9VDX5/v3vQH/AjA6deDdtw==}
@@ -2114,21 +2094,23 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.74)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.49.4(@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       dompurify: 3.4.15
-      expressmark: 0.4.0
+      expressmark: 0.5.2
       highlight.js: 11.11.2
       lowlight: 3.3.0
       lucide: 0.554.0
-      markdown-it: 14.3.1
       parse5: 8.0.1
     optionalDependencies:
-      '@threadlabs/markupkit': 0.4.2(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit': 0.4.3(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
+    transitivePeerDependencies:
+      - '@noble/hashes'
+      - canvas
 
-  '@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1)':
+  '@threadlabs/markupkit@0.4.3(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       parse5: 8.0.1
@@ -2258,8 +2240,6 @@ snapshots:
 
   '@vitest/spy@5.0.5': {}
 
-  argparse@2.0.1: {}
-
   assertion-error@2.0.1: {}
 
   axe-core@4.14.0: {}
@@ -2328,8 +2308,6 @@ snapshots:
 
   dprint-plugin-markup@0.27.5: {}
 
-  entities@4.5.0: {}
-
   entities@8.1.0: {}
 
   es-module-lexer@2.3.2: {}
@@ -2343,6 +2321,17 @@ snapshots:
   expect-type@1.4.0: {}
 
   expressmark@0.4.0:
+    dependencies:
+      entities: 8.1.0
+      htmlparser2: 12.0.0
+      mdurl: 2.1.0
+      parseman: 0.56.0
+      punycode.js: 2.3.1
+      sanitize-html: 2.18.1
+      uc.micro: 3.0.0
+      yaml: 2.9.1
+
+  expressmark@0.5.2:
     dependencies:
       entities: 8.1.0
       htmlparser2: 12.0.0
@@ -2504,10 +2493,6 @@ snapshots:
 
   linecraft@0.2.6: {}
 
-  linkify-it@5.0.2:
-    dependencies:
-      uc.micro: 2.1.0
-
   lowlight@3.3.0:
     dependencies:
       '@types/hast': 3.0.5
@@ -2525,15 +2510,6 @@ snapshots:
   magic-string@1.4.3:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
-
-  markdown-it@14.3.1:
-    dependencies:
-      argparse: 2.0.1
-      entities: 4.5.0
-      linkify-it: 5.0.2
-      mdurl: 2.1.0
-      punycode.js: 2.3.1
-      uc.micro: 2.1.0
 
   mdast-util-to-hast@13.2.1:
     dependencies:
@@ -2815,8 +2791,6 @@ snapshots:
       '@typescript/typescript-sunos-x64': 7.0.2
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
-
-  uc.micro@2.1.0: {}
 
   uc.micro@3.0.0: {}
 

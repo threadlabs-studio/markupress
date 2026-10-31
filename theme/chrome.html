@@ -7,6 +7,10 @@
 <link rel="component" href="@threadlabs/looma/components/ui-site-header/ui-site-header.html">
 <template component="markupress-header">
 <defs>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="uiLang" type="string" default="en">Language of the reader interface</prop>
+<prop name="noticeLabel" type="string" default="">Accessible name for dismissing the header notice</prop>
+
 <prop name="title" type="string" required>Site title</prop>
 <prop name="locales" type="list(object({ href: string, label: string, lang: string, current: string, note: string }))" default="[]">Language links for the selected document and version</prop>
 
@@ -19,12 +23,12 @@
 <prop name="search" type="string" default="">The URL of the version's search index, or "" for no search</prop>
 <prop name="appearance" type="string" default="automatic">The selected appearance: automatic, light or dark.</prop>
 <prop name="appearanceReady" type="boolean" default="false">The browser has restored its saved appearance choice.</prop></defs>
-<ui-site-header sticky label="Main" from:data-ready="$appearanceReady" style="--ui-site-header-height:var(--markupress-header-height,4.25rem);--ui-site-header-compact-height:var(--markupress-mobile-header-height,3.75rem);--ui-site-header-padding-inline:max(var(--ui-space-4),calc((100vw - var(--markupress-page-width,90rem)) / 2));--ui-site-header-z-index:2">
+<ui-site-header sticky from:label="$ui.mainNavigation" from:data-ready="$appearanceReady" style="--ui-site-header-height:var(--markupress-header-height,4.25rem);--ui-site-header-compact-height:var(--markupress-mobile-header-height,3.75rem);--ui-site-header-padding-inline:max(var(--ui-space-4),calc((100vw - var(--markupress-page-width,90rem)) / 2));--ui-site-header-z-index:2">
 <span slot="menu"><slot name="menu"></slot></span>
 <a class="brand-link" slot="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template><span class="brand-title">{$title}</span><ui-badge $if="$badge" tone="accent">{$badge}</ui-badge></a>
 <a slot="navigation" $each="item of $nav" from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
-<nav slot="actions" $if="$locales.length > 1" class="languages" aria-label="Languages"><details><summary>Languages</summary><ul><li $each="locale of $locales"><a from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current">{$locale.label}</a><small $if="$locale.note">{$locale.note}</small></li></ul></details></nav>
-<span slot="actions" $if="$headerNotice" class="notice"><ui-button size="sm" variant="outline" tone="neutral" shape="pill" data-action="dismiss-header-notice" from:aria-label="concat('Remove ', $headerNotice)">{$headerNotice}<ui-icon name="x"></ui-icon></ui-button></span><markupress-search slot="actions" $if="$search" from:index="$search" from:options="$searchOptions"></markupress-search><ui-cycle-button slot="actions" label="Appearance" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" items='[{"value":"automatic","label":"Automatic","icon":"monitor"},{"value":"light","label":"Light","icon":"sun"},{"value":"dark","label":"Dark","icon":"moon"}]'></ui-cycle-button>
+<nav slot="actions" $if="$locales.length > 1" class="languages" from:aria-label="$ui.languages"><details><summary from:aria-label="$ui.languages"><span class="language-code">{$uiLang}</span><span class="language-text">{$ui.languages}</span></summary><ul><li $each="locale of $locales"><a from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current">{$locale.label}</a><small $if="$locale.note">{$locale.note}</small></li></ul></details></nav>
+<span slot="actions" $if="$headerNotice" class="notice"><ui-button size="sm" variant="outline" tone="neutral" shape="pill" data-action="dismiss-header-notice" from:aria-label="$noticeLabel">{$headerNotice}<ui-icon name="x"></ui-icon></ui-button></span><markupress-search slot="actions" $if="$search" from:index="$search" from:options="$searchOptions" from:ui="$ui" from:lang="$uiLang"></markupress-search><ui-cycle-button slot="actions" from:label="$ui.appearance" from:description="$ui.appearanceHint" from:empty-label="$ui.noAppearanceChoices" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" from:items="[{ value: 'automatic', label: $ui.automatic, icon: 'monitor' }, { value: 'light', label: $ui.light, icon: 'sun' }, { value: 'dark', label: $ui.dark, icon: 'moon' }]"></ui-cycle-button>
 </ui-site-header>
 <style>
 /* Documentation content and state; SiteHeader owns layout and responsive navigation. */
@@ -32,6 +36,8 @@
 .logo { align-self: center; flex-shrink: 0; block-size: 2rem; inline-size: auto; }
 .nav-icon { display: block; block-size: 1.25rem; inline-size: auto; }
 :host:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
+.language-code { display: none; text-transform: uppercase; }
+@media (max-width: 40rem) { .language-code { display: inline; } .language-text { display: none; } }
 .languages { position: relative; } .languages summary { cursor: pointer; padding: .5rem; } .languages ul { position: absolute; inset-inline-end: 0; min-inline-size: 12rem; max-inline-size: min(20rem, 85vw); margin: .25rem 0; padding: .75rem; list-style: none; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); box-shadow: var(--ui-shadow-md); } .languages a { display: block; padding: .25rem; color: var(--ui-link-color, var(--ui-accent)); } .languages small { display: block; color: var(--ui-text-muted); }
 .notice { display: var(--markupress-header-notice-display, inline-flex); }
 </style></template>

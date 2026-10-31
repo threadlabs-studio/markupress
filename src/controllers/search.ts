@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import type { ComponentHost } from '@nextwebwg/html-next/runtime';
+import { english, formatMessage, searchResultCount, type Translations } from '../i18n.js';
 import { createSearch, type LocalSearchOptions, type SearchEntry } from '../search.js';
 
 const indexes = new Map<string, Promise<ReturnType<typeof createSearch>>>();
@@ -26,28 +27,31 @@ export default function searchController(host: ComponentHost): void {
     const input = root.querySelector('input')!;
     root.querySelector<HTMLElement>('.trigger')!.hidden = false;
     let latest = 0;
-    let scope = JSON.stringify([host.props.index!.value, host.props.options!.value]);
+    const currentScope = () => JSON.stringify([host.props.index!.value, host.props.options!.value, host.props.lang?.value, host.props.ui?.value]);
+    let scope = currentScope();
     // MarkupKit keeps this controller across language/version navigation and adopts its new props.
     const unwatch = host.effect(() => {
-      const next = JSON.stringify([host.props.index!.value, host.props.options!.value]);
+      const next = currentScope();
       if (next === scope) return;
       scope = next; ++latest;
       host.state.open = false; host.state.results = []; host.state.selected = ''; host.state.status = '';
     });
     const run = async () => {
       const query = input.value, request = ++latest;
+      const ui = (host.props.ui?.value as Translations | undefined) ?? english;
+      const lang = String(host.props.lang?.value ?? (document.documentElement.lang || 'en'));
       host.state.results = [];
       host.state.status = '';
       if (query.trim() === '') return;
-      host.state.status = 'Searching…';
+      host.state.status = ui.searching;
       try {
         const search = await load(String(host.props.index!.value), window, host.props.options!.value as LocalSearchOptions, document.documentElement.lang);
         if (request !== latest) return;
         const results = search(query);
         host.state.results = results;
         host.state.selected = results[0]?.href ?? '';
-        host.state.status = results.length === 0 ? `No results for "${query}"` : `${results.length} result${results.length === 1 ? '' : 's'}`;
-      } catch { if (request === latest) { host.state.results = []; host.state.status = 'Search is unavailable.'; } }
+        host.state.status = results.length === 0 ? formatMessage(ui.noResults, { query }) : searchResultCount(ui, results.length, lang);
+      } catch { if (request === latest) { host.state.results = []; host.state.status = ui.searchUnavailable; } }
     };
     // The opening dialog may focus its field first; the last query is then selected only when focus moves here, so typing never replaces a letter.
     const open = () => { host.state.open = true; void run(); window.requestAnimationFrame(() => { if (document.activeElement !== input) { input.focus(); input.select(); } }); };

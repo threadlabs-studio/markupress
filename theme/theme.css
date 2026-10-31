@@ -60,5 +60,6 @@ html[data-mk-navigating] body::before {
   content: ""; position: fixed; inset: 0 0 auto; z-index: 10; block-size: 3px; background: var(--ui-accent);
   transform-origin: left; animation: markupress-navigating 2s .2s ease-out both;
 }
+html[dir="rtl"][data-mk-navigating] body::before { transform-origin: right; }
 @keyframes markupress-navigating { from { transform: scaleX(0); } to { transform: scaleX(.9); } }
 @media (prefers-reduced-motion: reduce) { html[data-mk-navigating] body::before { animation: none; opacity: .6; } }

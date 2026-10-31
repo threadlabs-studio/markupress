@@ -14,12 +14,12 @@ export interface VersionLink {
   readonly note: string;
 }
 /** URLs are projected from logical identity; renaming a route never changes the switch target. */
-export function versionLinks(documents: readonly { readonly id: string; readonly version: string; readonly pathname: string }[], versions: readonly { readonly id: string; readonly label?: string; readonly pathname?: string }[], id: string, selected: string, base: string): readonly VersionLink[] {
+export function versionLinks(documents: readonly { readonly id: string; readonly version: string; readonly pathname: string }[], versions: readonly { readonly id: string; readonly label?: string; readonly pathname?: string }[], id: string, selected: string, base: string, unavailable?: (version: string) => string): readonly VersionLink[] {
   return versions.map(version => {
     const target = documents.find(doc => doc.id === id && doc.version === version.id);
     return { href: base + (target?.pathname ?? version.pathname ?? `/v/${version.id}/`).slice(1), label: version.label ?? version.id,
       current: selected === version.id ? 'page' : 'false',
-      note: target ? '' : `This document is unavailable in ${version.label ?? version.id}; open its documentation home.` };
+      note: target ? '' : unavailable ? unavailable(version.label ?? version.id) : `This document is unavailable in ${version.label ?? version.id}; open its documentation home.` };
   });
 }
 

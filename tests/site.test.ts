@@ -252,7 +252,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are locales, defaultLocale, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are translations, dateFormat, locales, defaultLocale, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -362,7 +362,7 @@ it('renders layout: home in the home layout, with the top navigation and footer 
     expect(html).toMatch(/<a\b(?=[^>]*href="\/v\/current\/guide\/install\/")(?=[^>]*data-component="ui-button")[^>]*>.*Install/s);
     expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
-    for (const absent of ['id="documentation-navigation"', 'data-component="mk-breadcrumbs"', 'data-component="mk-pager"', 'On this page']) expect(html).not.toContain(absent);
+    for (const absent of ['id="documentation-navigation"', 'data-component="mk-breadcrumbs"', 'data-component="mk-pager"', 'data-component="markupress-outline"']) expect(html).not.toContain(absent);
     // Other pages keep the shell.
     expect((await application.render('/guide/install/')).html).toContain('data-component="markupress-shell"');
   } finally { await application.close(); }
@@ -418,7 +418,7 @@ it('dates each page by the last commit touching its file, from one git log, and 
   expect(Object.fromEntries(await lastUpdated(root, ['docs']))).toEqual({ 'docs/01.guide/02.install.md': '2026-03-04', 'docs/01.index.md': '2026-01-02', 'docs/mark.svg': '2026-01-02' });
   application = await createApplication(siteOptions({ root }));
   try {
-    expect((await application.render('/guide/install/')).html).toContain('Last updated <time datetime="2026-03-04">2026-03-04</time>');
+    expect((await application.render('/guide/install/')).html).toContain('Last updated <time datetime="2026-03-04">March 4, 2026</time>');
     expect(updated((await application.render('/')).html)).toBe('2026-01-02');
     expect(updated((await application.render('/guide/new/')).html)).toBeUndefined();
   } finally { await application.close(); }
@@ -621,14 +621,14 @@ it('isolates locale/version routes and search, and switches renamed translations
   }, defaultLocale: 'en' }));
   try {
     const html = (await application.render('/manual/fr/v/v1/demarrer/')).html;
-    expect(html).toContain('<html lang="fr">');
+    expect(html).toContain('<html lang="fr" dir="ltr">');
     expect(html).toContain('href="/manual/v/v1/install/"');
     expect(html).toContain('href="/manual/ar/v/v1/"');
     expect(html).toContain('href="/manual/fr/v/current/demarrer/"');
     expect(html).toContain('/manual/fr/v/v1/_search.json');
     expect(html).not.toContain('English installation');
     expect((await application.render('/manual/ar/')).html).toContain('<html lang="ar" dir="rtl">');
-    expect((await application.render('/manual/ar/absent/')).html).toContain('<html lang="en">');
+    expect((await application.render('/manual/ar/absent/')).html).toContain('<html lang="en" dir="ltr">');
     const index = JSON.stringify(application.generated.get('/manual/fr/v/v1/_search.json')?.contents);
     expect(index).toContain('Français seulement');
     expect(index).not.toContain('English only');
@@ -646,3 +646,61 @@ it('rejects ambiguous or escaping locale content folders and unknown defaults', 
   await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '..' } } }))).rejects.toThrow('directory must stay inside its version');
   await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '.' }, fr: { label: 'Français' } } }))).rejects.toThrow('Locale directories overlap');
 });
+
+it('localizes reader controls, code labels, dates and locale chrome while inferring native direction', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-ui-locales-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const [locale, title] of [['en', 'Home'], ['fr', 'Accueil'], ['ar', 'البداية']]) {
+    await write(root, `docs/${locale}/index.md`, '# ' + title);
+    await write(root, `docs/${locale}/guide.md`, '---\nid: guide\n---\n# Guide\n\n## Examples\n\n```js\nconst value = 1;\n```\n\n::: details\nMore\n:::');
+  }
+  execFileSync('git', ['init', '--quiet'], { cwd: root });
+  execFileSync('git', ['add', 'docs'], { cwd: root });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Documentation'],
+    { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: '2026-10-28T12:00:00Z', GIT_COMMITTER_DATE: '2026-10-28T12:00:00Z' } });
+  const application = await createApplication(siteOptions({ root, base: '/manual/', title: 'Global title', editLink: 'https://example.com/edit/',
+    translations: { codeCopy: 'Copy code' }, locales: { en: { label: 'English' }, fr: { label: 'Français', title: 'Documentation française',
+      nav: [{ label: 'Projet', href: 'https://example.fr/' }], editLink: 'https://example.fr/edit/', translations: { codeCopy: 'Copier ce code' } }, ar: { label: 'العربية' } } }));
+  try {
+    const french = (await application.render('/manual/fr/guide/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(french).toContain('>Aller au contenu</a>'); expect(french).toMatch(/<input[^>]*aria-label="Rechercher dans la documentation"/);
+    expect(french).toContain('>Copier ce code</button>'); expect(french).toContain('>Détails</summary>'); expect(french).toContain('aria-label="Apparence: Automatique"'); expect(french).toContain('>Précédent</small>');
+    expect(french).toContain('Documentation française'); expect(french).toContain('href="https://example.fr/edit/docs/fr/guide.md"');
+    expect(french).toContain('datetime="2026-10-28">28 octobre 2026</time>'); expect(french).toContain('Dernière mise à jour');
+    const arabic = (await application.render('/manual/ar/guide/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(arabic).toContain('<html lang="ar" dir="rtl">'); expect(arabic).toMatch(/<input[^>]*aria-label="البحث في التوثيق"/);
+    expect(arabic).toContain('>التفاف السطور</button>'); expect(arabic).toContain('>Copy code</button>');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('emits reciprocal canonical language alternates for available identities within their native version mounts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-locale-head-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const folder of ['docs', 'versions/v1/docs']) {
+    for (const locale of ['en', 'fr', 'ar']) await write(root, `${folder}/${locale}/index.md`, '# Home');
+    await write(root, `${folder}/en/install.md`, '---\nid: setup\n---\n# Install');
+    await write(root, `${folder}/fr/demarrer.md`, '---\nid: setup\n---\n# Démarrer');
+  }
+  const application = await createApplication(siteOptions({ root, base: '/manual/', origin: 'https://docs.example',
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }));
+  const alternates = (html: string) => [...html.matchAll(/<link\b[^>]*rel="alternate"[^>]*>/g)]
+    .map(([tag]) => [/(?:\s)hreflang="([^"]*)"/.exec(tag)?.[1], /(?:\s)href="([^"]*)"/.exec(tag)?.[1]]);
+  try {
+    const current = [['en', 'https://docs.example/manual/install/'], ['fr', 'https://docs.example/manual/fr/demarrer/'], ['x-default', 'https://docs.example/manual/install/']];
+    expect(alternates((await application.render('/manual/install/')).html)).toEqual(current);
+    expect(alternates((await application.render('/manual/fr/demarrer/')).html)).toEqual(current);
+    const alias = (await application.render('/manual/v/current/install/')).html;
+    expect(alias).toContain('rel="canonical" href="https://docs.example/manual/install/"');
+    expect(alternates(alias)).toEqual(current);
+    expect(alternates((await application.render('/manual/fr/v/v1/demarrer/')).html)).toEqual([
+      ['en', 'https://docs.example/manual/v/v1/install/'], ['fr', 'https://docs.example/manual/fr/v/v1/demarrer/'], ['x-default', 'https://docs.example/manual/v/v1/install/'],
+    ]);
+  } finally { await application.close(); }
+  await write(root, 'docs/fr/demarrer.md', '---\nid: setup\nhead: { canonical: ../commencer/ }\n---\n# Démarrer');
+  const canonical = await createApplication(siteOptions({ root, base: '/manual/', origin: 'https://docs.example',
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }));
+  try {
+    expect(alternates((await canonical.render('/manual/install/')).html)).toContainEqual(['fr', 'https://docs.example/manual/fr/commencer/']);
+    expect(alternates((await canonical.render('/manual/fr/demarrer/')).html)).toContainEqual(['fr', 'https://docs.example/manual/fr/commencer/']);
+  } finally { await canonical.close(); }
+}, 30_000);

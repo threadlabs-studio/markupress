@@ -19,6 +19,8 @@ export type NavItem = Link & { readonly icon?: string };
 
 /** A sidebar entry from MarkupKit, rendered through Looma navigation controls: a page or link with `href`, and a folder or group with `children`. */
 export interface SidebarNode {
+  /** Localized link text for a section overview, when the site supplies reader translations. */
+  readonly overviewLabel?: string;
   readonly label: string;
   readonly href?: string;
   readonly current: string;

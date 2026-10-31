@@ -71,7 +71,7 @@ it('records immutable snapshots in versions/ and discovers them from its folders
     try {
       // Snapshots follow the current version, highest number first, each labelled by its folder name.
       const html = (await application.render('/')).html;
-      expect(/Versions.*?<\/nav>/s.exec(html)![0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).toBe('Versions Current v10 v2 v1');
+      expect(/<nav class="versions"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).toBe('Versions Current v10 v2 v1');
     } finally { await application.close(); }
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 30_000);
