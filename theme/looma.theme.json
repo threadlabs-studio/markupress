@@ -49,7 +49,7 @@
     "response-time": "100ms",
     "response-curve": "cubic-bezier(0.2,0,0.2,1)"
   },
-  "origin": "clear",
+  "origin": "minimal",
   "presets": {
     "status": "restrained"
   }

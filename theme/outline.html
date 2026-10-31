@@ -2,7 +2,7 @@
 <defs><prop name="label" type="string" default="On this page">Outline label</prop><prop name="items" type="list(object({ id: string, href: string, label: string, depth: number }))" required>The page's headings, in order</prop></defs>
 <nav aria-labelledby="markupress-outline-title"><strong id="markupress-outline-title">{$label}</strong><ul><li $each="item of $items" from:data-depth="$item.depth"><a from:href="$item.href">{$item.label}</a></li></ul></nav>
 <style>
-nav { font-size: .875rem; } strong { display: block; margin-bottom: .5rem; }
+:host { font-size: var(--ui-font-size-xs); } strong { display: block; margin-bottom: .5rem; }
 ul { margin: 0; padding: 0; list-style: none; border-inline-start: 1px solid var(--ui-border, #8885); }
 li { margin: 0; } li[data-depth="3"] a { padding-inline-start: 1.75rem; }
 a { display: block; padding-block: .2rem; padding-inline: 1rem 0; margin-inline-start: -1px; border-inline-start: 2px solid transparent; color: var(--ui-text-muted, inherit); text-decoration: none; }
