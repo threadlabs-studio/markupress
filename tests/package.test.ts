@@ -768,6 +768,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             await page.getByRole('button', { name: 'التنقل', exact: true }).click();
             await drawer.getByRole('link', { name: 'الحالية', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+            // MarkupKit commits the URL before its layers and head finish rendering.
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             await expect.poll(alternates).toEqual([['en', 'https://docs.example/manual/setup/'], ['fr', 'https://docs.example/manual/fr/demarrer/'],
               ['ar', 'https://docs.example/manual/ar/install/'], ['x-default', 'https://docs.example/manual/setup/']]);
             expect(await page.locator('head link[rel="canonical"]').getAttribute('href')).toBe('https://docs.example/manual/ar/install/');
