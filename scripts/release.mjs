@@ -58,7 +58,13 @@ export function prepareRelease({ root, source, execute = run }) {
     const version = nextReleaseVersion(declared, latest);
     for (const candidate of candidates) writeJSON(join(root, candidate.file), { ...candidate.manifest, version });
     const template = join(root, 'packages/create-markupress/template/package.json');
-    const starter = readJSON(template); starter.dependencies.markupress = `>=${version} <1`; writeJSON(template, starter);
+    const starter = readJSON(template);
+    const own = candidates[0].manifest;
+    starter.dependencies = { ...starter.dependencies,
+      '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'],
+      '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'],
+      markupress: `>=${version}` };
+    writeJSON(template, starter);
     const changelog = join(root, 'CHANGELOG.md');
     const text = readFileSync(changelog, 'utf8');
     if (!text.split('\n').some(line => line === `## ${version}`)) {

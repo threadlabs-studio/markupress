@@ -35,4 +35,7 @@
 - Run one foreground Playwright runner per repository with `--workers=1` locally.
 - Merges to main trigger the release workflow automatically. It verifies a source-specific snapshot, advances the patch when no larger version is declared, and publishes through the npm environment with trusted publishing. Do not request per-release human approval or publish locally. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.
 
-- Use minimum-version ranges for compatible Threadlabs dependencies across pre-1.0 minor releases; lockfiles record exact tested resolutions. Raise a minimum or add an exclusion for an actual API requirement or verified incompatibility, and record the reason. Keep experimental upstream artifact pins where required.
+- Use minimum-version ranges for Threadlabs and Nextwebwg dependencies without a
+  speculative 1.0 or later major-version ceiling. Lockfiles record exact tested
+  resolutions. Restrict a range only for a demonstrated API requirement or verified
+  incompatible release, and record the reason.

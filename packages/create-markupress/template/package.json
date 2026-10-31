@@ -8,8 +8,8 @@
     "preview": "markupress preview"
   },
   "dependencies": {
-    "@nextwebwg/html-next": "1.0.0-alpha.69",
-    "@threadlabs/looma": ">=0.44.0 <0.45 || >=0.46.1 <1",
-    "markupress": ">=0.14.0 <1"
+    "@nextwebwg/html-next": ">=1.0.0-alpha.71",
+    "@threadlabs/looma": ">=0.44.0 <0.45 || >=0.46.1",
+    "markupress": ">=0.14.0"
   }
 }
