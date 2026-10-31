@@ -198,11 +198,11 @@ importers:
         specifier: 4.14.0
         version: 4.14.0(playwright-core@1.64.1)
       '@nextwebwg/html-next':
-        specifier: '>=1.0.0-alpha.71'
-        version: 1.0.0-alpha.71
+        specifier: '>=1.0.0-alpha.74'
+        version: 1.0.0-alpha.74
       '@threadlabs/looma':
         specifier: '>=0.44.0 <0.45 || >=0.46.1'
-        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.71)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        version: 0.44.1(@nextwebwg/html-next@1.0.0-alpha.74)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -341,8 +341,8 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
-  '@nextwebwg/html-next@1.0.0-alpha.71':
-    resolution: {integrity: sha512-bc+7lqrL5nBaQedPXtgdIvvz5u5mWvlJfDSV+mjmLzysvxcSOwvAGwP5hzEA0uEraubTlGE5yYb3WLk3oe/y2A==}
+  '@nextwebwg/html-next@1.0.0-alpha.74':
+    resolution: {integrity: sha512-2Pyu7c34mFo3xltaakkfiUWyTg+4F8T2T7bUCgIfLC/bD62XRAdaHaz4aEhotLs8aD2rPS2SKcoDV7uykWEGgQ==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1826,7 +1826,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.4
     optional: true
 
-  '@nextwebwg/html-next@1.0.0-alpha.71':
+  '@nextwebwg/html-next@1.0.0-alpha.74':
     dependencies:
       '@dprint/formatter': 0.6.0
       '@dprint/typescript': 0.96.1
@@ -2114,9 +2114,9 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.71)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.44.1(@nextwebwg/html-next@1.0.0-alpha.74)(@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.71
+      '@nextwebwg/html-next': 1.0.0-alpha.74
       dompurify: 3.4.15
       expressmark: 0.4.0
       highlight.js: 11.11.2
@@ -2130,7 +2130,7 @@ snapshots:
 
   '@threadlabs/markupkit@0.4.2(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
-      '@nextwebwg/html-next': 1.0.0-alpha.71
+      '@nextwebwg/html-next': 1.0.0-alpha.74
       parse5: 8.0.1
       typescript-compiler: '@typescript/typescript6@6.0.2'
       vite: 8.3.4(@types/node@22.20.1)(yaml@2.9.1)

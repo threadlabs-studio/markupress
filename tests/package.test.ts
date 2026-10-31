@@ -116,7 +116,7 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
     // The starter keeps the required alpha runtime and the same compatible Looma range.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'], markupress: `>=${own.version}` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.peerDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'], markupress: `>=${own.version}` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);

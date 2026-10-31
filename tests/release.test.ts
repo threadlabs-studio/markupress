@@ -26,7 +26,7 @@ describe('merge releases', () => {
     const remote = join(directory, 'remote.git');
     mkdirSync(join(root, 'packages/create-markupress/template'), { recursive: true });
     const json = (file: string, value: unknown) => writeFileSync(join(root, file), JSON.stringify(value, null, 2) + '\n');
-    json('package.json', { name: 'markupress', version: '0.8.0', devDependencies: { '@nextwebwg/html-next': '>=1.0.0-alpha.71' }, peerDependencies: { '@threadlabs/looma': '>=0.44.0' } });
+    json('package.json', { name: 'markupress', version: '0.8.0', devDependencies: { '@nextwebwg/html-next': '>=1.0.0-alpha.74' }, peerDependencies: { '@nextwebwg/html-next': '>=1.0.0-alpha.69', '@threadlabs/looma': '>=0.44.0' } });
     json('packages/create-markupress/package.json', { name: 'create-markupress', version: '0.8.0' });
     json('packages/create-markupress/template/package.json', { private: true, dependencies: { markupress: '^0.8.0' } });
     writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n\n## Next release\n\nNew behavior.\n\n## 0.8.0\n\nFirst release.\n');
@@ -72,7 +72,7 @@ describe('merge releases', () => {
       expect(readFileSync(join(root, 'CHANGELOG.md'), 'utf8')).toContain('## 0.8.1');
       expect(readFileSync(join(root, 'CHANGELOG.md'), 'utf8')).not.toContain('## Next release');
       expect(JSON.parse(readFileSync(join(root, 'packages/create-markupress/template/package.json'), 'utf8')).dependencies.markupress).toBe('>=0.8.1');
-      expect(JSON.parse(readFileSync(join(root, 'packages/create-markupress/template/package.json'), 'utf8')).dependencies).toMatchObject({ '@nextwebwg/html-next': '>=1.0.0-alpha.71', '@threadlabs/looma': '>=0.44.0' });
+      expect(JSON.parse(readFileSync(join(root, 'packages/create-markupress/template/package.json'), 'utf8')).dependencies).toMatchObject({ '@nextwebwg/html-next': '>=1.0.0-alpha.69', '@threadlabs/looma': '>=0.44.0' });
       expect(() => publishRelease({ root, source, execute })).toThrow(/temporary outage/);
       latest = failure === 'missing-older' ? '0.8.2' : '0.8.1';
       git('checkout', 'main');

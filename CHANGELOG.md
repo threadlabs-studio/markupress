@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Qualify HTML Next alpha.74 so projected search rows receive their destination bindings on their first update. Generate starters from the public runtime peer range rather than the development compiler minimum, preserving installations alongside supported Looma releases. Dependency ranges retain no speculative upper ceiling.
+
 - Require MarkupKit 0.4.2 so component consumers can share the corrected HTML Next projection and hydration runtime.
 
 - Admit newer HTML Next runtimes and remove speculative 1.0 ceilings from Looma, MarkupKit and Expressmark compatibility ranges, including generated starters. Retain the exclusions for verified header/navigation incompatibilities; the lockfile records exact tested versions.

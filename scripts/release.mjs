@@ -61,7 +61,7 @@ export function prepareRelease({ root, source, execute = run }) {
     const starter = readJSON(template);
     const own = candidates[0].manifest;
     starter.dependencies = { ...starter.dependencies,
-      '@nextwebwg/html-next': own.devDependencies['@nextwebwg/html-next'],
+      '@nextwebwg/html-next': own.peerDependencies['@nextwebwg/html-next'],
       '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'],
       markupress: `>=${version}` };
     writeJSON(template, starter);
