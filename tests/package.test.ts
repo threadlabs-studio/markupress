@@ -31,7 +31,9 @@ beforeAll(() => {
   const packed = execFileSync('corepack', ['pnpm', 'pack', '--pack-destination', workspace], { cwd: root, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
   const tarball = isAbsolute(packed) ? packed : join(workspace, packed);
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
-  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
+  // Default consumers use the verified Looma release; newer releases may require a newer Markupress.
+  const looma = JSON.parse(readFileSync(join(root, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? JSON.stringify([`@threadlabs/looma@${looma.version}`])) as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   if (process.env.MARKUPRESS_EXPECT_LOOMA) {
     const actual = JSON.parse(readFileSync(join(workspace, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
@@ -351,6 +353,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.goto(server.url + 'v/current/guide/outline/');
       const outline = page.getByRole('navigation', { name: 'On this page' });
       expect(await outline.getByRole('link').allTextContents()).toEqual(['First', 'Second', 'Third']);
+      // Page-local navigation stays smaller than the documentation's links and section labels.
+      const navigationSizes = await page.locator('#documentation-navigation :is([data-component~="ui-nav-item"] .label, [data-component~="ui-disclosure"] .trigger)').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      const outlineSizes = await outline.locator('strong, a').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      expect(Math.max(...outlineSizes), 'On this page must be smaller than the main navigation').toBeLessThan(Math.min(...navigationSizes));
       await page.locator('#second').evaluate(element => element.scrollIntoView());
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
