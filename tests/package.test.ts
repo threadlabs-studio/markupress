@@ -462,7 +462,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('#documentation-navigation, [data-component="mk-pager"]').count()).toBe(0);
       await page.setViewportSize({ width: 375, height: 812 });
       const homeHeader = page.locator('[data-component~="markupress-header"]');
-      expect((await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
+      // Media-query events apply the drawer state during the next rendering pass.
+      await expect.poll(async () => (await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
       expect(await page.locator('header img.logo-light:visible, header img.logo-dark:visible').count()).toBe(1);
       expect(await page.getByRole('navigation', { name: 'Main', exact: true }).isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
@@ -505,7 +506,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
       if(process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({path:join(process.env.MARKUPRESS_SCREENSHOTS,`markupress-${mode}-mobile-notice.png`)});
       await page.locator('html').evaluate(element=>element.style.setProperty('--markupress-header-notice-display','none'));
-      expect(await page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
+      await expect.poll(() => page.locator('[data-component~="markupress-header"]').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
       const brand = page.getByRole('link', { name: /^Example docs with a deliberately long product title /, exact: true });
       expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
       for (const label of ['Navigation', 'Search']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
