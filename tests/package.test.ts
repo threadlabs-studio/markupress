@@ -31,7 +31,9 @@ beforeAll(() => {
   const packed = execFileSync('corepack', ['pnpm', 'pack', '--pack-destination', workspace], { cwd: root, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
   const tarball = isAbsolute(packed) ? packed : join(workspace, packed);
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
-  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
+  // Default consumers use the verified Looma release; newer releases may require a newer Markupress.
+  const looma = JSON.parse(readFileSync(join(root, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? JSON.stringify([`@threadlabs/looma@${looma.version}`])) as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
   if (process.env.MARKUPRESS_EXPECT_LOOMA) {
     const actual = JSON.parse(readFileSync(join(workspace, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
