@@ -8,6 +8,11 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import type { ApplicationServer } from '@threadlabs/markupkit';
 
+async function openLanguages(page: Page): Promise<void> {
+  const trigger = page.getByRole('button', { name: /^(Languages|Langues|اللغات)$/, exact: true });
+  if (await trigger.isVisible()) await trigger.click();
+}
+
 async function chooseAppearance(page: Page, choice: 'automatic' | 'light' | 'dark') {
   const button = page.getByRole('button', { name: /^Appearance:/ });
   const desired = `Appearance: ${choice.charAt(0).toUpperCase()}${choice.slice(1)}`;
@@ -83,11 +88,11 @@ beforeAll(() => {
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
-  const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
+  const html = readFileSync(join(workspace, 'site/guide/install/index.html'), 'utf8');
   expect(html).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>'); expect(html).toContain('id="install-1"');
   // MarkupKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
-  expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
+  expect(html).toContain('href="/manual/guide/install/" aria-current="page"');
   expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
   expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
@@ -97,10 +102,10 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
   expect(html).not.toContain('<time ');
-  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>');
+  expect(readFileSync(join(workspace, 'site/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
-  expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
-    .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
+  expect(readFileSync(join(workspace, 'site/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
+    .toContain('<ul class="contents"><li><a href="/manual/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
 });
 
@@ -169,17 +174,42 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       });
       const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(`${page.url()}: ${error.stack ?? error.message}`));
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
-      await page.goto(server.url + 'v/current/guide/install/');
+      await page.goto(server.url + 'guide/install/');
+      const permalink = page.locator('article h1 .heading-anchor').first();
+      expect(await permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('0');
+      await page.locator('article h1').first().hover();
+      await expect.poll(() => permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+      expect(await permalink.evaluate(link => link.getBoundingClientRect().right < link.parentElement!.getBoundingClientRect().left)).toBe(true);
+      await page.mouse.move(0, 0); await permalink.focus();
+      await expect.poll(() => permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+      await permalink.blur();
+      const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      try {
+        const phone = await touch.newPage(); await phone.goto(server.url + 'guide/install/');
+        const link = phone.locator('article h1 .heading-anchor').first();
+        expect(await link.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+        expect(await link.evaluate(link => link.getBoundingClientRect().left)).toBeGreaterThanOrEqual(0);
+      } finally { await touch.close(); }
       expect(await page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
       // On a wide screen the sidebar is in the page, and the shell's style hides the drawer's Navigation button it projects into the header.
       expect(await page.getByRole('button', { name: 'Navigation', exact: true }).isVisible()).toBe(false);
       // The site's stylesheet sizes the sidebar through --markupress-sidebar-width.
       expect(await page.locator('#documentation-navigation').evaluate(element => element.getBoundingClientRect().width)).toBe(272);
       // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
-      const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
-        shell: getComputedStyle(document.querySelector(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))')!).backgroundColor,
-        code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
-      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(247, 245, 240)', code: 'rgb(254, 254, 254)' });
+      const surfaces = () => page.evaluate(() => {
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+        const ctx = canvas.getContext('2d')!;
+        const brightness = (selector: string) => {
+          ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = getComputedStyle(document.querySelector(selector)!).backgroundColor; ctx.fillRect(0, 0, 1, 1);
+          const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+          return .2126 * r! + .7152 * g! + .0722 * b!;
+        };
+        const reading = brightness(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))');
+        return { scheme: getComputedStyle(document.documentElement).colorScheme,
+          readingLighter: reading > brightness('header') && reading > brightness(':is([component="markupress-footer"], [data-component="markupress-footer"]:not([component]))'),
+          code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor };
+      });
+      expect(await surfaces()).toEqual({ scheme: 'light', readingLighter: true, code: 'rgb(254, 254, 254)' });
       expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) a').first().evaluate(element => getComputedStyle(element).color)).toBe('rgb(105, 69, 194)');
       await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
       await page.emulateMedia({ colorScheme: 'dark' });
@@ -190,7 +220,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('#documentation-navigation :is([component~="markupress-nav-items"], [data-component~="markupress-nav-items"]:not([component]))').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
       expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) a').allTextContents()).toEqual(['Welcome', 'Installation']);
       expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
-      expect(await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
+      expect(await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="prev"]').getAttribute('href')).toBe('/manual/');
       expect(await page.locator(':is([component="demo-counter"], [data-component="demo-counter"]:not([component])) strong').textContent()).toBe('From Markdown');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
@@ -217,7 +247,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const light = await color();
       await chooseAppearance(page, 'dark');
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(15, 14, 11)', code: 'rgb(8, 7, 5)' });
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', readingLighter: true, code: 'rgb(8, 7, 5)' });
       await expect.poll(color).not.toBe(light);
       await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
@@ -249,7 +279,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
       // The document load takes the place of the committed entry, so back returns to the current version's page once,
       // and forward shows v1's page again under its URL, as soon as each document starts.
-      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
+      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'guide/install/');
       await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
       await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
@@ -258,11 +288,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
-      await page.goto(server.url + 'v/current/guide/new/');
+      await page.goto(server.url + 'guide/new/');
       // The page's imported stylesheet styles its own heading.
       expect(await page.locator('main h1').evaluate(element => getComputedStyle(element).letterSpacing)).toBe('2px');
       await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="next"]').click();
-      await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
+      await expect.poll(async () => (await page.locator('h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Blocks');
       // The page rendered in place, and the theme drew its pending bar while it did.
       expect(await page.evaluate(() => (window as unknown as { load: { pending: string[] } }).load.pending)).toContain('3px');
       // Code blocks: build-time highlighted lines and numbers, and keyboard-operable copy and wrap buttons.
@@ -306,7 +336,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await groups.first().getByRole('tabpanel').textContent()).toContain('npm install markupress');
       // Standard semantic output: toc links reach headings, chips use their tone, and task status is inert text.
       expect(await page.locator('main nav[data-type="toc"] a').evaluateAll(links => links.map(link =>
-        (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent))).toEqual(['Blocks', 'Über uns']);
+        (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent?.trim()))).toEqual(['Blocks', 'Über uns']);
       expect(await page.locator('main [data-type="chip"][data-tone="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
       expect(await page.locator('main').textContent()).toContain('☑ Read the changelog');
       expect(await page.locator('main').textContent()).toContain('☐ Run the migration');
@@ -327,7 +357,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       if (mode === 'preview') {
         // Without JavaScript the blocks still read: the callout is server-rendered, details is native, and every tab panel shows.
         const still = await browser.newContext({ javaScriptEnabled: false }); const plain = await still.newPage();
-        await plain.goto(server.url + 'v/current/guide/blocks/');
+        await plain.goto(server.url + 'guide/blocks/');
         expect(await plain.getByRole('note').filter({ hasText: 'Breaking {x}' }).isVisible()).toBe(true);
         expect(await plain.getByText('npx markupress build').isVisible()).toBe(true);
         expect(await plain.getByText('pnpm markupress build').isVisible()).toBe(true);
@@ -335,14 +365,14 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         expect(await plain.locator('.code-actions').first().isVisible()).toBe(false);
         expect(await plain.getByText('const first = 1;').isVisible()).toBe(true);
         // Without JavaScript the outline still links its headings, and the narrow-screen drawer still opens.
-        await plain.goto(server.url + 'v/current/guide/outline/');
+        await plain.goto(server.url + 'guide/outline/');
         expect(await plain.getByRole('navigation', { name: 'On this page' }).getByRole('link', { name: 'Third' }).getAttribute('href')).toBe('#third');
         await plain.setViewportSize({ width: 390, height: 844 });
         await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
         expect(await plain.getByRole('navigation', { name: 'Documentation', exact: true }).isVisible()).toBe(true);
         await still.close();
       }
-      await page.goto(server.url + 'v/current/guide/new/');
+      await page.goto(server.url + 'guide/new/');
       expect(await versions.getByText(/unavailable in v1/).textContent()).toContain('documentation home');
       await versions.getByRole('link', { name: 'v1', exact: true }).click(); await expect.poll(() => page.url()).toBe(server!.url + 'v/v1/');
       expect(await page.locator('main img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
@@ -350,7 +380,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('main').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       const audit = await new AxeBuilder({ page }).analyze(); expect(audit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       // The outline tracks the heading in view, and its links stay plain fragment links.
-      await page.goto(server.url + 'v/current/guide/outline/');
+      await page.goto(server.url + 'guide/outline/');
       const outline = page.getByRole('navigation', { name: 'On this page' });
       expect(await outline.getByRole('link').allTextContents()).toEqual(['First', 'Second', 'Third']);
       // Page-local navigation stays smaller than the documentation's links and section labels.
@@ -363,7 +393,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
       // Search: / opens Looma's search dialog, typing finds a heading on another page, and Enter opens it.
-      await page.goto(server.url + 'v/current/guide/install/');
+      await page.goto(server.url + 'guide/install/');
       const dialog = page.getByRole('dialog', { name: 'Search the documentation' });
       await page.getByRole('button', { name: 'Search' }).waitFor();
       await page.keyboard.press('/');
@@ -371,9 +401,9 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The dialog's field takes focus as it opens.
       await expect.poll(() => page.getByRole('searchbox').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       await page.keyboard.type('secnd');
-      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/guide/outline/#second');
       await page.getByRole('searchbox').fill('second');
-      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/guide/outline/#second');
       expect(await dialog.locator('[data-href]').first().textContent()).toContain('Outline');
       const searchAudit = await new AxeBuilder({ page }).include(':is([component="ui-search-shell"], [data-component="ui-search-shell"]:not([component]))').analyze();
       expect(searchAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
@@ -403,7 +433,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/v1/guide/outline/#second');
       await page.keyboard.press('Escape');
       await expect.poll(() => dialog.isVisible()).toBe(false);
-      await page.goto(server.url + 'v/current/guide/outline/');
+      await page.goto(server.url + 'guide/outline/');
       // The top navigation links each section folder with an index page, then the configured links; the logo and footer come from conventions.
       const main = page.getByRole('navigation', { name: 'Main' });
       expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
@@ -442,19 +472,19 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       // A generated folder index is a page of links, which navigate like any other.
       await main.getByRole('link', { name: 'Reference' }).click();
-      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Reference');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Reference');
       await expect.poll(() => main.getByRole('link', { name: 'Reference' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('ul.contents p').textContent()).toBe('Configure the site.');
       const indexAudit = await new AxeBuilder({ page }).analyze(); expect(indexAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       await page.locator('ul.contents').getByRole('link', { name: 'Options' }).click();
-      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Options');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Options');
       // An unknown path renders the 404 page in the shell.
-      expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
-      expect(await page.locator('h1').textContent()).toBe('Nothing here');
+      expect((await page.goto(server.url + 'nowhere/'))!.status()).toBe(404);
+      expect((await page.locator('h1').textContent())?.trim()).toBe('Nothing here');
       expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
       // The home page reads its hero and feature cards from its Markdown, between the top navigation and footer, with no sidebar.
-      await page.goto(server.url + 'v/current/');
-      expect(await page.locator(':is([component="markupress-home"], [data-component="markupress-home"]:not([component])) .hero h1').textContent()).toBe('Welcome');
+      await page.goto(server.url + '');
+      expect(await page.locator(':is([component="markupress-home"], [data-component="markupress-home"]:not([component])) .hero h1').innerText()).toBe('Welcome');
       expect(await page.locator('.hero-image img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
       const primaryAction = page.getByRole('link', { name: 'Installation', exact: true });
       expect(await primaryAction.getAttribute('data-ui-button-prop-tone')).toBe('accent');
@@ -464,7 +494,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         return action.y - story.y - story.height;
       });
       expect(actionGap).toBeGreaterThan(16);
-      expect(await page.locator('.features :is([component="ui-card"], [data-component="ui-card"]:not([component])) h2').allTextContents()).toEqual(['Components', 'Versions']);
+      expect((await page.locator('.features :is([component="ui-card"], [data-component="ui-card"]:not([component])) h2').allTextContents()).map(text => text.trim())).toEqual(['Components', 'Versions']);
       expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       expect(await page.locator('#documentation-navigation, :is([component="mk-pager"], [data-component="mk-pager"]:not([component]))').count()).toBe(0);
@@ -479,10 +509,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => homeNavigation.isVisible()).toBe(true);
       expect(await homeNavigation.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       await homeNavigation.getByRole('link', { name: 'Outline', exact: true }).click();
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/outline/');
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'guide/outline/');
       expect(await page.locator('#home-navigation:popover-open').count()).toBe(0);
       await page.setViewportSize({ width: 1280, height: 900 });
-      await page.goto(server.url + 'v/current/');
+      await page.goto(server.url + '');
 
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
@@ -493,10 +523,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       }
       // Its actions are links: the first leads to the guide, in the shell.
       await page.getByRole('link', { name: 'Installation' }).click();
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/install/#install');
+      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'guide/install/#install');
       await expect.poll(() => page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').count(), { timeout: 30_000 }).toBe(1);
-      if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + 'v/current/'); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
-      await page.goto(server.url + 'v/current/about/');
+      if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + ''); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
+      await page.goto(server.url + 'about/');
       const group = page.locator('#documentation-navigation :is([component~="ui-disclosure"], [data-component~="ui-disclosure"]:not([component]))').filter({ has: page.getByRole('button', { name: 'guide', exact: true }) });
       const trigger = group.getByRole('button', { name: 'guide', exact: true });
       await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('true');
@@ -552,14 +582,14 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
       // Workspace pages retain a mobile section menu without duplicating documentation navigation.
-      await page.goto(server.url + 'v/current/workspace/edit/');
+      await page.goto(server.url + 'workspace/edit/');
       expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(0);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
       expect(await page.getByRole('navigation', { name: 'Sections', exact: true }).isVisible()).toBe(true);
       await page.keyboard.press('Escape');
       await page.setViewportSize({ width: 1440, height: 1000 });
       expect(await page.locator('#documentation-navigation').isVisible()).toBe(false);
-      await page.goto(server.url + 'v/current/guide/outline/');
+      await page.goto(server.url + 'guide/outline/');
       const outlineTitle = page.getByText('On this page', { exact: true });
       const header = page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))');
       expect((await outlineTitle.boundingBox())!.y).toBeGreaterThan((await header.boundingBox())!.y + (await header.boundingBox())!.height + 10);
@@ -569,24 +599,24 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.locator('html').evaluate(element => element.style.removeProperty('--markupress-header-height'));
       await page.setViewportSize({ width: 390, height: 844 });
       // The home page fits a narrow screen too.
-      await page.goto(server.url + 'v/current/');
+      await page.goto(server.url + '');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (mode === 'preview') {
         const noScript = await browser.newContext({ javaScriptEnabled: false });
         try {
-          const plain = await noScript.newPage(); await plain.goto(server.url + 'v/current/about/');
+          const plain = await noScript.newPage(); await plain.goto(server.url + 'about/');
           const fallback = plain.locator('.native details').filter({ has: plain.locator('summary', { hasText: 'guide' }) });
           expect(await fallback.isVisible()).toBe(true);
           await fallback.locator('summary').click();
           expect(await fallback.getAttribute('open')).toBe(null);
           expect(await plain.locator('.enhanced').isVisible()).toBe(false);
           await plain.setViewportSize({ width: 375, height: 812 });
-          await plain.goto(server.url + 'v/current/');
+          await plain.goto(server.url + '');
           await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
           const sections = plain.getByRole('navigation', { name: 'Sections', exact: true });
           expect(await sections.isVisible()).toBe(true);
           await sections.getByRole('link', { name: 'Outline', exact: true }).click();
-          expect(plain.url()).toBe(server.url + 'v/current/guide/outline/');
+          expect(plain.url()).toBe(server.url + 'guide/outline/');
         } finally { await noScript.close(); }
       }
       expect(errors).toEqual([]); expect(violations).toEqual([]); await context.close(); await server.close(); server = undefined;
@@ -636,19 +666,19 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('installed section naviga
             })).toBe(true);
             expect(await nav.getByRole('link', { name: 'Stack', exact: true }).getAttribute('aria-current')).toBe('page');
             await nav.getByRole('link', { name: 'Forms', exact: true }).click();
-            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/forms/');
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/forms/');
             await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
             expect(await sidebarReachesFooter()).toBe(true);
             await page.reload();
             expect(await nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
             await nav.getByRole('link', { name: 'Layout', exact: true }).click();
-            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/layout/');
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/layout/');
             await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Stack', 'Grid', 'Forms']);
             await page.setViewportSize({ width: 375, height: 812 });
             await page.getByRole('button', { name: 'Navigation', exact: true }).click();
             expect(await nav.isVisible()).toBe(true);
             await nav.getByRole('link', { name: 'Forms', exact: true }).click();
-            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/v/current/reference/forms/');
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/forms/');
             await expect.poll(() => page.locator('#documentation-navigation:popover-open').count()).toBe(0);
           } finally { await context.close(); }
         }
@@ -704,13 +734,15 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             expect(await page.getByRole('button', { name: /^Apparence:/ }).count()).toBe(1);
             expect(await page.getByRole('button', { name: /^Apparence:/ }).getAttribute('aria-description')).toBe('Activer pour choisir l’apparence suivante.');
             const languages = page.getByRole('navigation', { name: /^(Languages|Langues|اللغات)$/, exact: true });
-            await languages.locator('summary').click();
-            await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
-            await languages.locator('summary').click();
-            await languages.getByRole('link', { name: 'Français', exact: true }).click();
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'Français', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
             await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('ltr');
             await expect.poll(alternates).toEqual(versionOne);
@@ -741,12 +773,13 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
               await input.press('Enter');
               await expect.poll(() => input.isVisible()).toBe(false);
               await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
               await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
               await page.evaluate(() => location.assign('/manual/v/v1/setup/'));
               await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
               await expect.poll(() => input.isVisible()).toBe(false);
-              await languages.locator('summary').click();
-              await languages.getByRole('link', { name: 'Français', exact: true }).click();
+              await openLanguages(page);
+              await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'Français', exact: true }).click();
               await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
             }
             if (mode === 'preview' && javaScriptEnabled) {
@@ -755,8 +788,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             }
             await page.setViewportSize({ width: 375, height: 812 });
             await expect.poll(logoAndMenuSeparate).toBe(true);
-            await languages.locator('summary').click();
-            await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
             await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
             expect(await page.locator('pre').evaluate(element => getComputedStyle(element).direction)).toBe('ltr');
             await expect.poll(logoAndMenuSeparate).toBe(true);
@@ -767,12 +800,11 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             await page.keyboard.press('Escape');
             await page.getByRole('button', { name: 'التنقل', exact: true }).click();
             await drawer.getByRole('link', { name: 'الحالية', exact: true }).click();
-            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/install/');
             // MarkupKit commits the URL before its layers and head finish rendering.
             await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             await expect.poll(alternates).toEqual([['en', 'https://docs.example/manual/setup/'], ['fr', 'https://docs.example/manual/fr/demarrer/'],
               ['ar', 'https://docs.example/manual/ar/install/'], ['x-default', 'https://docs.example/manual/setup/']]);
-            expect(await page.locator('head link[rel="canonical"]').getAttribute('href')).toBe('https://docs.example/manual/ar/install/');
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
             if (mode === 'preview' && javaScriptEnabled) await page.screenshot({ path: join(root, '.context/locales-mobile.png') });
             expect(errors).toEqual([]);
@@ -839,7 +871,9 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('serves installed source 
             }
             await page.setViewportSize({ width: 375, height: 812 });
             const languages = page.getByRole('navigation', { name: /^(Langues|اللغات)$/, exact: true });
-            await languages.locator('summary').click(); await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+            expect((await languages.getByRole('link').allTextContents()).map(text => text.trim())).toEqual(['English']);
+            expect(await languages.getByRole('button').count()).toBe(0);
+            await page.goto(server.url + 'ar/v/v1/reference/');
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/reference/');
             await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             expect(await page.locator('html').getAttribute('dir')).toBe('rtl'); expect(await article.getAttribute('dir')).toBe('ltr');
@@ -886,7 +920,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hoste
           const path = language === 'fr' ? 'installer' : language === 'ar' ? 'install' : 'setup';
           if (query === 'fail') { await route.fulfill({ status: 503, body: '{}' }); return; }
           await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results: [{ hits: query === 'empty' ? [] : [
-            { url: `https://docs.example/manual/${language === 'en' ? '' : language + '/'}v/${version}/${path}/`, language, version,
+            { url: `https://docs.example/manual/${language === 'en' ? '' : language + '/'}${version === 'current' ? '' : `v/${version}/`}${path}/`, language, version,
               hierarchy: { lvl1: 'Guide', lvl2: 'Literal <result>' }, content: 'Café 👩🏽‍💻 العربية <example>' },
             { url: 'https://evil.example/', language, version, hierarchy: { lvl1: 'Unsafe' } },
           ] }] }) });
@@ -906,7 +940,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hoste
           await rows.locator('button').press('Enter'); await expect.poll(() => input.isVisible()).toBe(false);
           await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
           const languages = page.getByRole('navigation', { name: 'Langues', exact: true });
-          await languages.locator('summary').click(); await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+          await openLanguages(page); await languages.getByRole('menuitem', { name: 'العربية', exact: true }).click();
           await page.waitForURL('**/manual/ar/v/old/install/');
           await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
           expect(await page.locator('html').getAttribute('lang')).toBe('ar');
@@ -914,12 +948,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hoste
           await input.fill('عربي'); await expect.poll(() => rows.count()).toBe(1);
           expect(await rows.getAttribute('data-href')).toBe('/manual/ar/v/old/install/');
           await input.press('Escape');
-          await page.evaluate(() => location.assign('/manual/ar/v/current/install/'));
-          await page.waitForURL('**/manual/ar/v/current/install/');
+          await page.evaluate(() => location.assign('/manual/ar/install/'));
+          await page.waitForURL('**/manual/ar/install/');
           await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
-          expect(new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+          expect(new URL(page.url()).pathname).toBe('/manual/ar/install/');
           await page.getByRole('button', { name: 'بحث', exact: true }).click(); await input.fill('حالي');
-          await expect.poll(() => rows.getAttribute('data-href')).toBe('/manual/ar/v/current/install/');
+          await expect.poll(() => rows.getAttribute('data-href')).toBe('/manual/ar/install/');
           expect(requests).toEqual(expect.arrayContaining([['language:fr', 'version:old'], ['language:ar', 'version:old'], ['language:ar', 'version:current']]));
           expect(localRequests).toEqual([]); expect(errors).toEqual([]);
           if (mode === 'preview') await page.screenshot({ path: join(root, '.context/hosted-search.png') });

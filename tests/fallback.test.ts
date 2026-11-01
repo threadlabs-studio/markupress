@@ -57,14 +57,14 @@ it('serves source content with selected-locale chrome, original dependencies and
     expect(french).toContain('Ce contenu n’est pas encore disponible en Français.');
     expect(french).toContain('>Copier</button>');
     expect(french).toContain('datetime="2026-10-28">28 octobre 2026</time>');
-    expect(french).toContain('href="/manual/fr/v/current/demarrer/"');
+    expect(french).toContain('href="/manual/fr/demarrer/"');
     expect(french).toContain('Original component'); expect(french).toContain('{literal} &lt;source-card&gt;');
     expect(french).toMatch(/src="\/manual\/_markupkit\/files\/[a-f0-9]{16}-mark\.svg"/);
     expect(french).toContain('rel="canonical" href="https://docs.example/manual/fallback/"');
     expect(french).not.toMatch(/<link[^>]*rel="alternate"[^>]*hreflang="(?:fr|ar)"/);
     const arabic = visible((await app.render('/manual/ar/fallback/')).html);
     expect(arabic).toContain('<html lang="ar" dir="rtl">'); expect(arabic).toMatch(/<article[^>]*lang="en"[^>]*dir="ltr"/);
-    expect(arabic).toContain('>نسخ</button>'); expect(arabic).toContain('href="/manual/ar/v/current/start/"');
+    expect(arabic).toContain('>نسخ</button>'); expect(arabic).toContain('href="/manual/ar/start/"');
     expect((await app.render('/manual/fr/old-fallback/')).status).toBe(200);
     expect((await app.render('/manual/fr/start/')).status).toBe(404);
     expect((await app.render('/manual/fr/v/v1/start/')).html).toContain('Source installation');

@@ -45,7 +45,6 @@ export default function shell(host: ComponentHost): void {
       }
       if (target.closest('a[href]')) {
         host.root.querySelector<HTMLElement>('#documentation-navigation:popover-open, #home-navigation:popover-open')?.hidePopover();
-        target.closest('.languages a[href]')?.closest('details')?.removeAttribute('open');
       }
     };
     // The page sits inside the shell, so this sees every click.

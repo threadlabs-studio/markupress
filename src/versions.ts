@@ -61,7 +61,7 @@ export function freezeRootPaths(text: string, path: string, id: string, copied: 
  * dot folder and renamed into place, so a version appears whole or not at all.
  */
 export async function snapshotVersion(id: string, options: MarkupressOptions = {}): Promise<DocumentationVersion> {
-  if (!/^[A-Za-z0-9_-]+$/.test(id) || id === 'current') throw new Error('Snapshot id must be a URL slug other than current.');
+  if (!/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/.test(id) || id === 'current') throw new Error('Snapshot id must be a URL slug other than current.');
   const root = resolve(options.root ?? process.cwd());
   const canonicalRoot = await realpath(root);
   const source = resolve(root, options.contentDir ?? 'docs');

@@ -4,14 +4,18 @@ a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; 
 h1 { margin-block: 0 var(--ui-space-5); font: var(--ui-font-bold) clamp(2rem, 5vw, 3rem)/var(--ui-line-height-tight) var(--ui-font-display, var(--ui-font-sans)); letter-spacing: -.025em; }
 h2, h3, h4, h5, h6 { font-family: var(--ui-font-display, var(--ui-font-sans)); }
 h2, h3 { line-height: var(--ui-line-height-tight); }
-h2, h3 { margin-block: 2.5rem 1rem; scroll-margin-top: 5.5rem; }
+h2, h3 { margin-block: 2.5rem 1rem; }
 p, ul, ol { margin-block: 0 1.25rem; }
 li + li { margin-block-start: .35rem; }
 li > :last-child { margin-block-end: 0; }
 blockquote { margin: 1.5rem 0; padding-inline-start: 1.25rem; border-inline-start: 3px solid var(--ui-border-strong, var(--ui-border)); color: var(--ui-text-secondary); }
 :not(pre) > code { padding: .12em .3em; border-radius: var(--ui-radius-sm); background: var(--ui-surface-sunken); }
 hr { margin-block: 2rem; border: 0; border-block-start: 1px solid var(--ui-border); }
-h1 a, h2 a, h3 a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4, h5, h6 { position: relative; scroll-margin-block-start: calc(var(--_markupress-header-height, var(--markupress-header-height, 4.25rem)) + 1.25rem); }
+.heading-anchor { position: absolute; inset-inline-start: -1.25rem; inset-block-start: .2em; display: inline-flex; align-items: center; justify-content: center; inline-size: 1rem; block-size: 1.25rem; color: var(--ui-text-muted); --ui-icon-size: 1rem; font-size: 1rem; opacity: 0; transition: opacity var(--ui-motion-fast) var(--ui-motion-ease); }
+:is(h1, h2, h3, h4, h5, h6):is(:hover, :focus-within) > .heading-anchor { opacity: 1; }
+@media (hover: none) { .heading-anchor { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .heading-anchor { transition: none; } }
 pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border-radius: .5rem; }
 figure.code { margin: 1rem 0; }
 figure.code figcaption { margin-bottom: .25rem; font: .85rem ui-monospace, monospace; color: var(--ui-text-muted, inherit); }
