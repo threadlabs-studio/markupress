@@ -325,7 +325,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), edition, within.current, base),
       versions: versionLinks(catalog, versionsList.map(version => ({ ...version, ...(options.versions === undefined && version.id === 'current' ? { label: ui.currentVersion } : {}), pathname: editions.find(entry => entry.id === version.id && entry.locale === edition.locale)!.prefix })), page?.id ?? 'index', selected, base, version => formatMessage(ui.versionUnavailable, { version })),
       locales: Object.entries(options.locales ?? {}).flatMap(([id, locale]) => {
-        const target = all.find(doc => doc.locale === id && doc.version === selected && doc.id === (page?.id ?? 'index') && !doc.fallback);
+        const target = all.find(doc => doc.locale === id && doc.version === selected && doc.id === page?.id && !doc.fallback);
         return target ? [{ label: locale.label, lang: locale.lang ?? id, href: base + target.pathname.slice(1),
           current: id === edition.locale ? 'page' : 'false', note: '' }] : [];
       }),

@@ -649,6 +649,7 @@ it('isolates locale/version routes and search, and switches renamed translations
     expect(html).toContain('/manual/fr/v/v1/_search.json');
     expect(html).not.toContain('English installation');
     expect((await application.render('/manual/ar/')).html).toContain('<html lang="ar" dir="rtl">');
+    expect((await application.render('/manual/absent/')).html).not.toContain('class="languages"');
     expect((await application.render('/manual/ar/absent/')).html).toContain('<html lang="en" dir="ltr">');
     const index = JSON.stringify(application.generated.get('/manual/fr/v/v1/_search.json')?.contents);
     expect(index).toContain('Français seulement');
