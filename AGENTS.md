@@ -39,3 +39,8 @@
   speculative 1.0 or later major-version ceiling. Lockfiles record exact tested
   resolutions. Restrict a range only for a demonstrated API requirement or verified
   incompatible release, and record the reason.
+
+- The public documentation URL is `https://threadlabs.studio/markupress/`. Keep the
+  `/markupress/` base and `https://threadlabs.studio` origin in the website config.
+  GitHub Pages is the upstream host for the Threadlabs website proxy; use the
+  Threadlabs URL in public links, package metadata, and generated site metadata.

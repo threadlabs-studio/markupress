@@ -22,7 +22,7 @@
     "url": "git+https://github.com/threadlabs-studio/markupress.git",
     "directory": "packages/create-markupress"
   },
-  "homepage": "https://threadlabs-studio.github.io/markupress/guide/getting-started/",
+  "homepage": "https://threadlabs.studio/markupress/guide/getting-started/",
   "bugs": {
     "url": "https://github.com/threadlabs-studio/markupress/issues"
   }
