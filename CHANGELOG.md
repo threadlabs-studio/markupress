@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.16.0
 
 - Read canonical HTML Next component identities in theme selectors and controllers, preserving legacy identity support and canonical precedence. Require MarkupKit 0.5.0 for scoped page compilation and source selection.
 
