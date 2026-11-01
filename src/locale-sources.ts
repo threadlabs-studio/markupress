@@ -39,7 +39,8 @@ export async function localeSources(pages: readonly PageSource[], editions: read
       if (pending === undefined) { pending = readFile(file, 'utf8').then(source => readFrontMatter(source, file)); fields.set(file, pending); }
       const frontmatter = await pending;
       const path = mount.href.slice((mount.href.startsWith(version) ? version : home).length);
-      const canonical = new URL(frontmatter.head?.canonical ?? mount.href, new URL(mount.href, origin ?? 'https://markupress.invalid'));
+      const owner = mount.aliasOf ?? mount.href;
+      const canonical = new URL(frontmatter.head?.canonical ?? owner, new URL(owner, origin ?? 'https://markupress.invalid'));
       const target = { file, edition, id: frontmatter.id ?? (path.slice(0, -1) || 'index'), path, href: mount.href,
         canonical: origin !== undefined || /^[A-Za-z][A-Za-z\d+.-]*:/.test(frontmatter.head?.canonical ?? '') ? canonical.href : canonical.pathname + canonical.search + canonical.hash, fields: frontmatter };
       const collision = result.find(source => source.edition.locale === edition.locale && source.edition.id === edition.id && source.id === target.id);

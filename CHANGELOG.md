@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
+- Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.
+
 - Read canonical HTML Next component identities in theme selectors and controllers, preserving legacy identity support and canonical precedence. Require MarkupKit 0.5.0 for scoped page compilation and source selection.
 
 - Serve untranslated default-locale content inside the selected locale and version with opt-in `localeFallback: 'source'`. Real translations take precedence by identity, scoped links remain in the selected catalog, and source files retain their relative dependencies and article language. Localize the fallback notice and reader controls, keep source canonical ownership, and refresh selection after translation edits.

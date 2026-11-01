@@ -22,6 +22,7 @@
 <prop name="favicon" type="string">Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
 <prop name="headerNotice" type="string" default="">Removable status chip before search</prop>
+<prop name="hosted" type="object({ appId: string, apiKey: string, indexName: string, filters: string, limit: number, timeout: number, debounce: number, language: string, version: string, base: string, home: string, prefix: string, defaultVersion: boolean, excludedHomes: list(string), origin: string })">Contextual hosted search settings</prop>
 <prop name="searchOptions" type="object({ limit: number, fuzzy: number, prefix: boolean })" default='{"limit":20,"fuzzy":0.2,"prefix":true}'>Local search matching options</prop>
 <prop name="search" type="string" default="">The URL of the version's search index</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links, each with an icon URL or ""</prop>
@@ -39,7 +40,7 @@
 <state name="appearance" type="string" value="automatic"></state>
 <state name="appearanceReady" type="boolean" value="false"></state></defs>
 <div class="site" from:lang="$uiLang"><a class="skip" href="#documentation-content">{$ui.skipToContent}</a>
-<markupress-header from:ui="$ui" from:ui-lang="$uiLang" from:notice-label="$noticeLabel" from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
+<markupress-header from:ui="$ui" from:ui-lang="$uiLang" from:notice-label="$noticeLabel" from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:hosted="$hosted" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
 <span class="menu" slot="menu"><ui-icon-button from:label="$ui.navigation" variant="ghost" tone="neutral" popovertarget="documentation-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></span></markupress-header>
 <div class="columns"><aside id="documentation-navigation" popover from:aria-label="$ui.documentation" from:data-sidebar="$sidebarVisible">
 <div class="sidebar-content">

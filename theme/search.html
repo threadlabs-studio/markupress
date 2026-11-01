@@ -9,6 +9,7 @@
 <prop name="lang" type="string" default="en">Language for feedback and number formatting</prop>
 
 <prop name="index" type="string" required>The URL of the version's search index</prop>
+<prop name="hosted" type="object({ appId: string, apiKey: string, indexName: string, filters: string, limit: number, timeout: number, debounce: number, language: string, version: string, base: string, home: string, prefix: string, defaultVersion: boolean, excludedHomes: list(string), origin: string })">Contextual hosted search settings</prop>
 <prop name="options" type="object({ limit: number, fuzzy: number, prefix: boolean })" default='{"limit":20,"fuzzy":0.2,"prefix":true}'>Local matching options</prop>
 <state name="open" type="boolean" value="false"></state>
 <state name="selected" type="string" value=""></state>
@@ -19,6 +20,7 @@
 <input slot="search" type="search" from:aria-label="$ui.searchLabel" from:placeholder="$ui.search" autocomplete="off" spellcheck="false">
 <p slot="status" role="status">{$status}</p>
 <div slot="body"><div $each="result of $results" from:data-href="$result.href"><ui-search-result-row from:selected="$result.href = $selected"><span slot="title">{$result.heading}</span><span slot="meta">{$result.page}</span><span slot="excerpt">{$result.excerpt}</span></ui-search-result-row></div></div>
+<a $if="$hosted" slot="footer" href="https://www.algolia.com/" rel="external">Algolia</a>
 </ui-search-shell></div>
 <style>
 input { box-sizing: border-box; inline-size: 100%; padding: .75rem 1rem; border: 0; background: transparent; color: var(--ui-text); font: inherit; font-size: 1.1rem; outline: none; }

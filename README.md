@@ -8,7 +8,8 @@ Build a versioned Markdown documentation site with native HTML Next components, 
 - **Code blocks:** Shiki highlighting at build time in both themes, titles, line highlights and numbers, copy and wrap.
 - **Components:** native HTML Next components in any page, with TypeScript controllers.
 - **Navigation:** sections and sidebars from folders, a top navigation, breadcrumbs, an "On this page" outline, a mobile drawer, edit links and last-updated dates.
-- **Search:** typo-tolerant local search of each version, with page/content exclusions and keyboard result selection, opened with `/` or Ctrl+K.
+- **Search:** typo-tolerant local search or contextual Algolia search, with language/version isolation, content exclusions and keyboard selection. Open it with `/` or Ctrl+K.
+- **Languages:** locale routes, identity-based language switching, translated reader controls, RTL layouts, language metadata and optional source-content fallback.
 - **Versions:** `markupress snapshot v1` records the docs, and readers switch versions on the same document.
 - **Theme:** a coordinated light/dark Markupress palette, Looma controls, a home layout, a footer, and site layouts that replace the shell.
 

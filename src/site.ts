@@ -13,7 +13,10 @@ import { footer, generatedSidebar, siteLink, type Link, type NavItem, type Sideb
 import { themeScript } from './theme.js';
 import type { Syntax } from 'expressmark';
 import { versionLinks } from './versions.js';
-import type { LocalSearchOptions } from './search.js';
+import { configureSearch, type SearchOptions } from './search-config.js';
+import { algoliaOrigin, type HostedSearch } from './algolia.js';
+import { algoliaRecords } from './search-records.js';
+import { hostedPolicy } from './search-policy.js';
 
 export interface DocumentationVersion {
   readonly id: string;
@@ -42,8 +45,8 @@ export interface MarkupressOptions {
   readonly defaultLocale?: string;
   /** Serve missing translations from the default locale, or retain locale-home switching (the default). */
   readonly localeFallback?: 'source' | 'home';
-  /** Local search matching options, or false to disable search and its generated indexes. */
-  readonly search?: false | LocalSearchOptions;
+  /** Local matching options or an Algolia provider, or false to disable search and generated indexes. */
+  readonly search?: false | SearchOptions;
   readonly root?: string;
   readonly contentDir?: string;
   readonly base?: string;
@@ -130,15 +133,7 @@ const pageStyles = [...['tokens.css', 'theme-light.css', 'theme-dark.css'].map(f
  */
 export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   if (options.sidebarNavigation !== undefined && !['tree', 'sections'].includes(options.sidebarNavigation)) throw new Error('sidebarNavigation must be tree or sections.');
-  const localSearch = options.search === false ? undefined : options.search === undefined ? {} : options.search;
-  if (localSearch !== undefined) {
-    if (localSearch === null || typeof localSearch !== 'object' || Array.isArray(localSearch)) throw new Error('search must be false or an object of local search options.');
-    for (const key of Object.keys(localSearch)) if (!['limit', 'fuzzy', 'prefix'].includes(key)) throw new Error(`Unknown search option ${key}.`);
-    if (localSearch.limit !== undefined && (!Number.isSafeInteger(localSearch.limit) || localSearch.limit < 1)) throw new Error('search.limit must be a positive whole number.');
-    if (localSearch.fuzzy !== undefined && localSearch.fuzzy !== false && (typeof localSearch.fuzzy !== 'number' || !Number.isFinite(localSearch.fuzzy) || localSearch.fuzzy < 0 || localSearch.fuzzy > 1)) throw new Error('search.fuzzy must be false or a fraction between 0 and 1.');
-    if (localSearch.prefix !== undefined && typeof localSearch.prefix !== 'boolean') throw new Error('search.prefix must be true or false.');
-  }
-  const searchOptions = { limit: localSearch?.limit ?? 20, fuzzy: localSearch?.fuzzy === false ? 0 : localSearch?.fuzzy ?? 0.2, prefix: localSearch?.prefix ?? true };
+  const searchConfiguration = configureSearch(options.search), searchOptions = searchConfiguration.local;
   if (options.localeFallback !== undefined && options.localeFallback !== 'source' && options.localeFallback !== 'home') throw new Error('localeFallback must be source or home.');
   const sourceFallback = options.localeFallback === 'source' && options.locales !== undefined;
   const defaultVersion = options.defaultVersion ?? 'current';
@@ -286,7 +281,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
           aliases: page.aliases.map(alias => edition.prefix + alias.slice(1)), outline: page.outline, generated: page.generated, sections: page.sections,
           page: { ...page.frontmatter, id: physical.id, title: page.title } });
       },
-    }, siteBase, { ...(fallback ? { canonical: physical.canonical } : {}), uiLanguage: uiLanguage(edition) });
+    }, siteBase, { canonical: physical.canonical, uiLanguage: uiLanguage(edition) });
   }
   let layoutFile = shell;
   let logo: { readonly light: string; readonly dark?: string } | undefined, favicon: string | undefined;
@@ -320,8 +315,14 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     const sidebarDefault = catalog.filter(doc => doc.version === selected && isIndex(doc.source) &&
       (page?.pathname ?? requested).startsWith(doc.pathname) && doc.page.sidebar !== undefined)
       .sort((a, b) => b.pathname.length - a.pathname.length)[0]?.page.sidebar;
+    const hosted: HostedSearch | null = searchConfiguration.algolia === undefined ? null : {
+      ...searchConfiguration.algolia, language: edition.locale || uiLanguage(edition), version: edition.id, base,
+      home: base + edition.home.slice(1), prefix: base + edition.prefix.slice(1), defaultVersion: edition.id === defaultVersion,
+      excludedHomes: [...new Set(editions.filter(other => other.home !== edition.home && other.home.startsWith(edition.home)).map(other => base + other.home.slice(1)))],
+      origin: siteOrigin ?? '',
+    };
     const data: Record<string, unknown> = { fallbackNotice: page?.fallback ? formatMessage(ui.untranslatedContent, { locale: locale?.label ?? edition.locale }) : '', sidebarVisible: page?.page.sidebar ?? sidebarDefault ?? true, title: locale?.title ?? options.title ?? ui.documentation, ui, uiLang: uiLanguage(edition), home: base + edition.home.slice(1), navigation: items,
-      search: options.search === false ? '' : base + (explicit ? edition.prefix : edition.home).slice(1) + '_search.json', searchOptions,
+      hosted, search: !searchConfiguration.enabled ? '' : base + (explicit ? edition.prefix : edition.home).slice(1) + '_search.json', searchOptions,
       ...await chrome(items, navigationTree, catalog.filter(doc => doc.version === selected), edition, within.current, base),
       versions: versionLinks(catalog, versionsList.map(version => ({ ...version, ...(options.versions === undefined && version.id === 'current' ? { label: ui.currentVersion } : {}), pathname: editions.find(entry => entry.id === version.id && entry.locale === edition.locale)!.prefix })), page?.id ?? 'index', selected, base, version => formatMessage(ui.versionUnavailable, { version })),
       locales: Object.entries(options.locales ?? {}).map(([id, locale]) => {
@@ -400,8 +401,18 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   return { ...pages, name: 'markupress', pages: { ...pages.pages!, compile: compileScoped },
     // Each version's search index beside its pages, and the default version's at the root too. MarkupKit runs this once
     // every page has compiled, and again in development after each change.
-    generate: ({ base }) => options.search === false ? {} : Object.fromEntries(editions.flatMap(edition => [[edition.prefix + '_search.json', searchIndex(edition, edition.prefix, base)],
-      ...(edition.id === defaultVersion ? [[edition.home + '_search.json', searchIndex(edition, edition.home, base)]] : [])])),
+    generate: ({ base }) => {
+      if (!searchConfiguration.enabled) return {};
+      const files = Object.fromEntries(editions.flatMap(edition => [[edition.prefix + '_search.json', searchIndex(edition, edition.prefix, base)],
+        ...(edition.id === defaultVersion ? [[edition.home + '_search.json', searchIndex(edition, edition.home, base)]] : [])]));
+      if (searchConfiguration.algolia) files['/_algolia.json'] = JSON.stringify(editions.flatMap(edition => algoliaRecords(
+        current().filter(doc => doc.version === edition.id && doc.locale === edition.locale && doc.page.search !== false).flatMap(doc => {
+          const href = base + (edition.id === defaultVersion ? edition.home : edition.prefix).slice(1) + doc.pathname.slice(edition.prefix.length);
+          return doc.sections.map(section => ({ document: doc.id, section: section.id, page: doc.page.title, heading: section.heading,
+            href: section.id ? `${href}#${section.id}` : href, text: section.text }));
+        }), edition.locale || uiLanguage(edition), edition.id, siteOrigin)).sort((a, b) => a.objectID.localeCompare(b.objectID)));
+      return files;
+    },
     async config(markupkit) {
     root = resolve(markupkit.root ?? root); siteBase = markupkit.base ?? '/'; siteOrigin = markupkit.origin;
     // Conventions first: public/logo.svg, public/logo-dark.svg and public/favicon.svg, which the options override.
@@ -470,7 +481,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     }) : [];
     function layout(edition: Edition) { return { component: layoutFile, server: { load: (context: LoadContext) => load(context, edition.locale) } }; }
     // layout: home names this layout; a site's app/layouts/home.html takes its place, as MarkupKit resolves a name.
-    return { headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
+    return { ...(searchConfiguration.algolia ? { csp: hostedPolicy(markupkit.csp, algoliaOrigin(searchConfiguration.algolia.appId)) } : {}), headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       // The root serves the default version's folder as its own; every further mount of a folder, the default's
       // /v/<id>/ included, is an alias, so its pages name the first as canonical and stay out of the sitemap.
       pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: edition.prefix, layout: layout(edition), ...nativeScope(edition),
