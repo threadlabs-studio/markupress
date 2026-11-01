@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Show a file's code with an empty fence that names it, ```` ```html {src="@/examples/button.html"} ````, and an HTML example working above its code with `::example{src="@/examples/button.html"}`, as Expressive Markdown defines them. `src` is relative to the page or starts at the project root with `@/`. A missing file fails the build, and `markupress dev` reloads the page when the file changes.
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
 - Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.
 

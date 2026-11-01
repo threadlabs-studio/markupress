@@ -433,3 +433,30 @@ it('groups standard adjacent tabs without accepting the old equals-label grammar
   expect(legacy).not.toContain('<ui-tabs');
   expect(legacy).toContain('== Examples');
 });
+
+it('reads code fences and live examples from the files their src names, and fails on a missing one', async () => {
+  const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = await mkdtemp(join(tmpdir(), 'markupress-src-'));
+  await mkdir(join(root, 'docs')); await mkdir(join(root, 'examples'));
+  await writeFile(join(root, 'examples/setup.ts'), 'const mode = "safe";\nawait deploy();\n');
+  await writeFile(join(root, 'examples/button.html'), '<link rel="component" href="./parts/badge.html">\n<button>Save {draft}</button>\n');
+  const file = join(root, 'docs/page.md'), watched: string[] = [];
+  const page = (markdown: string) => compileMarkdown(markdown, { file, pageName: 'page-src', root, watch: path => watched.push(path) });
+  const compiled = await page('# Examples\n\n```ts {src="../examples/setup.ts" & highlight=2}\n```\n\n::example[Save button]{src="@/examples/button.html"}\n');
+  const tree = parseFragment(compiled.resource);
+  expect(text(tree)).toContain('await deploy();');
+  expect(compiled.resource).toMatch(/class="line highlighted"><span[^>]*>await/);
+  // The example's HTML renders live, its source follows as code, and its component link resolves from the example's folder.
+  expect(compiled.resource).toContain('<figure class="example" data-type="example"><figcaption>Save button</figcaption><div class="example-preview">');
+  expect(compiled.resource).toMatch(/<div class="example-preview">\s*<button>Save \{draft\}<\/button>/);
+  // Code is literal: its braces are escaped, so HTML Next never evaluates them.
+  expect(text(tree)).toContain('<button>Save \\{draft}</button>');
+  expect(compiled.resource).toMatch(/<link rel="component" href="file:\/\/[^"]*\/examples\/parts\/badge\.html">/);
+  expect(watched).toEqual([join(root, 'examples/setup.ts'), join(root, 'examples/button.html')]);
+  await expect(page('```ts {src="./missing.ts"}\n```\n')).rejects.toThrow(/page\.md.*missing\.ts names no readable file/);
+  await expect(page('```ts {src="../examples/setup.ts"}\nx\n```\n')).rejects.toThrow(/page\.md: a code fence with src takes its code from the file/);
+  await expect(page('::example{src="/examples/button.html"}\n')).rejects.toThrow(/relative path or starts with @\//);
+  await expect(page('::example\n')).rejects.toThrow(/src names a file/);
+});
