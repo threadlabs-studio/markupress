@@ -125,3 +125,17 @@ it('resolves a fallback canonical beside its source while retaining an authored 
     expect(html).toContain('hreflang="en" href="https://docs.example/manual/source-owner/"');
   } finally { await app.close(); }
 }, 30_000);
+
+it('keeps shared-version fallback canonicals and relative overrides at the physical source owner', async () => {
+  const root = await fixture();
+  await write(root, 'docs/en/relative.md', '---\nhead:\n  canonical: ../preferred/\n---\n# Relative');
+  const app = await createApplication(siteOptions({ ...options(root, 'source'), versions: [{ id: 'current', directory: 'docs' }, { id: 'legacy', directory: 'docs' }] }));
+  try {
+    for (const locale of ['', 'fr/', 'ar/']) {
+      const page = (await app.render(`/manual/${locale}v/legacy/fallback/`)).html;
+      expect(page).toContain('rel="canonical" href="https://docs.example/manual/fallback/"');
+      const relative = (await app.render(`/manual/${locale}v/legacy/relative/`)).html;
+      expect(relative).toContain('rel="canonical" href="https://docs.example/manual/preferred/"');
+    }
+  } finally { await app.close(); }
+}, 30_000);

@@ -3,23 +3,24 @@
 import { expect, it, vi } from 'vitest';
 import type { ComponentHost } from '@nextwebwg/html-next/runtime';
 import searchController from '../src/controllers/search.js';
+import type { HostedSearch } from '../src/algolia.js';
 
 let identity = 0;
-function controller(fetch: typeof window.fetch, shells = '<div data-component="ui-search-shell"></div>') {
+function controller(fetch: typeof window.fetch, shells = '<div data-component="ui-search-shell"></div>', hosted?: HostedSearch) {
   const root = document.createElement('div');
   root.innerHTML = '<span class="trigger" hidden></span><input>' + shells;
   document.body.replaceChildren(root);
   window.fetch = fetch;
   let connect!: () => (() => void);
   const state: Record<string, unknown> = { results: [], status: '' };
-  const props = { index: { value: `/index-${++identity}.json` }, options: { value: {} } };
+  const props = { index: { value: `/index-${++identity}.json` }, options: { value: {} }, hosted: { value: hosted ?? null } };
   let effect: (() => void) | undefined;
   searchController({ root, state, props,
     effect(callback: () => void) { effect = callback; callback(); return () => { effect = undefined; }; },
     on(_event: string, callback: () => (() => void)) { connect = callback; } } as unknown as ComponentHost);
   const disconnect = connect();
   const input = (query: string) => { root.querySelector('input')!.value = query; root.querySelector('input')!.dispatchEvent(new Event('input')); };
-  return { state, input, disconnect, changeIndex(url: string) { props.index.value = url; effect?.(); } };
+  return { state, input, disconnect, changeHosted(value: HostedSearch | null) { props.hosted.value = value; effect?.(); }, changeIndex(url: string) { props.index.value = url; effect?.(); } };
 }
 const entries = [{ href: '/install/', page: 'Installation', heading: 'Installation', text: 'Set up the package.' }];
 
@@ -110,5 +111,47 @@ it('listens to canonical search-shell identity when a legacy identity disagrees'
   expect(subject.state.open).toBe(true);
   document.querySelector('[component="ui-search-shell"]')!.dispatchEvent(new Event('close'));
   expect(subject.state.open).toBe(false);
+  subject.disconnect();
+});
+
+const hosted: HostedSearch = { appId: 'APP123', apiKey: 'public-key', indexName: 'docs', filters: '', limit: 20, timeout: 5000, debounce: 0,
+  language: 'fr', version: 'current', base: '/', home: '/fr/', prefix: '/fr/v/current/', defaultVersion: true, excludedHomes: [], origin: 'https://docs.example' };
+const providerResponse = (heading: string) => new Response(JSON.stringify({ results: [{ hits: [{ language: 'fr', version: 'current',
+  url: '/fr/install/', hierarchy: { lvl1: heading }, content: 'French catalog' }] }] }));
+
+it('cancels hosted requests and ignores their late completion after a query or scope changes', async () => {
+  let resolve!: (value: Response) => void;
+  const fetch = vi.fn<typeof window.fetch>().mockImplementationOnce(() => new Promise<Response>(done => { resolve = done; }))
+    .mockResolvedValueOnce(providerResponse('Newest'));
+  const subject = controller(fetch, undefined, hosted);
+  subject.input('old'); const signal = fetch.mock.calls[0]![1]!.signal!;
+  subject.input('new'); expect(signal.aborted).toBe(true);
+  await vi.waitFor(() => expect(subject.state.results).toMatchObject([{ heading: 'Newest' }]));
+  subject.changeHosted({ ...hosted, version: 'v1', prefix: '/fr/v/v1/', defaultVersion: false });
+  expect(subject.state.results).toEqual([]);
+  resolve(providerResponse('Obsolete')); await new Promise(done => setTimeout(done, 0));
+  expect(subject.state.results).toEqual([]); subject.disconnect();
+});
+
+it('debounces hosted input and releases pending work when closed or disconnected', async () => {
+  vi.useFakeTimers();
+  try {
+    const fetch = vi.fn<typeof window.fetch>().mockResolvedValue(providerResponse('Installation'));
+    const subject = controller(fetch, undefined, { ...hosted, debounce: 150 });
+    subject.input('ins'); subject.input('install'); expect(fetch).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(150); expect(fetch).toHaveBeenCalledTimes(1);
+    subject.input('closed'); document.querySelector('[data-component="ui-search-shell"]')!.dispatchEvent(new Event('close'));
+    await vi.advanceTimersByTimeAsync(150); expect(fetch).toHaveBeenCalledTimes(1);
+    subject.input('disconnected'); subject.disconnect();
+    await vi.advanceTimersByTimeAsync(150); expect(fetch).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});
+
+it('retries hosted failures without loading the local index', async () => {
+  const fetch = vi.fn<typeof window.fetch>().mockResolvedValueOnce(new Response('', { status: 503 })).mockResolvedValueOnce(providerResponse('Installation'));
+  const subject = controller(fetch, undefined, hosted);
+  subject.input('install'); await vi.waitFor(() => expect(subject.state.status).toBe('Search is unavailable.'));
+  subject.input('install'); await vi.waitFor(() => expect(subject.state.status).toBe('1 result'));
+  expect(fetch.mock.calls.every(([url]) => String(url).startsWith('https://app123-dsn.algolia.net/'))).toBe(true);
   subject.disconnect();
 });

@@ -12,3 +12,6 @@ export type { VersionLink } from './versions.js';
 export type { LocalSearchOptions } from './search.js';
 
 export type { Translations, TranslationOverrides } from './i18n.js';
+
+export type { SearchOptions } from './search-config.js';
+export type { AlgoliaSearchOptions } from './algolia.js';

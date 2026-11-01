@@ -47,8 +47,11 @@ it('refreshes translation metadata after identity swaps, failed discoveries, add
     await put('fr', 'b', '---\nid: {}\n---\n# Invalid');
     await expect.poll(async () => (await fetch(server.url + 'a/')).status, { timeout: 5000 }).toBe(500);
     await put('fr', 'b', page('first', 'Recovered'));
+    // The alternate URL is unchanged by recovery, so it alone cannot prove that generation finished.
+    await expect.poll(async () => (await fetch(server.url + 'fr/b/')).text(), { timeout: 5000 }).toContain('Recovered');
     await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/b/');
     await rm(join(root, 'docs/fr/b.md'));
+    await expect.poll(async () => (await fetch(server.url + 'fr/b/')).status, { timeout: 5000 }).toBe(404);
     await expect.poll(frenchAlternate, { timeout: 5000 }).toBeUndefined();
     await put('fr', 'renamed', page('first', 'Added translation'));
     await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/renamed/');

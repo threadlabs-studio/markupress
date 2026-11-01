@@ -853,3 +853,78 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('serves installed source 
     }
   } finally { await browser.close(); }
 }, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hosted search through the installed dev and production theme', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'hosted');
+  for (const [file, text] of Object.entries({ 'en/index.md': '# Home', 'en/setup.md': '---\nid: setup\n---\n# Setup',
+    'fr/index.md': '# Accueil', 'fr/installer.md': '---\nid: setup\n---\n# Installer', 'ar/index.md': '# البداية', 'ar/install.md': '---\nid: setup\n---\n# التثبيت' })) {
+    mkdirSync(join(site, 'docs', file, '..'), { recursive: true }); writeFileSync(join(site, 'docs', file), text);
+  }
+  const options = { root: site, base: '/manual/', origin: 'https://docs.example', port: 0,
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } },
+    versions: [{ id: 'current', directory: 'docs' }, { id: 'old', directory: 'docs' }],
+    search: { provider: 'algolia' as const, appId: 'APP123', apiKey: 'public-key', indexName: 'docs', debounce: 0, filters: 'audience:public' } };
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        const page = await browser.newPage(); const errors: string[] = [], localRequests: string[] = [], requests: string[][] = [];
+        page.on('pageerror', error => errors.push(error.message));
+        page.on('request', request => { if (request.url().endsWith('_search.json')) localRequests.push(request.url()); });
+        // Native navigation commits the URL before its payload finishes; exercise that boundary deliberately.
+        await page.route('**/manual/_markupkit/pages/ar/v/old/install/payload.json', async route => {
+          await new Promise(done => setTimeout(done, 1500)); await route.continue();
+        });
+        await page.route('https://app123-dsn.algolia.net/1/indexes/*/queries', async route => {
+          const body = route.request().postDataJSON() as { requests: { params: string; indexName: string }[] };
+          const params = new URLSearchParams(body.requests[0]!.params), facets = JSON.parse(params.get('facetFilters')!) as string[];
+          requests.push(facets); expect(params.get('filters')).toBe('audience:public'); expect(body.requests[0]!.indexName).toBe('docs');
+          const language = facets[0]!.slice('language:'.length), version = facets[1]!.slice('version:'.length), query = params.get('query');
+          const path = language === 'fr' ? 'installer' : language === 'ar' ? 'install' : 'setup';
+          if (query === 'fail') { await route.fulfill({ status: 503, body: '{}' }); return; }
+          await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results: [{ hits: query === 'empty' ? [] : [
+            { url: `https://docs.example/manual/${language === 'en' ? '' : language + '/'}v/${version}/${path}/`, language, version,
+              hierarchy: { lvl1: 'Guide', lvl2: 'Literal <result>' }, content: 'Café 👩🏽‍💻 العربية <example>' },
+            { url: 'https://evil.example/', language, version, hierarchy: { lvl1: 'Unsafe' } },
+          ] }] }) });
+        });
+        try {
+          await page.goto(server.url + 'fr/v/old/installer/');
+          await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+          let input = page.getByRole('searchbox');
+          await input.fill('fail'); await expect.poll(() => page.getByRole('status').textContent()).toContain('indisponible');
+          await input.fill('empty'); await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
+          await input.fill('installer');
+          const rows = page.locator('[data-href]');
+          await expect.poll(() => rows.count()).toBe(1);
+          expect(await rows.textContent()).toContain('Literal <result>'); expect(await rows.locator('result, example').count()).toBe(0);
+          expect(await rows.textContent()).toContain('Café 👩🏽‍💻 العربية <example>');
+          await input.press('ArrowDown'); expect(await rows.locator('button').evaluate(button => button === document.activeElement)).toBe(true);
+          await rows.locator('button').press('Enter'); await expect.poll(() => input.isVisible()).toBe(false);
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          const languages = page.getByRole('navigation', { name: 'Langues', exact: true });
+          await languages.locator('summary').click(); await languages.getByRole('link', { name: 'العربية', exact: true }).click();
+          await page.waitForURL('**/manual/ar/v/old/install/');
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          expect(await page.locator('html').getAttribute('lang')).toBe('ar');
+          await page.getByRole('button', { name: 'بحث', exact: true }).click(); input = page.getByRole('searchbox');
+          await input.fill('عربي'); await expect.poll(() => rows.count()).toBe(1);
+          expect(await rows.getAttribute('data-href')).toBe('/manual/ar/v/old/install/');
+          await input.press('Escape');
+          await page.evaluate(() => location.assign('/manual/ar/v/current/install/'));
+          await page.waitForURL('**/manual/ar/v/current/install/');
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          expect(new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+          await page.getByRole('button', { name: 'بحث', exact: true }).click(); await input.fill('حالي');
+          await expect.poll(() => rows.getAttribute('data-href')).toBe('/manual/ar/v/current/install/');
+          expect(requests).toEqual(expect.arrayContaining([['language:fr', 'version:old'], ['language:ar', 'version:old'], ['language:ar', 'version:current']]));
+          expect(localRequests).toEqual([]); expect(errors).toEqual([]);
+          if (mode === 'preview') await page.screenshot({ path: join(root, '.context/hosted-search.png') });
+        } finally { await page.close(); }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 90_000);
