@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.17.2
 
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
 - Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.
