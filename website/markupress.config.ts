@@ -6,7 +6,7 @@ export default defineConfig({
   defaultLocale: 'en',
   localeFallback: 'source',
   base: '/markupress/',
-  origin: 'https://threadlabs-studio.github.io',
+  origin: 'https://threadlabs.studio',
   robots: true,
   editLink: 'https://github.com/threadlabs-studio/markupress/edit/main/website/',
   nav: [

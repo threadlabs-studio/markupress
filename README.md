@@ -2,7 +2,7 @@
 
 Build a versioned Markdown documentation site with native HTML Next components, MarkupKit routing and a Looma theme. Markupress provides `dev`, `build`, `preview` and `snapshot` commands, and `build` writes a portable static site.
 
-**Documentation: [threadlabs-studio.github.io/markupress](https://threadlabs-studio.github.io/markupress/)**
+**Documentation: [threadlabs.studio/markupress](https://threadlabs.studio/markupress/)**
 
 - **Markdown:** Expressmark standard syntax with footnotes, bracketed callouts, details, adjacent tabs and named list tables.
 - **Code blocks:** Shiki highlighting at build time in both themes, titles, line highlights and numbers, copy and wrap.
@@ -30,7 +30,7 @@ npx markupress build     # write the static site to site/
 npx markupress preview   # serve the built site
 ```
 
-`docs/index.md` is a complete site. The [guide](https://threadlabs-studio.github.io/markupress/guide/getting-started/) covers project structure, writing, navigation, versions, theming and SEO, and the [reference](https://threadlabs-studio.github.io/markupress/reference/) covers configuration, the command line and the API.
+`docs/index.md` is a complete site. The [guide](https://threadlabs.studio/markupress/guide/getting-started/) covers project structure, writing, navigation, versions, theming and SEO, and the [reference](https://threadlabs.studio/markupress/reference/) covers configuration, the command line and the API.
 
 ## Home pages
 
