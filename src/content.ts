@@ -38,6 +38,8 @@ export interface MarkdownOptions {
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
+  /** A draft page is served by `markupress dev` and left out of a production build, unless the `drafts` option includes it. */
+  readonly draft?: boolean;
   /** Whether this page appears in search, true by default. */
   readonly search?: boolean;
   readonly title?: string;
@@ -227,6 +229,7 @@ function pagerLink(value: unknown): boolean {
 }
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
   search: [value => typeof value === 'boolean', 'true or false'],
+  draft: [value => typeof value === 'boolean', 'true or false'],
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
