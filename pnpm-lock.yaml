@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@threadlabs/markupkit':
-        specifier: '>=0.5.0'
-        version: 0.5.0(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: '>=0.6.0'
+        version: 0.6.0(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
         specifier: '>=0.4.0'
         version: 0.4.0
@@ -201,8 +201,8 @@ importers:
         specifier: '>=1.0.0-alpha.74'
         version: 1.0.0-alpha.74
       '@threadlabs/looma':
-        specifier: '>=0.49.4'
-        version: 0.49.4(@threadlabs/markupkit@0.5.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        specifier: '>=0.51.4'
+        version: 0.51.4(@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -333,6 +333,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@js-temporal/polyfill@0.5.1':
+    resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
+    engines: {node: '>=12'}
 
   '@napi-rs/wasm-runtime@1.2.5':
     resolution: {integrity: sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA==}
@@ -834,12 +838,12 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@threadlabs/looma@0.49.4':
-    resolution: {integrity: sha512-aBpKZnabF1ISUKM0j9+COet511S48Cc4L85uuRH31fLqTyIcYlsda/Eb7Hj1ZBu0KJ9mwcMh65VgvaNAl54O6g==}
+  '@threadlabs/looma@0.51.4':
+    resolution: {integrity: sha512-/zijk1WS7QU4OJPkzcfN/9vZjT5dKqh62mS8EZ9iTfpYh/wUXkMSEnx+ZK6hNu4KKijRorKi+1tbyvYJQvkqkg==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
     peerDependencies:
-      '@threadlabs/markupkit': '>=0.4.2'
+      '@threadlabs/markupkit': '>=0.4.3'
       '@tiptap/core': '>=2 <3'
       '@tiptap/pm': '>=2 <3'
       markupress: '>=0.14.6'
@@ -856,8 +860,8 @@ packages:
       vite:
         optional: true
 
-  '@threadlabs/markupkit@0.5.0':
-    resolution: {integrity: sha512-MASo8Bmc4oUV6jg1nZlOeQwgqbklCkvwVKb+CO6o/y/V0WELT/GIqg5di+YQTiORFU5EBOCRsypHOaf6LqIthQ==}
+  '@threadlabs/markupkit@0.6.0':
+    resolution: {integrity: sha512-dJ61oq9juZ4z40VnMVTaOH0rgcz5O1Axd+Am+TSfDkB4v8Fl49odImCx15S7BGqzHh/GPwkb/efv9rO17Rfn5w==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -1173,6 +1177,9 @@ packages:
 
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
+
+  jsbi@4.3.2:
+    resolution: {integrity: sha512-9fqMSQbhJykSeii05nxKl4m6Eqn2P6rOlYiS+C5Dr/HPIU/7yZxu5qzbs40tgaFORiw2Amd0mirjxatXYMkIew==}
 
   jsdom@30.1.2:
     resolution: {integrity: sha512-0FFE/jE1rppmVfUrJUgxqXjcwolZYIGtAgj1pTussMhNZxIxi7W/PvfWaMNroGi2B36X1IKHbexpZ9DhkoOPiQ==}
@@ -1799,6 +1806,10 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
+  '@js-temporal/polyfill@0.5.1':
+    dependencies:
+      jsbi: 4.3.2
+
   '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
       '@emnapi/core': 1.11.1
@@ -2094,8 +2105,9 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.49.4(@threadlabs/markupkit@0.5.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.51.4(@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
+      '@js-temporal/polyfill': 0.5.1
       '@nextwebwg/html-next': 1.0.0-alpha.74
       dompurify: 3.4.15
       expressmark: 0.5.2
@@ -2104,13 +2116,13 @@ snapshots:
       lucide: 0.554.0
       parse5: 8.0.1
     optionalDependencies:
-      '@threadlabs/markupkit': 0.5.0(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit': 0.6.0(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
 
-  '@threadlabs/markupkit@0.5.0(@types/node@22.20.1)(yaml@2.9.1)':
+  '@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       parse5: 8.0.1
@@ -2387,6 +2399,8 @@ snapshots:
   is-plain-object@5.1.0: {}
 
   is-potential-custom-element-name@1.0.1: {}
+
+  jsbi@4.3.2: {}
 
   jsdom@30.1.2:
     dependencies:

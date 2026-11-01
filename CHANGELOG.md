@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0
+
+- Require MarkupKit 0.6.0 for semantic version routes and isolated navigation queries, and Looma 0.51.4 for navigation disclosure spacing and theme-aware content/chrome surfaces.
+
+- **Breaking:** The default documentation version now lives only at the locale root. Current links use `/guide/` or `/fr/guide/`; reserve `/v/<id>/` for historical versions, including semantic version IDs such as `1.2.3`. Update bookmarks and integrations that used `/v/current/`.
+- Give headings a separate left-outset link icon that appears on hover and keyboard focus, and stays visible on hoverless devices. Authored links inside headings keep their destinations, and fragment targets stay visible below the sticky header.
+- Use Looma’s content and chrome surface roles to keep the reading area lighter than the header and footer across themes.
+- Present configured languages with Looma’s button and menu controls, including keyboard navigation and a checked current language. List only actual translations of the current page, omitting unavailable pages and source fallback copies. The public site lists English only.
+- Pair every Markdown example in the public documentation with a rendered tab, including live component examples.
+
 All notable changes to this project will be documented in this file.
 
 ## Next release

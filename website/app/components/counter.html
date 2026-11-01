@@ -1,0 +1,6 @@
+<link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-cluster/ui-cluster.html">
+<template component="demo-counter" controller="./counter.js">
+<defs><state name="count" type="number" value="0"></state></defs>
+<ui-cluster gap="s" align="center"><ui-button data-counter-action>Increment</ui-button><output>{$count}</output></ui-cluster>
+</template>

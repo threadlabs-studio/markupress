@@ -1,3 +1,6 @@
+<link rel="component" href="@threadlabs/looma/components/ui-cluster/ui-cluster.html">
+<link rel="component" href="@threadlabs/looma/components/ui-menu/ui-menu.html">
+<link rel="component" href="@threadlabs/looma/components/ui-menu-item/ui-menu-item.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-cycle-button/ui-cycle-button.html">
 <link rel="component" href="@threadlabs/looma/components/ui-badge/ui-badge.html">
@@ -24,11 +27,16 @@
 <prop name="search" type="string" default="">The URL of the version's search index, or "" for no search</prop>
 <prop name="appearance" type="string" default="automatic">The selected appearance: automatic, light or dark.</prop>
 <prop name="appearanceReady" type="boolean" default="false">The browser has restored its saved appearance choice.</prop></defs>
-<ui-site-header sticky from:label="$ui.mainNavigation" from:data-ready="$appearanceReady" style="--ui-site-header-height:var(--markupress-header-height,4.25rem);--ui-site-header-compact-height:var(--markupress-mobile-header-height,3.75rem);--ui-site-header-padding-inline:max(var(--ui-space-4),calc((100vw - var(--markupress-page-width,90rem)) / 2));--ui-site-header-z-index:2">
+<ui-site-header sticky from:label="$ui.mainNavigation" from:data-ready="$appearanceReady" style="--ui-site-header-surface:var(--ui-surface-chrome);--ui-site-header-height:var(--markupress-header-height,4.25rem);--ui-site-header-compact-height:var(--markupress-mobile-header-height,3.75rem);--ui-site-header-padding-inline:max(var(--ui-space-4),calc((100vw - var(--markupress-page-width,90rem)) / 2));--ui-site-header-z-index:2">
 <span slot="menu"><slot name="menu"></slot></span>
 <a class="brand-link" slot="brand" from:href="$home"><template $if="$logo"><img class="logo logo-light" from:src="$logo.light" alt=""><img class="logo logo-dark" from:src="$logo.dark" alt=""></template><span class="brand-title">{$title}</span><ui-badge $if="$badge" tone="accent">{$badge}</ui-badge></a>
 <a slot="navigation" $each="item of $nav" from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a>
-<nav slot="actions" $if="$locales.length > 1" class="languages" from:aria-label="$ui.languages"><details><summary from:aria-label="$ui.languages"><span class="language-code">{$uiLang}</span><span class="language-text">{$ui.languages}</span></summary><ul><li $each="locale of $locales"><a from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current">{$locale.label}</a><small $if="$locale.note">{$locale.note}</small></li></ul></details></nav>
+<nav slot="actions" $if="$locales.length > 1 or ($locales.length = 1 and $locales[0].current = 'false')" class="languages" from:aria-label="$ui.languages">
+<ui-button $if="$locales.length = 1" from:href="$locales[0].href" from:lang="$locales[0].lang" from:hreflang="$locales[0].lang" variant="outline" tone="neutral" size="sm">{$locales[0].label}</ui-button>
+<div $if="$locales.length > 1" class="language-menu"><ui-button id="documentation-language-trigger" variant="outline" tone="neutral" size="sm" from:aria-label="$ui.languages"><span class="language-code">{$uiLang}</span><span class="language-text">{$ui.languages}</span><ui-icon slot="trailing" name="chevron-down"></ui-icon></ui-button>
+<ui-menu for="documentation-language-trigger" placement="bottom-end" size="sm" icons from:aria-label="$ui.languages"><ui-menu-item $each="locale of $locales" from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current"><ui-icon $if="$locale.current = 'page'" slot="icon" name="check"></ui-icon>{$locale.label}<small $if="$locale.note">{$locale.note}</small></ui-menu-item></ui-menu></div>
+
+</nav>
 <span slot="actions" $if="$headerNotice" class="notice"><ui-button size="sm" variant="outline" tone="neutral" shape="pill" data-action="dismiss-header-notice" from:aria-label="$noticeLabel">{$headerNotice}<ui-icon name="x"></ui-icon></ui-button></span><markupress-search slot="actions" $if="$search" from:index="$search" from:options="$searchOptions" from:hosted="$hosted" from:ui="$ui" from:lang="$uiLang"></markupress-search><ui-cycle-button slot="actions" from:label="$ui.appearance" from:description="$ui.appearanceHint" from:empty-label="$ui.noAppearanceChoices" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" from:items="[{ value: 'automatic', label: $ui.automatic, icon: 'monitor' }, { value: 'light', label: $ui.light, icon: 'sun' }, { value: 'dark', label: $ui.dark, icon: 'moon' }]"></ui-cycle-button>
 </ui-site-header>
 <style>
@@ -39,7 +47,8 @@
 :host:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
 .language-code { display: none; text-transform: uppercase; }
 @media (max-width: 40rem) { .language-code { display: inline; } .language-text { display: none; } }
-.languages { position: relative; } .languages summary { cursor: pointer; padding: .5rem; } .languages ul { position: absolute; inset-inline-end: 0; min-inline-size: 12rem; max-inline-size: min(20rem, 85vw); margin: .25rem 0; padding: .75rem; list-style: none; border: 1px solid var(--ui-border); border-radius: var(--ui-radius-md); background: var(--ui-surface); box-shadow: var(--ui-shadow-md); } .languages a { display: block; padding: .25rem; color: var(--ui-link-color, var(--ui-accent)); } .languages small { display: block; color: var(--ui-text-muted); }
+@media (scripting: none) { .languages { display: none; } }
+
 .notice { display: var(--markupress-header-notice-display, inline-flex); }
 </style></template>
 <template component="markupress-footer">
@@ -47,8 +56,16 @@
 <footer><div class="footer-columns" $if="$footer.columns.length"><div $each="column of $footer.columns"><strong>{$column.title}</strong><ul><li $each="link of $column.items"><a from:href="$link.href" from:aria-current="$link.current">{$link.label}</a></li></ul></div></div>
 <p $if="$footer.copyright">{$footer.copyright}</p></footer>
 <style>
-:host { display: block; border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }
+:host { display: block; background: var(--ui-surface-chrome); border-top: 1px solid var(--ui-border, #8885); padding: 2rem max(1.5rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); color: var(--ui-text-muted, inherit); font-size: .9rem; }
 .footer-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1.5rem; } ul { margin: .5rem 0 0; padding: 0; list-style: none; } li { margin: .25rem 0; } strong { color: var(--ui-text); }
 p { margin: 1.5rem 0 0; }
 a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } :focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }
+</style></template>
+
+<template component="markupress-language-links">
+<defs><prop name="label" type="string" required>Localized language navigation label</prop><prop name="locales" type="list(object({ href: string, label: string, lang: string, current: string, note: string }))" required>Available translations of this page</prop></defs>
+<nav from:aria-label="$label"><ui-cluster gap="s" align="center" wrap="wrap"><strong>{$label}</strong><ui-button $each="locale of $locales" from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current" variant="ghost" tone="neutral" size="sm"><ui-icon $if="$locale.current = 'page'" slot="leading" name="check"></ui-icon>{$locale.label}</ui-button></ui-cluster></nav>
+<style>
+:host { display: none; background: var(--ui-surface-chrome); border-block-start: var(--ui-border-width) solid var(--ui-border); padding: var(--ui-space-4) max(1.5rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); }
+@media (scripting: none) { :host { display: block; } }
 </style></template>

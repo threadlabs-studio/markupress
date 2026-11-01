@@ -1,0 +1,14 @@
+<link rel="component" href="@threadlabs/looma/components/ui-button/ui-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-cluster/ui-cluster.html">
+<link rel="component" href="@threadlabs/looma/components/ui-grid/ui-grid.html">
+<link rel="component" href="@threadlabs/looma/components/ui-card/ui-card.html">
+<template component="demo-home-preview">
+<div class="markupress-prose">
+<header class="hero"><div class="hero-text"><h1>Markupress</h1>
+<p>Versioned documentation from Markdown, with native HTML Next components.</p>
+<div class="actions"><ui-cluster gap="m"><ui-button href="../../getting-started/" tone="accent" size="lg">Get started</ui-button><ui-button href="https://github.com/threadlabs-studio/markupress" variant="outline" tone="neutral" size="lg">GitHub</ui-button></ui-cluster></div>
+</div><div class="hero-image"><img src="/markupress/mark.svg" alt="Markupress mark" width="120"></div></header>
+<ui-grid class="features" min="md"><ui-card as="section"><h2>Components in Markdown</h2><p>Link an HTML Next component in a page and use it on the next line.</p></ui-card><ui-card as="section"><h2>Versions</h2><p><code>markupress snapshot v1</code> records the docs as they stand.</p></ui-card></ui-grid>
+</div>
+<style>@import "markupress/styles/prose.css";</style>
+</template>
