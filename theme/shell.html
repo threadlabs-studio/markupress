@@ -1,3 +1,4 @@
+<link rel="component" href="@threadlabs/looma/components/ui-callout/ui-callout.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon/ui-icon.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
 <link rel="component" href="./chrome.html">
@@ -5,7 +6,8 @@
 <link rel="component" href="./navigation.html">
 <template component="markupress-shell" controller="../dist/controllers/shell.js">
 <defs>
-<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, untranslatedContent: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="fallbackNotice" type="string" default="">Notice for source content in the selected locale</prop>
 <prop name="uiLang" type="string" default="en">Language of the reader interface</prop>
 <prop name="noticeLabel" type="string" default="">Accessible name for dismissing the header notice</prop>
 
@@ -44,7 +46,7 @@
 <nav class="mobile-sections" $if="$nav.length" from:aria-label="$ui.sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current">{$item.label}</a></li></ul></nav>
 <markupress-navigation $if="$sidebarVisible" from:items="$sidebar" from:mode="$sidebarNavigation" from:label="$ui.documentation"></markupress-navigation>
 <nav class="versions" $if="$sidebarVisible and $versions.length > 1" from:aria-label="$ui.documentationVersions"><strong>{$ui.versions}</strong><ul><li $each="version of $versions"><a from:href="$version.href" from:aria-current="$version.current">{$version.label}</a><small $if="$version.note">{$version.note}</small></li></ul></nav>
-</div></aside><main id="documentation-content" tabindex="-1"><mk-breadcrumbs from:label="$ui.breadcrumb" from:items="$crumbs"></mk-breadcrumbs><slot name="page"></slot>
+</div></aside><main id="documentation-content" tabindex="-1"><mk-breadcrumbs from:label="$ui.breadcrumb" from:items="$crumbs"></mk-breadcrumbs><ui-callout $if="$fallbackNotice" tone="note">{$fallbackNotice}</ui-callout><slot name="page"></slot>
 <ul class="contents" $if="$contents.length"><li $each="entry of $contents"><a from:href="$entry.href">{$entry.label}</a><p $if="$entry.description">{$entry.description}</p></li></ul>
 <div class="page-meta" $if="$page.editLink or $page.lastUpdated"><a $if="$page.editLink" from:href="$page.editLink">{$ui.editThisPage}</a><p $if="$page.lastUpdated">{$ui.lastUpdated} <time from:datetime="$page.lastUpdated">{$page.lastUpdatedText}</time></p></div><mk-pager from:label="$ui.pages" from:previous-text="$ui.previous" from:next-text="$ui.next" from:previous="$previous" from:next="$next"></mk-pager></main>
 <aside class="outline" $if="$outline.length" from:aria-label="$ui.onThisPage"><markupress-outline from:label="$ui.onThisPage" from:items="$outline"></markupress-outline></aside></div>

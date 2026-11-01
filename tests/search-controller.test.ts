@@ -5,9 +5,9 @@ import type { ComponentHost } from '@nextwebwg/html-next/runtime';
 import searchController from '../src/controllers/search.js';
 
 let identity = 0;
-function controller(fetch: typeof window.fetch) {
+function controller(fetch: typeof window.fetch, shells = '<div data-component="ui-search-shell"></div>') {
   const root = document.createElement('div');
-  root.innerHTML = '<span class="trigger" hidden></span><input><div data-component="ui-search-shell"></div>';
+  root.innerHTML = '<span class="trigger" hidden></span><input>' + shells;
   document.body.replaceChildren(root);
   window.fetch = fetch;
   let connect!: () => (() => void);
@@ -100,5 +100,15 @@ it('consumes Enter in the field so focus restoration cannot activate the search 
   document.querySelector('input')!.dispatchEvent(enter);
   expect(click).toHaveBeenCalledOnce();
   expect(enter.defaultPrevented).toBe(true);
+  subject.disconnect();
+});
+
+it('listens to canonical search-shell identity when a legacy identity disagrees', () => {
+  const subject = controller(vi.fn(), '<div component="other-shell" data-component="ui-search-shell"></div><div component="ui-search-shell" data-component="other-shell"></div>');
+  subject.state.open = true;
+  document.querySelector('[component="other-shell"]')!.dispatchEvent(new Event('close'));
+  expect(subject.state.open).toBe(true);
+  document.querySelector('[component="ui-search-shell"]')!.dispatchEvent(new Event('close'));
+  expect(subject.state.open).toBe(false);
   subject.disconnect();
 });

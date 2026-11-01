@@ -1,28 +1,29 @@
+/* Canonical component identities take precedence. Legacy branches keep their previous specificity. */
 /* Global, so it reaches MarkupKit's built-in navigation, breadcrumbs and pager inside the shell; the shell's own <style> is scoped and stops at them. */
-[data-component~="markupress-shell"] :is([data-component="mk-breadcrumbs"], [data-component="mk-pager"]) a {
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is(:is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:where(:not([component]))), :is([component="mk-pager"], [data-component="mk-pager"]:where(:not([component])))) a {
   color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em;
 }
-[data-component~="markupress-shell"] [data-component="mk-breadcrumbs"] a[aria-current="page"] { font-weight: 700; }
-[data-component~="markupress-shell"] [data-component="mk-breadcrumbs"] ol { display: flex; flex-wrap: wrap; gap: .25rem .5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; font-size: .875rem; }
-[data-component~="markupress-shell"] [data-component="mk-breadcrumbs"] li + li::before { content: "/"; margin-inline-end: .5rem; color: var(--ui-text-muted, inherit); }
-[data-component~="markupress-shell"] [data-component="mk-pager"] { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--ui-border, #8885); }
-[data-component~="markupress-shell"] [data-component="mk-pager"] a { display: grid; }
-[data-component~="markupress-shell"] [data-component="mk-pager"] a[rel="next"] { margin-inline-start: auto; text-align: end; }
-[data-component~="markupress-shell"] [data-component="mk-pager"] small { color: var(--ui-text-muted, inherit); }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:where(:not([component]))) a[aria-current="page"] { font-weight: 700; }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:where(:not([component]))) ol { display: flex; flex-wrap: wrap; gap: .25rem .5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; font-size: .875rem; }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:where(:not([component]))) li + li::before { content: "/"; margin-inline-end: .5rem; color: var(--ui-text-muted, inherit); }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-pager"], [data-component="mk-pager"]:where(:not([component]))) { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--ui-border, #8885); }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-pager"], [data-component="mk-pager"]:where(:not([component]))) a { display: grid; }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-pager"], [data-component="mk-pager"]:where(:not([component]))) a[rel="next"] { margin-inline-start: auto; text-align: end; }
+:is([component~="markupress-shell"], [data-component~="markupress-shell"]:where(:not([component]))) :is([component="mk-pager"], [data-component="mk-pager"]:where(:not([component]))) small { color: var(--ui-text-muted, inherit); }
 /* Shared blocks. Markdown inside a callout or tabs is projected into a Looma component, where the page's scoped
    prose styles never reach (HTML Next styling: a page's rules stop at every nested component), so these global
    rules space the blocks and repeat the prose code styles inside them. Details is native and needs no script. */
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"], details) { margin-block: 1.5rem; }
+.markupress-prose :is(:is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))), :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component]))), details) { margin-block: 1.5rem; }
 .markupress-prose details { padding: 1rem 1.25rem; border: 1px solid var(--ui-border, #8885); border-radius: var(--ui-radius-md, .5rem); }
 .markupress-prose summary { cursor: pointer; font-weight: 600; }
-.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details) { margin-block: .5rem; }
-.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):first-child { margin-block-start: 0; }
-.markupress-prose [data-component~="ui-callout"] :is(p, ul, ol, pre, figure, table, details):last-child { margin-block-end: 0; }
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border-radius: .5rem; }
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) code { font-size: .9em; }
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) figure.code { margin: 1rem 0; }
-.markupress-prose :is([data-component~="ui-callout"], [data-component~="ui-tabs"]) figure.code > pre { margin: 0; }
-.markupress-prose [data-component~="ui-tabs"] figure.code:only-child { margin: 0; }
+.markupress-prose :is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))) :is(p, ul, ol, pre, figure, table, details) { margin-block: .5rem; }
+.markupress-prose :is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))) :is(p, ul, ol, pre, figure, table, details):first-child { margin-block-start: 0; }
+.markupress-prose :is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))) :is(p, ul, ol, pre, figure, table, details):last-child { margin-block-end: 0; }
+.markupress-prose :is(:is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))), :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component])))) pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border-radius: .5rem; }
+.markupress-prose :is(:is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))), :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component])))) code { font-size: .9em; }
+.markupress-prose :is(:is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))), :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component])))) figure.code { margin: 1rem 0; }
+.markupress-prose :is(:is([component~="ui-callout"], [data-component~="ui-callout"]:where(:not([component]))), :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component])))) figure.code > pre { margin: 0; }
+.markupress-prose :is([component~="ui-tabs"], [data-component~="ui-tabs"]:where(:not([component]))) figure.code:only-child { margin: 0; }
 .markupress-prose .code-group section { padding-inline: 0; }
 /* Code blocks. Highlighted lines and line numbers are classes written at build time; a highlighted line tints the page
    surface, which contrasts more with the code than the block's sunken surface does. The copy and wrap buttons stay
@@ -44,8 +45,8 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme]) { --markupress-logo-light: none; --markupress-logo-dark: inline; } }
 [data-theme="light"] { --markupress-logo-light: inline; --markupress-logo-dark: none; }
 [data-theme="dark"] { --markupress-logo-light: none; --markupress-logo-dark: inline; }
-[data-component~="markupress-header"] .logo-dark { display: var(--markupress-logo-dark); }
-[data-component~="markupress-header"] .logo-light { display: var(--markupress-logo-light); }
+:is([component~="markupress-header"], [data-component~="markupress-header"]:where(:not([component]))) .logo-dark { display: var(--markupress-logo-dark); }
+:is([component~="markupress-header"], [data-component~="markupress-header"]:where(:not([component]))) .logo-light { display: var(--markupress-logo-light); }
 /* A home page's feature cards. Their Markdown is projected into Looma's card, where the page's scoped prose styles
    never reach, so these rules set its type; the card spaces its children. */
 .markupress-prose .features { margin-block: 1rem; }

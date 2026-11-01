@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Read canonical HTML Next component identities in theme selectors and controllers, preserving legacy identity support and canonical precedence. Require MarkupKit 0.5.0 for scoped page compilation and source selection.
+
+- Serve untranslated default-locale content inside the selected locale and version with opt-in `localeFallback: 'source'`. Real translations take precedence by identity, scoped links remain in the selected catalog, and source files retain their relative dependencies and article language. Localize the fallback notice and reader controls, keep source canonical ownership, and refresh selection after translation edits.
+
 - Require Looma 0.49.4 for localized CycleButton instructions, safe deferred choices, RTL search-row alignment and wide logos that fit beside mobile navigation. Align the shared runtime minimum with HTML Next alpha.74, already required by this Looma release.
 
 - Translate the reader interface through built-in English, French and Arabic dictionaries and typed partial overrides. Locale-specific branding, navigation, notices, edit links and title templates follow the selected documentation language.

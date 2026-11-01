@@ -37,6 +37,8 @@ export interface Translations {
   readonly versionUnavailable: string;
   /** {locale} is the language's display label. */
   readonly translationUnavailable: string;
+  /** {locale} is the selected interface language label. */
+  readonly untranslatedContent: string;
   readonly codeWrap: string;
   readonly codeCopy: string;
   readonly codeCopied: string;
@@ -56,6 +58,7 @@ export const english: Translations = {
   onThisPage: 'On this page', editThisPage: 'Edit this page', lastUpdated: 'Last updated', currentVersion: 'Current',
   versionUnavailable: 'This document is unavailable in {version}; open its documentation home.',
   translationUnavailable: 'This document is unavailable in {locale}; open its documentation home.',
+  untranslatedContent: 'This content is not yet available in {locale}.',
   codeWrap: 'Wrap', codeCopy: 'Copy', codeCopied: 'Copied', codeCopyFailed: 'Copy failed', details: 'Details',
 };
 const french: Translations = {
@@ -67,6 +70,7 @@ const french: Translations = {
   onThisPage: 'Sur cette page', editThisPage: 'Modifier cette page', lastUpdated: 'Dernière mise à jour', currentVersion: 'Actuelle',
   versionUnavailable: 'Ce document est indisponible dans {version} ; ouvrir l’accueil de cette version.',
   translationUnavailable: 'Ce document est indisponible en {locale} ; ouvrir l’accueil de cette langue.',
+  untranslatedContent: 'Ce contenu n’est pas encore disponible en {locale}.',
   codeWrap: 'Retour à la ligne', codeCopy: 'Copier', codeCopied: 'Copié', codeCopyFailed: 'Échec de la copie', details: 'Détails',
 };
 const arabic: Translations = {
@@ -79,6 +83,7 @@ const arabic: Translations = {
   editThisPage: 'تحرير هذه الصفحة', lastUpdated: 'آخر تحديث', currentVersion: 'الحالية',
   versionUnavailable: 'هذا المستند غير متاح في {version}؛ افتح الصفحة الرئيسية لهذا الإصدار.',
   translationUnavailable: 'هذا المستند غير متاح باللغة {locale}؛ افتح الصفحة الرئيسية لهذه اللغة.',
+  untranslatedContent: 'هذا المحتوى غير متاح بعد باللغة {locale}.',
   codeWrap: 'التفاف السطور', codeCopy: 'نسخ', codeCopied: 'تم النسخ', codeCopyFailed: 'تعذر النسخ', details: 'التفاصيل',
 };
 
