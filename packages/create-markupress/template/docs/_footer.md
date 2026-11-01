@@ -4,6 +4,6 @@
 
 ## Built with
 
-- [Markupress](https://threadlabs-studio.github.io/markupress/)
+- [Markupress](https://threadlabs.studio/markupress/)
 
 Copyright 2026 My project contributors.
