@@ -1,3 +1,4 @@
+<link rel="component" href="@threadlabs/looma/components/ui-cluster/ui-cluster.html">
 <link rel="component" href="@threadlabs/looma/components/ui-menu/ui-menu.html">
 <link rel="component" href="@threadlabs/looma/components/ui-menu-item/ui-menu-item.html">
 <link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
@@ -34,7 +35,7 @@
 <ui-button $if="$locales.length = 1" from:href="$locales[0].href" from:lang="$locales[0].lang" from:hreflang="$locales[0].lang" variant="outline" tone="neutral" size="sm">{$locales[0].label}</ui-button>
 <div $if="$locales.length > 1" class="language-menu"><ui-button id="documentation-language-trigger" variant="outline" tone="neutral" size="sm" from:aria-label="$ui.languages"><span class="language-code">{$uiLang}</span><span class="language-text">{$ui.languages}</span><ui-icon slot="trailing" name="chevron-down"></ui-icon></ui-button>
 <ui-menu for="documentation-language-trigger" placement="bottom-end" size="sm" icons from:aria-label="$ui.languages"><ui-menu-item $each="locale of $locales" from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current"><ui-icon $if="$locale.current = 'page'" slot="icon" name="check"></ui-icon>{$locale.label}<small $if="$locale.note">{$locale.note}</small></ui-menu-item></ui-menu></div>
-<ul $if="$locales.length > 1" class="language-links"><li $each="locale of $locales"><a from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current">{$locale.label}</a><small $if="$locale.note">{$locale.note}</small></li></ul>
+
 </nav>
 <span slot="actions" $if="$headerNotice" class="notice"><ui-button size="sm" variant="outline" tone="neutral" shape="pill" data-action="dismiss-header-notice" from:aria-label="$noticeLabel">{$headerNotice}<ui-icon name="x"></ui-icon></ui-button></span><markupress-search slot="actions" $if="$search" from:index="$search" from:options="$searchOptions" from:hosted="$hosted" from:ui="$ui" from:lang="$uiLang"></markupress-search><ui-cycle-button slot="actions" from:label="$ui.appearance" from:description="$ui.appearanceHint" from:empty-label="$ui.noAppearanceChoices" variant="outline" data-action="theme" from:index="{ automatic: 0, light: 1, dark: 2 }[$appearance]" from:items="[{ value: 'automatic', label: $ui.automatic, icon: 'monitor' }, { value: 'light', label: $ui.light, icon: 'sun' }, { value: 'dark', label: $ui.dark, icon: 'moon' }]"></ui-cycle-button>
 </ui-site-header>
@@ -46,8 +47,7 @@
 :host:not([data-ready]) { --ui-motion-fast: 0ms; --ui-motion-base: 0ms; }
 .language-code { display: none; text-transform: uppercase; }
 @media (max-width: 40rem) { .language-code { display: inline; } .language-text { display: none; } }
-.language-links { display: none; }
-@media (scripting: none) { .language-menu { display: none; } .language-links { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); margin: 0; padding: 0; list-style: none; } }
+@media (scripting: none) { .languages { display: none; } }
 
 .notice { display: var(--markupress-header-notice-display, inline-flex); }
 </style></template>
@@ -60,4 +60,12 @@
 .footer-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1.5rem; } ul { margin: .5rem 0 0; padding: 0; list-style: none; } li { margin: .25rem 0; } strong { color: var(--ui-text); }
 p { margin: 1.5rem 0 0; }
 a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; } a[aria-current="page"] { font-weight: 700; } :focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }
+</style></template>
+
+<template component="markupress-language-links">
+<defs><prop name="label" type="string" required>Localized language navigation label</prop><prop name="locales" type="list(object({ href: string, label: string, lang: string, current: string, note: string }))" required>Available translations of this page</prop></defs>
+<nav from:aria-label="$label"><ui-cluster gap="s" align="center" wrap="wrap"><strong>{$label}</strong><ui-button $each="locale of $locales" from:href="$locale.href" from:lang="$locale.lang" from:hreflang="$locale.lang" from:aria-current="$locale.current" variant="ghost" tone="neutral" size="sm"><ui-icon $if="$locale.current = 'page'" slot="leading" name="check"></ui-icon>{$locale.label}</ui-button></ui-cluster></nav>
+<style>
+:host { display: none; background: var(--ui-surface-chrome); border-block-start: var(--ui-border-width) solid var(--ui-border); padding: var(--ui-space-4) max(1.5rem, calc((100vw - var(--markupress-page-width, 90rem)) / 2)); }
+@media (scripting: none) { :host { display: block; } }
 </style></template>

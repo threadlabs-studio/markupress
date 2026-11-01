@@ -734,6 +734,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             expect(await page.getByRole('button', { name: /^Apparence:/ }).count()).toBe(1);
             expect(await page.getByRole('button', { name: /^Apparence:/ }).getAttribute('aria-description')).toBe('Activer pour choisir l’apparence suivante.');
             const languages = page.getByRole('navigation', { name: /^(Languages|Langues|اللغات)$/, exact: true });
+            if (!javaScriptEnabled) expect(await languages.evaluate(nav => nav.closest('header') === null)).toBe(true);
             await openLanguages(page);
             await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
             await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
@@ -773,7 +774,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
               await input.press('Enter');
               await expect.poll(() => input.isVisible()).toBe(false);
               await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
-            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+              await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
               await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
               await page.evaluate(() => location.assign('/manual/v/v1/setup/'));
               await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
@@ -781,6 +782,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
               await openLanguages(page);
               await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'Français', exact: true }).click();
               await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
+              await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             }
             if (mode === 'preview' && javaScriptEnabled) {
               mkdirSync(join(root, '.context'), { recursive: true });
@@ -790,6 +792,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed local
             await expect.poll(logoAndMenuSeparate).toBe(true);
             await openLanguages(page);
             await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
             await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
             expect(await page.locator('pre').evaluate(element => getComputedStyle(element).direction)).toBe('ltr');
             await expect.poll(logoAndMenuSeparate).toBe(true);
