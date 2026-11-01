@@ -54,6 +54,7 @@ it('refreshes translation metadata after identity swaps, failed discoveries, add
     await expect.poll(async () => (await fetch(server.url + 'fr/b/')).status, { timeout: 5000 }).toBe(404);
     await expect.poll(frenchAlternate, { timeout: 5000 }).toBeUndefined();
     await put('fr', 'renamed', page('first', 'Added translation'));
+    await expect.poll(async () => (await fetch(server.url + 'fr/renamed/')).text(), { timeout: 5000 }).toContain('Added translation');
     await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/renamed/');
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
 }, 30_000);
