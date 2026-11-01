@@ -83,8 +83,10 @@ export interface MarkupressOptions {
   readonly titleTemplate?: string | false;
   /** The language of every page, as a BCP 47 tag such as `fr` or `pt-BR`: the document's `<html lang>`. */
   readonly lang?: string;
+  /** Serve pages whose front matter sets `draft: true`: in `markupress dev` by default, and left out of a build. */
+  readonly drafts?: boolean;
 }
-const optionNames = ['translations', 'dateFormat', 'locales', 'defaultLocale', 'localeFallback', 'search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'markdownSyntax', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang'];
+const optionNames = ['translations', 'dateFormat', 'locales', 'defaultLocale', 'localeFallback', 'search', 'root', 'contentDir', 'base', 'origin', 'robots', 'outDir', 'title', 'headerNotice', 'sidebarNavigation', 'versions', 'defaultVersion', 'host', 'port', 'lineNumbers', 'markdownSyntax', 'logo', 'favicon', 'nav', 'editLink', 'titleTemplate', 'lang', 'drafts'];
 export interface DocumentationPage {
   readonly locale?: string;
   readonly id: string;
@@ -180,6 +182,8 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     return pending;
   };
   const current = () => [...documents.values()].filter(doc => existsSync(doc.source));
+  let drafts = options.drafts ?? true;
+  const published = async (file: string) => drafts || !file.endsWith('.md') || readFrontMatter(await readFile(file, 'utf8'), file).draft !== true;
   const pages = markdown({
     // Each Markdown page component imports the prose styles, so they style that page's region and nothing else.
     styles: [own('styles/prose.css')],
@@ -395,9 +399,11 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
   if (options.markdownSyntax !== undefined && options.markdownSyntax !== 'standard' && options.markdownSyntax !== 'compatible') throw new Error(`The markdownSyntax option is standard or compatible: ${String(options.markdownSyntax)}.`);
   if (options.lang !== undefined && !/^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(options.lang)) throw new Error(`The lang option is a language tag such as fr or pt-BR: ${options.lang}.`);
   if (options.editLink !== undefined && !options.editLink.endsWith('/')) throw new Error(`The editLink option ends in /, and each page's path in the project follows it: ${options.editLink}.`);
+  if (options.drafts !== undefined && typeof options.drafts !== 'boolean') throw new Error(`The drafts option is true or false: ${String(options.drafts)}.`);
   resolveTranslations('en', options.translations);
   validateDateFormat(options.dateFormat);
   return { ...pages, name: 'markupress', pages: { ...pages.pages!, compile: compileScoped },
+    buildStart({ command }) { drafts = options.drafts ?? command === 'dev'; },
     // Each version's search index lives beside its pages. MarkupKit runs this once
     // every page has compiled, and again in development after each change.
     generate: ({ base }) => {
@@ -470,6 +476,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
       if (edition.locale === defaultLocale) return [];
       const original = editions.find(source => source.id === edition.id && source.locale === defaultLocale)!;
       const include = async (file: string, candidates: readonly PageSource[]) => {
+        if (!await published(file)) return false;
         const catalog = await scopedCatalog(candidates);
         const source = catalog.find(page => page.file === file && page.edition.id === edition.id && page.edition.locale === defaultLocale);
         return source !== undefined && !catalog.some(page => page.id === source.id && page.edition.id === edition.id && page.edition.locale === edition.locale);
@@ -481,7 +488,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     return { ...(searchConfiguration.algolia ? { csp: hostedPolicy(markupkit.csp, algoliaOrigin(searchConfiguration.algolia.appId)) } : {}), headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       // The default version owns its locale root. Only historical versions use /v/<id>/;
       // another version serving the same files is an alias and stays out of the sitemap.
-      pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: edition.prefix, layout: layout(edition), ...nativeScope(edition),
+      pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: edition.prefix, layout: layout(edition), include: published, ...nativeScope(edition),
         ...(edition.id !== defaultVersion && (homes.some(home => same(edition, home)) || editions.slice(0, index).some(earlier => same(earlier, edition))) ? { alias: true } : {}) })), ...fallbackMounts] };
   } };
 }

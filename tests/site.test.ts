@@ -81,6 +81,18 @@ it('builds a static site using the installed MarkupKit package and native naviga
   expect((await readdir(join(result.outDir, '_markupkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
 }, 30_000);
 
+it('leaves draft pages out of a build unless the drafts option includes them', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/03.draft.md', '---\ndraft: true\n---\n# Unfinished page');
+  const result = await buildSite({ root, origin: 'https://docs.example' });
+  await expect(stat(join(result.outDir, 'guide/draft/index.html'))).rejects.toThrow();
+  expect(await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8')).not.toContain('Unfinished page');
+  expect(await readFile(join(result.outDir, '_search.json'), 'utf8')).not.toContain('Unfinished page');
+  expect(await readFile(join(result.outDir, 'sitemap.xml'), 'utf8')).not.toContain('/guide/draft/');
+  const staging = await buildSite({ root, outDir: 'staging', drafts: true });
+  expect(await readFile(join(staging.outDir, 'guide/draft/index.html'), 'utf8')).toContain('Unfinished page');
+}, 30_000);
+
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/02.install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
@@ -270,7 +282,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are translations, dateFormat, locales, defaultLocale, localeFallback, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are translations, dateFormat, locales, defaultLocale, localeFallback, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang, drafts.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));

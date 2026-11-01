@@ -10,10 +10,12 @@ it('rebuilds edited and removed Markdown pages through the development server', 
   await mkdir(join(root, 'docs')); await writeFile(join(root, 'package.json'), '{"type":"module"}');
   await writeFile(join(root, 'docs/index.md'), '# Original');
   await writeFile(join(root, 'docs/old.md'), '# Removed');
+  await writeFile(join(root, 'docs/draft.md'), '---\ndraft: true\n---\n# Draft');
   await linkDependencies(root);
   const server = await devSite({ root, port: 0 });
   try {
     expect(await (await fetch(server.url)).text()).toContain('Original');
+    expect(await (await fetch(server.url + 'draft/')).text()).toContain('Draft');
     await writeFile(join(root, 'docs/index.md'), '# Changed');
     await expect.poll(async () => (await fetch(server.url)).text(), { timeout: 5000 }).toContain('Changed');
     await rm(join(root, 'docs/old.md'));

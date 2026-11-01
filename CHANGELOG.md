@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add `draft: true` front matter: `markupress dev` serves the page, and `markupress build` leaves it out of the site, its navigation, search and sitemap. The `drafts` option and `--drafts` flag include drafts in a build, such as a staging site.
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
 - Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.
 
