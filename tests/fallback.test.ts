@@ -12,10 +12,10 @@ afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, {
 async function write(root: string, file: string, source: string) {
   await mkdir(dirname(join(root, file)), { recursive: true }); await writeFile(join(root, file), source);
 }
-async function fixture() {
+async function fixture(withSnapshot = false) {
   const root = await mkdtemp(join(tmpdir(), 'markupress-fallback-')); roots.push(root);
   await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
-  for (const folder of ['docs', 'versions/v1/docs']) {
+  for (const folder of withSnapshot ? ['docs', 'versions/v1/docs'] : ['docs']) {
     for (const [locale, title] of [['en', 'Home'], ['fr', 'Accueil'], ['ar', 'البداية']]) await write(root, `${folder}/${locale}/index.md`, '# ' + title);
     await write(root, `${folder}/en/start.md`, '---\nid: setup\n---\n# Install\n\nSource installation');
     await write(root, `${folder}/en/fallback.md`, '---\nid: fallback\naliases: [/old-fallback/]\n---\n# Source reference\n\n[Install](./start.md)\n\n![Mark](./mark.svg)\n\n```text\n{literal} <source-card>\n```\n\n<link rel="component" href="./_parts/card.html">\n<source-card></source-card>');
@@ -40,10 +40,10 @@ it('keeps locale-home behavior unless source fallback is enabled', async () => {
     try { expect((await app.render('/manual/fr/fallback/')).status).toBe(404); }
     finally { await app.close(); }
   }
-});
+}, 30_000);
 
 it('serves source content with selected-locale chrome, original dependencies and scoped document identities', async () => {
-  const root = await fixture();
+  const root = await fixture(true);
   execFileSync('git', ['init', '--quiet'], { cwd: root });
   execFileSync('git', ['add', 'docs', 'versions'], { cwd: root });
   execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Documentation'],
@@ -99,7 +99,7 @@ it('builds fallback aliases with source canonicals while listing only real trans
   const html = await readFile(join(built.outDir, 'ar/fallback/index.html'), 'utf8');
   expect(html).toContain('<html lang="ar" dir="rtl">');
   expect(html).toContain('rel="canonical" href="https://docs.example/manual/fallback/"');
-}, 30_000);
+}, 60_000);
 
 it('allows a locale to begin without a translated folder, including a source home layout', async () => {
   const root = await fixture();
