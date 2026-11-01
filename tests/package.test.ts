@@ -874,6 +874,10 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hoste
         const page = await browser.newPage(); const errors: string[] = [], localRequests: string[] = [], requests: string[][] = [];
         page.on('pageerror', error => errors.push(error.message));
         page.on('request', request => { if (request.url().endsWith('_search.json')) localRequests.push(request.url()); });
+        // Native navigation commits the URL before its payload finishes; exercise that boundary deliberately.
+        await page.route('**/manual/_markupkit/pages/ar/v/old/install/payload.json', async route => {
+          await new Promise(done => setTimeout(done, 1500)); await route.continue();
+        });
         await page.route('https://app123-dsn.algolia.net/1/indexes/*/queries', async route => {
           const body = route.request().postDataJSON() as { requests: { params: string; indexName: string }[] };
           const params = new URLSearchParams(body.requests[0]!.params), facets = JSON.parse(params.get('facetFilters')!) as string[];
@@ -900,17 +904,20 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hoste
           expect(await rows.textContent()).toContain('Café 👩🏽‍💻 العربية <example>');
           await input.press('ArrowDown'); expect(await rows.locator('button').evaluate(button => button === document.activeElement)).toBe(true);
           await rows.locator('button').press('Enter'); await expect.poll(() => input.isVisible()).toBe(false);
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
           const languages = page.getByRole('navigation', { name: 'Langues', exact: true });
           await languages.locator('summary').click(); await languages.getByRole('link', { name: 'العربية', exact: true }).click();
-          await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('ar');
+          await page.waitForURL('**/manual/ar/v/old/install/');
           await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          expect(await page.locator('html').getAttribute('lang')).toBe('ar');
           await page.getByRole('button', { name: 'بحث', exact: true }).click(); input = page.getByRole('searchbox');
           await input.fill('عربي'); await expect.poll(() => rows.count()).toBe(1);
           expect(await rows.getAttribute('data-href')).toBe('/manual/ar/v/old/install/');
           await input.press('Escape');
           await page.evaluate(() => location.assign('/manual/ar/v/current/install/'));
+          await page.waitForURL('**/manual/ar/v/current/install/');
           await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
-          await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
+          expect(new URL(page.url()).pathname).toBe('/manual/ar/v/current/install/');
           await page.getByRole('button', { name: 'بحث', exact: true }).click(); await input.fill('حالي');
           await expect.poll(() => rows.getAttribute('data-href')).toBe('/manual/ar/v/current/install/');
           expect(requests).toEqual(expect.arrayContaining([['language:fr', 'version:old'], ['language:ar', 'version:old'], ['language:ar', 'version:current']]));
