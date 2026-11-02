@@ -12,7 +12,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.2
 
 - Give code blocks a token-based border and corner radius so their shape remains visible when code and page surfaces share a color.
 
