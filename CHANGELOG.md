@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 ## Next release
 
 - Add `draft: true` front matter: `markupress dev` serves the page, and `markupress build` leaves it out of the site, its navigation, search and sitemap. The `drafts` option and `--drafts` flag include drafts in a build, such as a staging site.
-- Show a file's code with an empty fence that names it, ```` ```html {src="@/examples/button.html"} ````, and an HTML example working above its code with `::example{src="@/examples/button.html"}`, as Expressive Markdown defines them. `src` is relative to the page or starts at the project root with `@/`. A missing file fails the build, and `markupress dev` reloads the page when the file changes.
+- Embed a file with a link, `[button.html](../examples/button.html "{embed}")`, as Expressive Markdown defines it: its code, or with `{embed=example}` its HTML working above its code. The path is relative to the page, so other Markdown renderers show a working link. A missing file fails the build, and `markupress dev` reloads the page when the file changes. Requires expressmark 0.6.0.
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
 - Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.
 

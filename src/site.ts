@@ -190,7 +190,6 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
     ...(options.markdownSyntax === undefined ? {} : { markdownSyntax: options.markdownSyntax }),
     publicDir: file => resolve(root, editionOf(file)?.publicDir ?? 'public'),
-    root: () => root,
     translations: file => messagesOf(editionOf(file)),
     async alternates(context) {
       if (siteOrigin === undefined || options.locales === undefined) return [];
@@ -268,7 +267,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
       styles: [own('styles/prose.css')],
       ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }),
       ...(options.markdownSyntax === undefined ? {} : { markdownSyntax: options.markdownSyntax }),
-      publicDir: () => resolve(root, original.publicDir ?? 'public'), root: () => root,
+      publicDir: () => resolve(root, original.publicDir ?? 'public'),
       translations: () => ui,
       frontmatter: () => ({ ...(lang === undefined ? {} : { lang }), ...(dir === undefined ? {} : { dir }) }),
       alternates: () => alternates,

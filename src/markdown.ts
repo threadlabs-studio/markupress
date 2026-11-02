@@ -28,8 +28,6 @@ export interface MarkdownPluginOptions {
   readonly home?: (file: string) => string;
   /** A page's document `<title>` from its title, such as `Install | My site`; the page title by default. */
   readonly documentTitle?: (file: string, title: string) => string;
-  /** The project root, which `@/` names in a code fence's or example's `src`; MarkupKit's root by default. */
-  readonly root?: () => string;
 }
 
 /**
@@ -38,9 +36,9 @@ export interface MarkdownPluginOptions {
  * through MarkupKit, so the plugin holds no routing of its own.
  */
 export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
-  let base = '/', root: string | undefined;
-  return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; root = markupkit.root; }, pages: { extensions: ['.md'], async compile(source, page) {
-    return compilePage(source, page, root === undefined || options.root ? options : { ...options, root: () => root! }, base);
+  let base = '/';
+  return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; }, pages: { extensions: ['.md'], async compile(source, page) {
+    return compilePage(source, page, options, base);
   } } };
 }
 
@@ -57,8 +55,7 @@ export async function compilePage(source: string, page: PageContext, options: Ma
   const compiled = await compileMarkdown(source, { ...presentation, file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
     ...(translations === undefined ? {} : { translations }), ...(alternates === undefined ? {} : { alternates }),
-    ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}),
-    ...(options.root ? { root: options.root() } : {}), watch: file => page.watch(file), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
+    ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), watch: file => page.watch(file), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
   options.onPage?.({ ...compiled, file: page.file, href }, page);
   return compiled.resource;
 }
