@@ -1,9 +1,20 @@
 # Changelog
 
+## 0.18.0
+
+- Require MarkupKit 0.6.0 for semantic version routes and isolated navigation queries, and Looma 0.51.4 for navigation disclosure spacing and theme-aware content/chrome surfaces.
+
+- **Breaking:** The default documentation version now lives only at the locale root. Current links use `/guide/` or `/fr/guide/`; reserve `/v/<id>/` for historical versions, including semantic version IDs such as `1.2.3`. Update bookmarks and integrations that used `/v/current/`.
+- Give headings a separate left-outset link icon that appears on hover and keyboard focus, and stays visible on hoverless devices. Authored links inside headings keep their destinations, and fragment targets stay visible below the sticky header.
+- Use Looma’s content and chrome surface roles to keep the reading area lighter than the header and footer across themes.
+- Present configured languages with Looma’s button and menu controls, including keyboard navigation and a checked current language. List only actual translations of the current page, omitting unavailable pages and source fallback copies. The public site lists English only.
+- Pair every Markdown example in the public documentation with a rendered tab, including live component examples.
+
 All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Add `draft: true` front matter: `markupress dev` serves the page, and `markupress build` leaves it out of the site, its navigation, search and sitemap. The `drafts` option and `--drafts` flag include drafts in a build, such as a staging site.
 - Show a file's code with an empty fence that names it, ```` ```html {src="@/examples/button.html"} ````, and an HTML example working above its code with `::example{src="@/examples/button.html"}`, as Expressive Markdown defines them. `src` is relative to the page or starts at the project root with `@/`. A missing file fails the build, and `markupress dev` reloads the page when the file changes.
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
 - Resolve source-fallback canonicals through the physical owner when versions share a content folder, including relative canonical overrides.

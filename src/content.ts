@@ -43,6 +43,8 @@ export interface MarkdownOptions {
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
+  /** A draft page is served by `markupress dev` and left out of a production build, unless the `drafts` option includes it. */
+  readonly draft?: boolean;
   /** Whether this page appears in search, true by default. */
   readonly search?: boolean;
   readonly title?: string;
@@ -202,8 +204,8 @@ function rebaseExample(html: string, from: string, to: string): string {
  */
 /** The page's authored HTML, its examples' included, is the site's own: its elements and attributes stay. */
 function hostHtml(document: MarkdownDocument, examples: readonly string[] = []): HtmlAllowlist {
-  const tags = new Set(['ui-callout', 'ui-tabs', 'button', 'input']);
-  const attributes = new Set(['heading', 'tone', 'group', 'type', 'hidden', 'disabled', 'checked', 'role', 'tabindex']);
+  const tags = new Set(['ui-callout', 'ui-tabs', 'ui-icon', 'button', 'input']);
+  const attributes = new Set(['heading', 'tone', 'group', 'type', 'hidden', 'disabled', 'checked', 'role', 'tabindex', 'name', 'aria-hidden', 'data-markupress-example', 'data-search-ignore']);
   const styles: Record<string, readonly RegExp[]> = { color: [/^light-dark\(.*\)$/], '--shiki-light': [/^#[\da-f]+$/i], '--shiki-dark': [/^#[\da-f]+$/i] };
   const visit = (node: DefaultTreeAdapterMap['node']): void => {
     if ('tagName' in node) {
@@ -250,6 +252,7 @@ function pagerLink(value: unknown): boolean {
 }
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
   search: [value => typeof value === 'boolean', 'true or false'],
+  draft: [value => typeof value === 'boolean', 'true or false'],
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
   navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
@@ -348,14 +351,18 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   }
   const trustedHtml = hostHtml(document, [...exampleParts.values()].map(parts => parts.live));
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
-    .filter(([name]) => ['id', 'class', 'lang', 'dir'].includes(name)).map(([name, value]) => ` ${name}="${escapeHTML(String(value))}"`).join('');
+    .filter(([name]) => ['id', 'class', 'lang', 'dir', 'dataMarkupressExample', 'dataSearchIgnore'].includes(name))
+    .map(([name, value]) => ` ${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}="${escapeHTML(String(value))}"`).join('');
   const title = (node: MarkdownNode) => markdownText(node.title);
   const transformers: Record<string, HtmlTransformer> = {
     code: node => highlighted.get(node),
     inlineCode: node => `<code>${literal(escapeHTML(node.value ?? ''))}</code>`,
     heading: (node, context) => {
       const id = anchors.get(node)!;
-      return `<h${node.level} id="${escapeHTML(id)}"><a href="#${escapeHTML(id)}">${context.renderChildren()}</a></h${node.level}>`;
+      components.add('ui-icon');
+      const content = context.renderChildren();
+      const label = textContent(parseFragment(content)).replace(/\\([\\{])/g, '$1');
+      return `<h${node.level} id="${escapeHTML(id)}">${content}<a class="heading-anchor" href="#${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h${node.level}>`;
     },
     'container:tabs': (node, context) => {
       if (!node.body?.length || !node.body.every(child => child.type === 'container' && child.subType === 'tab')) return undefined;
@@ -398,7 +405,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   // another component; its headings, like escaped code examples, are not page headings.
   const collectHeadings = (node: DefaultTreeAdapterMap['node']): void => {
     if ('tagName' in node) {
-      if (node.tagName === 'template') return;
+      if (node.tagName === 'template' || node.attrs.some(attribute => attribute.name === 'data-markupress-example')) return;
       const id = node.attrs.find(attribute => attribute.name === 'id')?.value;
       const hidden = node.attrs.some(attribute => attribute.name === 'hidden' || (attribute.name === 'aria-hidden' && attribute.value === 'true')
         || (attribute.name === 'class' && attribute.value.split(/\s+/).includes('sr-only')));

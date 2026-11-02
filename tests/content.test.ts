@@ -26,6 +26,14 @@ it('excludes ignored inline text from a heading without removing its visible hea
   expect(compiled.sections.map(section => `${section.heading} ${section.text}`).join(' ')).not.toContain('secretquartz');
 });
 
+it('keeps authored heading links separate from its permalink', async () => {
+  const compiled = await compileMarkdown('## Read the [API](https://example.com/api)\n', { file: '/docs/heading.md', pageName: 'page-heading' });
+  expect(compiled.resource).toContain('<a href="https://example.com/api">API</a>');
+  expect(compiled.resource).toMatch(/class="heading-anchor"[^>]*href="#read-the-api"/);
+  expect(compiled.resource).not.toMatch(/href="#read-the-api"[^>]*>Read the/);
+  expect(compiled.outline).toEqual([{ id: 'read-the-api', href: '#read-the-api', label: 'Read the API', depth: 2 }]);
+});
+
 it('compiles owned metadata, stable anchors, literal fences, and native resources', async () => {
   const compiled = await compileMarkdown(`---
 title: Products
@@ -110,7 +118,7 @@ head:
 
 it('rejects unknown and mistyped front matter fields with the Markdown file', async () => {
   const page = (yaml: string) => compileMarkdown(`---\n${yaml}\n---\n# Page`, { file: '/docs/01.page.md', pageName: 'page-example' });
-  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, title, description, order, navigation, sidebar, markdownSyntax, id, aliases, redirectFrom, layout, outline, head, editLink, dir, lang, previous, next.');
+  await expect(page('sidebarLabel: Start')).rejects.toThrow('/docs/01.page.md: unknown front matter field sidebarLabel. Fields are search, draft, title, description, order, navigation, sidebar, markdownSyntax, id, aliases, redirectFrom, layout, outline, head, editLink, dir, lang, previous, next.');
   for (const old of ['sidebarHidden: true', 'sidebarPosition: 1', 'toc: false', 'collapsed: true', 'label: Start']) await expect(page(old)).rejects.toThrow(/unknown front matter field/);
   await expect(page('navigation: yes please')).rejects.toThrow('/docs/01.page.md: front matter navigation must be hidden, overview, or collapsed on a folder\'s index page.');
   await expect(page('navigation: collapsed')).rejects.toThrow('/docs/01.page.md: front matter navigation collapsed applies to a folder\'s index page.');
@@ -173,10 +181,10 @@ it('reads indented native HTML as HTML in standard mode and keeps fenced example
 it('preserves authored heading IDs while generating anchors for other headings', async () => {
   const compiled = await compileMarkdown('# Getting started {#start}\n\n## Install {#setup}\n\n## Configure {#setup}\n\n## Escaped \\{#kept}', { file: '/docs/index.md', pageName: 'page-index' });
   expect(compiled.title).toBe('Getting started');
-  expect(compiled.resource).toContain('<h1 id="start"><a href="#start">Getting started</a></h1>');
-  expect(compiled.resource).toContain('<h2 id="setup"><a href="#setup">Install</a></h2>');
-  expect(compiled.resource).toContain('<h2 id="setup"><a href="#setup">Configure</a></h2>');
-  expect(compiled.resource).toContain('<h2 id="escaped-kept"><a href="#escaped-kept">Escaped \\{#kept}</a></h2>');
+  expect(compiled.resource).toContain('<h1 id="start">Getting started<a class="heading-anchor" href="#start" aria-label="Getting started"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h1>');
+  expect(compiled.resource).toContain('<h2 id="setup">Install<a class="heading-anchor" href="#setup" aria-label="Install"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h2>');
+  expect(compiled.resource).toContain('<h2 id="setup">Configure<a class="heading-anchor" href="#setup" aria-label="Configure"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h2>');
+  expect(compiled.resource).toContain('<h2 id="escaped-kept">Escaped \\{#kept}<a class="heading-anchor" href="#escaped-kept"');
 });
 
 const page = (source: string) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index' }).then(compiled => compiled.resource);
@@ -374,12 +382,12 @@ Use them in Markdown.
 - Switch
 `, { file: '/project/docs/index.md', pageName: 'page-home', resolveLink: href => href === './guide.md' ? '/v/current/guide/' : href });
   const article = /<article class="markupress-prose">(.*)<\/article>/s.exec(compiled.resource)![1]!;
-  expect(article).toBe('<header class="hero"><div class="hero-text"><h1 id="markupress"><a href="#markupress">Markupress</a></h1><p>Docs from <em>Markdown</em> \\{literally}.</p>' +
+  expect(article).toBe('<header class="hero"><div class="hero-text"><h1 id="markupress">Markupress<a class="heading-anchor" href="#markupress" aria-label="Markupress"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h1><p>Docs from <em>Markdown</em> \\{literally}.</p>' +
     '<div class="actions"><ui-cluster gap="m"><ui-button href="/v/current/guide/" variant="solid" tone="accent" size="lg">Get started</ui-button>' +
     '<ui-button href="https://github.com/example" variant="outline" tone="neutral" size="lg">GitHub</ui-button></ui-cluster></div></div>' +
     '<div class="hero-image"><img src="./logo.svg" alt="Logo"></div></header>' +
-    '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components"><a href="#components">Components</a></h2><p>Use them in Markdown.</p></ui-card>' +
-    '<ui-card as="section"><h2 id="versions"><a href="#versions">Versions</a></h2><ul><li>Snapshot</li><li>Switch</li></ul></ui-card></ui-grid>');
+    '<ui-grid class="features" min="md"><ui-card as="section"><h2 id="components">Components<a class="heading-anchor" href="#components" aria-label="Components"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h2><p>Use them in Markdown.</p></ui-card>' +
+    '<ui-card as="section"><h2 id="versions">Versions<a class="heading-anchor" href="#versions" aria-label="Versions"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h2><ul><li>Snapshot</li><li>Switch</li></ul></ui-card></ui-grid>');
   for (const name of ['ui-cluster', 'ui-button', 'ui-grid', 'ui-card']) expect(compiled.resource).toContain(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   expect(compiled.resource).toContain('<meta name="mk:layout" content="home">');
   // Without an h1 the hero is titled by the page title, and without h2s or actions it has no cards or buttons.
@@ -389,7 +397,7 @@ Use them in Markdown.
 });
 
 it('includes authored HTML headings in outline order while ignoring inert examples and definitions', async () => {
-  const compiled = await compileMarkdown('# Reference\n\n<h2 id="preview">Preview <em>states</em></h2>\n\n## Options\n\n```html\n<h2 id="fake">Example code</h2>\n```\n\n<template component="demo-box"><h2 id="internal">Internal title</h2></template>\n\n<div hidden><h2 id="hidden">Hidden section</h2></div>\n\n<div aria-hidden="true"><h2 id="decorative">Decorative section</h2></div>', { file: '/docs/reference.md', pageName: 'page-reference' });
+  const compiled = await compileMarkdown('# Reference\n\n<h2 id="preview">Preview <em>states</em></h2>\n\n## Options\n\n```html\n<h2 id="fake">Example code</h2>\n```\n\n<template component="demo-box"><h2 id="internal">Internal title</h2></template>\n\n<div data-markupress-example><h2 id="example">Example title</h2></div>\n\n<div hidden><h2 id="hidden">Hidden section</h2></div>\n\n<div aria-hidden="true"><h2 id="decorative">Decorative section</h2></div>', { file: '/docs/reference.md', pageName: 'page-reference' });
   expect(compiled.outline).toEqual([
     { id: 'preview', href: '#preview', label: 'Preview states', depth: 2 },
     { id: 'options', href: '#options', label: 'Options', depth: 2 },
@@ -432,6 +440,13 @@ it('groups standard adjacent tabs without accepting the old equals-label grammar
   const legacy = await page('::: tabs\n== Examples\nExample body.\n:::');
   expect(legacy).not.toContain('<ui-tabs');
   expect(legacy).toContain('== Examples');
+});
+
+it('keeps rendered tab examples visible without adding their headings to the article outline or search sections', async () => {
+  const compiled = await compileMarkdown('# Page\n\n::: tab [Rendered] {data-markupress-example data-search-ignore}\n## Preview-only heading\n\nPreview-only phrase.\n:::\n\n## Article section', { file: '/docs/examples.md', pageName: 'page-examples' });
+  expect(compiled.resource).toContain('Preview-only heading');
+  expect(compiled.outline.map(item => item.label)).toEqual(['Article section']);
+  expect(JSON.stringify(compiled.sections)).not.toContain('Preview-only');
 });
 
 it('reads code fences and live examples from the files their src names, and fails on a missing one', async () => {
