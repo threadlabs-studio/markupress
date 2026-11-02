@@ -16,7 +16,7 @@ h1, h2, h3, h4, h5, h6 { position: relative; scroll-margin-block-start: calc(var
 :is(h1, h2, h3, h4, h5, h6):is(:hover, :focus-within) > .heading-anchor { opacity: 1; }
 @media (hover: none) { .heading-anchor { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .heading-anchor { transition: none; } }
-pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border-radius: .5rem; }
+pre { box-sizing: border-box; overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border: var(--ui-border-width) solid var(--ui-border); border-radius: var(--ui-radius-md); }
 figure.code { margin: 1rem 0; }
 figure.code figcaption { margin-bottom: .25rem; font: .85rem ui-monospace, monospace; color: var(--ui-text-muted, inherit); }
 code { font-family: var(--ui-font-mono); font-size: .9em; overflow-wrap: break-word; }

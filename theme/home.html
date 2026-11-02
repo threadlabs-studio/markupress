@@ -37,8 +37,7 @@
 <markupress-language-links $if="$locales.length > 1 or ($locales.length = 1 and $locales[0].current = 'false')" from:label="$ui.languages" from:locales="$locales"></markupress-language-links>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
-:host { display: block; background: var(--ui-surface-content); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--ui-font-sans); min-height: 100vh; }
-.site { display: flex; flex-direction: column; min-height: 100vh; }
+:host { display: flex; flex-direction: column; background: var(--ui-surface-content); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--ui-font-sans); min-height: 100vh; }
 main { flex: 1; inline-size: 100%; max-inline-size: var(--markupress-home-width, 75rem); margin-inline: auto; padding: 2rem 1.5rem 4rem; }
 .skip { position: absolute; top: .5rem; inset-inline-start: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-link-color, var(--ui-accent)); z-index: 3; } .skip:focus { transform: none; }
 :focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }

@@ -144,6 +144,56 @@ it('accepts maintained TypeScript controllers and rejects an invalid lifecycle c
   expect(() => run(process.execPath, [compiler, ...args.slice(0, -1), 'components/invalid.ts'])).toThrow();
 });
 
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('keeps code blocks bounded when code and page surfaces share a color', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...await product.loadConfig(workspace), root: workspace, port: 0 });
+      try {
+        const page = await browser.newPage();
+        try {
+          await page.goto(server.url + 'guide/install/');
+          await page.addStyleTag({ content: ':root { --ui-surface-sunken: white; --ui-surface-content: white; --ui-radius-md: 12px; }' });
+          const appearance = await page.locator('figure.code pre').first().evaluate(pre => {
+            const style = getComputedStyle(pre);
+            return { border: parseFloat(style.borderTopWidth), edge: style.borderTopStyle, radius: style.borderTopLeftRadius, width: pre.getBoundingClientRect().width, container: pre.parentElement!.getBoundingClientRect().width };
+          });
+          expect(appearance.border).toBeGreaterThan(0);
+          expect(appearance.edge).toBe('solid');
+          expect(appearance.radius).toBe('12px');
+          expect(appearance.width).toBeLessThanOrEqual(appearance.container);
+          if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `code-${mode}.png`) });
+        } finally { await page.close(); }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 150_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('keeps short home and documentation footers at the viewport bottom', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...await product.loadConfig(workspace), root: workspace, port: 0 });
+      try {
+        for (const viewport of [{ width: 1280, height: 1800 }, { width: 390, height: 1100 }]) {
+          const page = await browser.newPage({ viewport, javaScriptEnabled: false });
+          try {
+            for (const path of ['', 'about/']) {
+              await page.goto(server.url + path);
+              const geometry = await page.locator('footer').evaluate(footer => ({ bottom: footer.getBoundingClientRect().bottom, viewport: innerHeight, document: document.documentElement.scrollHeight }));
+              expect(geometry.document, 'short content and navigation fit in the viewport').toBe(geometry.viewport);
+              expect(Math.abs(geometry.bottom - geometry.viewport), 'the footer ends at the viewport bottom').toBeLessThanOrEqual(1);
+              if (process.env.MARKUPRESS_SCREENSHOTS && path === 'about/') await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `footer-${mode}-${viewport.width}.png`) });
+            }
+          } finally { await page.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 150_000);
+
 it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and production controllers, keyboard navigation, themes and version fallbacks', async () => {
   const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
   const browser = await chromium.launch({ headless: true });

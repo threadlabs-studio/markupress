@@ -14,6 +14,10 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Give code blocks a token-based border and corner radius so their shape remains visible when code and page surfaces share a color.
+
+- Keep home and documentation footers at the viewport bottom when content and navigation are short.
+
 - Add `draft: true` front matter: `markupress dev` serves the page, and `markupress build` leaves it out of the site, its navigation, search and sitemap. The `drafts` option and `--drafts` flag include drafts in a build, such as a staging site.
 - Embed a file with a link, `[button.html](../examples/button.html "{embed}")`, as Expressive Markdown defines it: its code, or with `{embed=example}` its HTML working above its code. The path is relative to the page, so other Markdown renderers show a working link. A missing file fails the build, and `markupress dev` reloads the page when the file changes. Requires expressmark 0.6.0.
 - Add contextual Algolia search through the existing localized Looma dialog, with mandatory language/version filters, safe URLs, plain snippets, cancellation, retry and native CSP integration. Export deterministic DocSearch-compatible records with full Unicode content and provider-sized chunks. Local search remains the default.
