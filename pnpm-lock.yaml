@@ -170,8 +170,8 @@ importers:
         specifier: '>=0.6.0'
         version: 0.6.0(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
-        specifier: '>=0.4.0'
-        version: 0.4.0
+        specifier: '>=0.6.0'
+        version: 0.6.0
       minisearch:
         specifier: 7.2.0
         version: 7.2.0
@@ -1128,12 +1128,8 @@ packages:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
 
-  expressmark@0.4.0:
-    resolution: {integrity: sha512-tYYgC+qsSsetAU8gA5COLExOFezNGH+EFtaFAfZ19Isj8yIqEYpQUKiU2Xo2LKeT0Wiw8IoMFw1OwW4v7RsWgg==}
-    engines: {node: '>=22.13 <23 || >=24 <25'}
-
-  expressmark@0.5.2:
-    resolution: {integrity: sha512-Z18NzEsNz69mZ/6cEvoupWgNp7KJ9pPuvizuNn7exi064nx7ngapwjBOJkBAWlsjYnZNCdp+ZikIC1G6N2Z4Cw==}
+  expressmark@0.6.0:
+    resolution: {integrity: sha512-zylsRyr0FUPUovtizSsMOXYI1eY3zPFI3o93dDwB5AVMt7FXYUrTLtz7F/XlcLIR98MQOW2JLAMXAhATn+GaGQ==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
 
   fdir@6.5.0:
@@ -2110,7 +2106,7 @@ snapshots:
       '@js-temporal/polyfill': 0.5.1
       '@nextwebwg/html-next': 1.0.0-alpha.74
       dompurify: 3.4.15
-      expressmark: 0.5.2
+      expressmark: 0.6.0
       highlight.js: 11.11.2
       lowlight: 3.3.0
       lucide: 0.554.0
@@ -2332,18 +2328,7 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  expressmark@0.4.0:
-    dependencies:
-      entities: 8.1.0
-      htmlparser2: 12.0.0
-      mdurl: 2.1.0
-      parseman: 0.56.0
-      punycode.js: 2.3.1
-      sanitize-html: 2.18.1
-      uc.micro: 3.0.0
-      yaml: 2.9.1
-
-  expressmark@0.5.2:
+  expressmark@0.6.0:
     dependencies:
       entities: 8.1.0
       htmlparser2: 12.0.0
