@@ -14,8 +14,10 @@ it('adds Markdown pages to any MarkupKit site without Markupress versions or the
     await write(root, 'package.json', '{"type":"module"}');
     await write(root, 'app/pages/index.md', '# Welcome\n\n[Guide](guide.md)');
     await write(root, 'app/pages/guide.md', '---\ntitle: The guide\n---\n# Guide\n\nPlain {braces} stay text.\n\n```html\n<output>{$count}</output>\n```');
-    // A page with code links Markupress's code controller, which the site resolves like its own install.
+    // Supply the required Looma peer, without installing Markupress or MarkupKit in this project.
     await linkDependencies(root);
+    await rm(join(root, 'node_modules/markupress'));
+    await rm(join(root, 'node_modules/@threadlabs/markupkit'));
     await write(root, 'app/pages/about.html', '<template component="page-about"><p>HTML pages still route.</p></template>');
     const application = await createApplication({ root, plugins: [markdown()] });
     try {
