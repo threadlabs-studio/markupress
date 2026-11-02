@@ -55,7 +55,7 @@ export async function compilePage(source: string, page: PageContext, options: Ma
   const compiled = await compileMarkdown(source, { ...presentation, file: page.file, pageName, ...(options.styles ? { styles: options.styles } : {}),
     ...(options.lineNumbers === undefined ? {} : { lineNumbers: options.lineNumbers }), ...(options.markdownSyntax ? { markdownSyntax: options.markdownSyntax } : {}), ...(frontmatter ? { frontmatter } : {}),
     ...(translations === undefined ? {} : { translations }), ...(alternates === undefined ? {} : { alternates }),
-    ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
+    ...(options.documentTitle ? { documentTitle: (title: string) => options.documentTitle!(page.file, title) } : {}), watch: file => page.watch(file), resolveLink: (target, kind) => link(target, kind, page, options, home(page.file)) });
   options.onPage?.({ ...compiled, file: page.file, href }, page);
   return compiled.resource;
 }

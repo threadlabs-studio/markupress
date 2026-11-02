@@ -1,4 +1,5 @@
-import { basename, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist, type Syntax } from 'expressmark';
 import { renderHtml, type HtmlRenderOptions, type HtmlTransformer } from 'expressmark/render';
@@ -35,6 +36,8 @@ export interface MarkdownOptions {
   readonly markdownSyntax?: Syntax;
   /** The document `<title>` for the page's title, such as `Install | My site`; the page title by default. */
   readonly documentTitle?: (title: string) => string;
+  /** Called with each file an embed link reads, so development recompiles the page when it changes. */
+  readonly watch?: (file: string) => void;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
@@ -176,12 +179,29 @@ const codeLines = (value: string): ReadonlySet<number> => new Set(value.split(',
   return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
 }));
 
+/** An example's relative references, written for its own folder, rebased onto the page's. */
+function rebaseExample(html: string, from: string, to: string): string {
+  const fragment = parseFragment(html);
+  const visit = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) for (const attribute of node.attrs) {
+      if (!['href', 'src', 'controller'].includes(attribute.name) || !/^\.\.?\//.test(attribute.value)) continue;
+      const path = relative(to, resolve(from, attribute.value)).split(sep).join('/');
+      attribute.value = path.startsWith('.') ? path : './' + path;
+    }
+    if ('tagName' in node && node.tagName === 'template' && 'content' in node) visit(node.content);
+    if ('childNodes' in node) node.childNodes.forEach(visit);
+  };
+  visit(fragment);
+  return serialize(fragment);
+}
+
 /**
  * Authored pages are trusted HTML Next source, not submitted HTML. Expressmark still owns the
  * Markdown grammar and HTML rendering; its host allowlist admits the exact native tags and props
  * present in that source, plus the components and code styles this presentation emits.
  */
-function hostHtml(document: MarkdownDocument): HtmlAllowlist {
+/** The page's authored HTML, its examples' included, is the site's own: its elements and attributes stay. */
+function hostHtml(document: MarkdownDocument, examples: readonly string[] = []): HtmlAllowlist {
   const tags = new Set(['ui-callout', 'ui-tabs', 'ui-icon', 'button', 'input']);
   const attributes = new Set(['heading', 'tone', 'group', 'type', 'hidden', 'disabled', 'checked', 'role', 'tabindex', 'name', 'aria-hidden', 'data-markupress-example', 'data-search-ignore']);
   const styles: Record<string, readonly RegExp[]> = { color: [/^light-dark\(.*\)$/], '--shiki-light': [/^#[\da-f]+$/i], '--shiki-dark': [/^#[\da-f]+$/i] };
@@ -203,6 +223,7 @@ function hostHtml(document: MarkdownDocument): HtmlAllowlist {
     if (node.type === 'htmlElement') visit(parseFragment(`${node.open ?? ''}${node.close ?? ''}`));
     else if (node.type === 'html') visit(parseFragment(node.value ?? ''));
   });
+  for (const html of examples) visit(parseFragment(html));
   return { tags: [...tags], attributes: { '*': [...attributes] }, styles };
 }
 
@@ -284,7 +305,7 @@ export interface RenderedMarkdown {
  * Expressmark owns standard syntax and native HTML rendering. Markupress supplies component presentation,
  * highlighting and literal text escaping. Its own front matter schema stays in compileMarkdown.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations' | 'uiLanguage'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations' | 'uiLanguage' | 'watch'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
   const ui = options.translations === undefined ? english : resolveTranslations('en', options.translations);
   const syntax = fields.markdownSyntax ?? options.markdownSyntax ?? 'standard';
@@ -292,19 +313,39 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const document = parse(body, { syntax: syntax as Syntax, trustedHtml: true });
   const highlighted = new Map<MarkdownNode, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
   const anchors = headingAnchors(document);
-  const codes: MarkdownNode[] = [];
-  walkMarkdown(document, node => { if (node.type === 'code') codes.push(node); });
-  for (const node of codes) {
-    const language = node.language ?? '', meta = node.meta ?? '';
-    const marked = codeLines(String(node.attributes?.highlight ?? ''));
-    const numbers = node.attributes?.showLineNumbers === undefined ? options.lineNumbers ?? false : node.attributes.showLineNumbers !== false && node.attributes.showLineNumbers !== 'false';
-    const code = node.value ?? '';
+  // A link with an embed setting, alone in its paragraph, embeds the file it links to.
+  const codes: MarkdownNode[] = [], embeds: MarkdownNode[] = [];
+  walkMarkdown(document, node => {
+    if (node.type === 'code') codes.push(node);
+    else if (node.type === 'paragraph' && node.children?.length === 1 && node.children[0]!.type === 'link' && node.children[0]!.attributes?.embed !== undefined) embeds.push(node);
+  });
+  const codeBlock = async (code: string, language: string, settings: MarkdownNode['attributes'], meta: string, title: string) => {
+    const marked = codeLines(String(settings?.highlight ?? ''));
+    const numbers = settings?.showLineNumbers === undefined ? options.lineNumbers ?? false : settings.showLineNumbers !== false && settings.showLineNumbers !== 'false';
     const known = language && (Object.hasOwn(bundledLanguages, language) || plain.has(language));
     const pre = known ? await highlight(code, language, lineClasses(marked, numbers, meta))
       : `<pre tabindex="0"${numbers ? ' class="line-numbers"' : ''}><code${language ? ` class="language-${escapeHTML(language)}"` : ''}${meta ? ` data-meta="${escapeHTML(meta)}"` : ''}>${literal(escapeHTML(code))}</code></pre>`;
-    highlighted.set(node, codeFigure(pre, markdownText(node.title), ui, options.uiLanguage));
+    return codeFigure(pre, title, ui, options.uiLanguage);
+  };
+  for (const node of codes) highlighted.set(node, await codeBlock(node.value ?? '', node.language ?? '', node.attributes, node.meta ?? '', markdownText(node.title)));
+  // An embed reads a file relative to the page, so the link also works where Markdown renders without Markupress.
+  // The build fails on a missing file, as on a missing link target.
+  const embedded = new Map<MarkdownNode, { readonly live?: string; readonly code: string }>();
+  for (const node of embeds) {
+    const link = node.children![0]!, ref = link.url ?? '', embed = link.attributes!.embed;
+    if (embed !== true && embed !== 'code' && embed !== 'example') throw new Error(`${options.file}: embed is code or example, as in [${markdownText(link)}](${ref} "{embed=example}").`);
+    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|[/#?])/.test(ref)) throw new Error(`${options.file}: the embedded file ${ref} is a path relative to the page.`);
+    const file = resolve(dirname(options.file), decodeURIComponent(ref));
+    options.watch?.(file);
+    let text: string;
+    // The file's final line break ends its last line, as a fence's closing line does.
+    try { text = (await readFile(file, 'utf8')).replace(/\r?\n$/, ''); }
+    catch { throw new Error(`${options.file}: the embedded file ${ref} is not readable (${file}).`); }
+    embedded.set(node, embed === 'example'
+      ? { live: dirname(file) === dirname(options.file) ? text : rebaseExample(text, dirname(file), dirname(options.file)), code: await codeBlock(text, 'html', link.attributes, '', '') }
+      : { code: await codeBlock(text, String(link.attributes!.language ?? extname(file).slice(1)), link.attributes, '', markdownText(link)) });
   }
-  const trustedHtml = hostHtml(document);
+  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []));
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
     .filter(([name]) => ['id', 'class', 'lang', 'dir', 'dataMarkupressExample', 'dataSearchIgnore'].includes(name))
     .map(([name, value]) => ` ${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}="${escapeHTML(String(value))}"`).join('');
@@ -345,6 +386,14 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     return `<nav data-type="toc" data-format="${escapeHTML(format)}"${attributes(node)}>${node.title ? `<header>${context.render(typeof node.title === 'string' ? { type: 'title', value: node.title } : node.title)}</header>` : ''}<${list} role="list">${entries}</${list}></nav>`;
   };
   transformers['container:toc'] = toc;
+  // An embedded example's HTML renders as the page's own HTML does, then its source.
+  transformers.paragraph = (node, context) => {
+    const parts = embedded.get(node);
+    if (!parts) return undefined;
+    const link = node.children![0]!;
+    return parts.live === undefined ? parts.code : `<figure class="example" data-type="example"${attributes(link)}><figcaption>${link.children ? link.children.map(context.render).join('') : literal(escapeHTML(link.value ?? ''))}</figcaption>` +
+      `<div class="example-preview">${parts.live}</div>${parts.code}</figure>`;
+  };
   transformers['leaf:toc'] = toc;
   // Component usage passes through as native HTML. External .html definitions are loaded,
   // bound and rendered later by HTML Next; Expressmark never sees those definitions.
@@ -367,7 +416,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
     if ('childNodes' in node) node.childNodes.forEach(collectHeadings);
   };
   collectHeadings(parseFragment(html));
-  return { html, frontmatter: fields, body, headings, hasCode: codes.length > 0, components };
+  return { html, frontmatter: fields, body, headings, hasCode: codes.length + embeds.length > 0, components };
 }
 
 export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {

@@ -448,3 +448,33 @@ it('keeps rendered tab examples visible without adding their headings to the art
   expect(compiled.outline.map(item => item.label)).toEqual(['Article section']);
   expect(JSON.stringify(compiled.sections)).not.toContain('Preview-only');
 });
+
+it('embeds the files that embed links name, and fails on a missing one', async () => {
+  const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = await mkdtemp(join(tmpdir(), 'markupress-embed-'));
+  await mkdir(join(root, 'docs')); await mkdir(join(root, 'examples'));
+  await writeFile(join(root, 'examples/setup.ts'), 'const mode = "safe";\nawait deploy();\n');
+  await writeFile(join(root, 'examples/button.html'), '<link rel="component" href="./parts/badge.html">\n<button>Save {draft}</button>\n');
+  const file = join(root, 'docs/page.md'), watched: string[] = [];
+  const page = (markdown: string) => compileMarkdown(markdown, { file, pageName: 'page-embed', watch: path => watched.push(path) });
+  const compiled = await page('# Examples\n\n[setup.ts](../examples/setup.ts "{embed highlight=2}")\n\n[Save *button*](../examples/button.html){embed=example}\n\nSee [setup](../examples/setup.ts "{embed}") inline.\n');
+  const tree = parseFragment(compiled.resource);
+  expect(text(tree)).toContain('await deploy();');
+  // The language comes from the extension, and the link text titles the code.
+  expect(compiled.resource).toMatch(/class="line highlighted"><span[^>]*>await/);
+  expect(text(tree)).toContain('setup.ts');
+  // The example's HTML renders live, its source follows as code, and its component link resolves from the example's folder.
+  expect(compiled.resource).toContain('<figure class="example" data-type="example"><figcaption>Save <em>button</em></figcaption><div class="example-preview">');
+  expect(compiled.resource).toMatch(/<div class="example-preview">\s*<button>Save \{draft\}<\/button>/);
+  // Code is literal: its braces are escaped, so HTML Next never evaluates them.
+  expect(text(tree)).toContain('<button>Save \\{draft}</button>');
+  expect(compiled.resource).toMatch(/<link rel="component" href="\.\.\/examples\/parts\/badge\.html">|<link rel="component" href="file:\/\/[^"]*\/examples\/parts\/badge\.html">/);
+  // A link that shares its paragraph stays a link.
+  expect(compiled.resource).toMatch(/See <a [^>]*>setup<\/a> inline/);
+  expect(watched).toEqual([join(root, 'examples/setup.ts'), join(root, 'examples/button.html')]);
+  await expect(page('[x](./missing.ts "{embed}")\n')).rejects.toThrow(/page\.md: the embedded file \.\/missing\.ts is not readable/);
+  await expect(page('[x](/examples/setup.ts "{embed}")\n')).rejects.toThrow(/is a path relative to the page/);
+  await expect(page('[x](../examples/setup.ts "{embed=video}")\n')).rejects.toThrow(/embed is code or example/);
+});
