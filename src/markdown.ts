@@ -7,6 +7,10 @@ import { siteLink } from './navigation.js';
 import type { Syntax } from 'expressmark';
 import type { TranslationOverrides } from './i18n.js';
 
+// Resolve in Markupress's package scope, including when a documentation tool installs it.
+export const controllerImports = { 'markupress/controllers/': new URL('./', import.meta.resolve('markupress/controllers/code.js')).href };
+
+
 export interface MarkdownPluginOptions {
   /** Alternate links known before this page compiles; native context supplies the source mounts. */
   readonly alternates?: (page: PageContext) => readonly LanguageAlternate[] | Promise<readonly LanguageAlternate[]>;
@@ -37,7 +41,7 @@ export interface MarkdownPluginOptions {
  */
 export function markdown(options: MarkdownPluginOptions = {}): MarkupKitPlugin {
   let base = '/';
-  return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; }, pages: { extensions: ['.md'], async compile(source, page) {
+  return { name: 'markdown', config(markupkit) { base = markupkit.base ?? '/'; return { imports: controllerImports }; }, pages: { extensions: ['.md'], async compile(source, page) {
     return compilePage(source, page, options, base);
   } } };
 }

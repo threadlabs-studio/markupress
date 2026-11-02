@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Declare package-owned code-controller imports so documentation builds work when a tooling package installs Markupress as a dependency.
+
 - Give code blocks a token-based border and corner radius so their shape remains visible when code and page surfaces share a color.
 
 - Keep home and documentation footers at the viewport bottom when content and navigation are short.

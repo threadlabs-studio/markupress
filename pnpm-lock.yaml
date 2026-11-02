@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@threadlabs/markupkit':
-        specifier: '>=0.6.0'
-        version: 0.6.0(@types/node@22.20.1)(yaml@2.9.1)
+        specifier: '>=0.6.1'
+        version: 0.6.1(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
         specifier: '>=0.6.0'
         version: 0.6.0
@@ -202,7 +202,7 @@ importers:
         version: 1.0.0-alpha.74
       '@threadlabs/looma':
         specifier: '>=0.51.4'
-        version: 0.51.4(@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
+        version: 0.51.4(@threadlabs/markupkit@0.6.1(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))
       '@types/node':
         specifier: 22.20.1
         version: 22.20.1
@@ -860,8 +860,8 @@ packages:
       vite:
         optional: true
 
-  '@threadlabs/markupkit@0.6.0':
-    resolution: {integrity: sha512-dJ61oq9juZ4z40VnMVTaOH0rgcz5O1Axd+Am+TSfDkB4v8Fl49odImCx15S7BGqzHh/GPwkb/efv9rO17Rfn5w==}
+  '@threadlabs/markupkit@0.6.1':
+    resolution: {integrity: sha512-V2ZKBOIVnswGKKgok3oDYCZvMGnOQGjndBIttoyAM2kDFx1Pd2DPWi+B9QvDG6UpO6IPQmqvEk8rRD+Kso/iyQ==}
     engines: {node: '>=22.22.2 <23 || >=24.15 <25'}
     hasBin: true
 
@@ -2101,7 +2101,7 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@threadlabs/looma@0.51.4(@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
+  '@threadlabs/looma@0.51.4(@threadlabs/markupkit@0.6.1(@types/node@22.20.1)(yaml@2.9.1))(vite@8.3.5(@types/node@22.20.1)(yaml@2.9.1))':
     dependencies:
       '@js-temporal/polyfill': 0.5.1
       '@nextwebwg/html-next': 1.0.0-alpha.74
@@ -2112,13 +2112,13 @@ snapshots:
       lucide: 0.554.0
       parse5: 8.0.1
     optionalDependencies:
-      '@threadlabs/markupkit': 0.6.0(@types/node@22.20.1)(yaml@2.9.1)
+      '@threadlabs/markupkit': 0.6.1(@types/node@22.20.1)(yaml@2.9.1)
       vite: 8.3.5(@types/node@22.20.1)(yaml@2.9.1)
     transitivePeerDependencies:
       - '@noble/hashes'
       - canvas
 
-  '@threadlabs/markupkit@0.6.0(@types/node@22.20.1)(yaml@2.9.1)':
+  '@threadlabs/markupkit@0.6.1(@types/node@22.20.1)(yaml@2.9.1)':
     dependencies:
       '@nextwebwg/html-next': 1.0.0-alpha.74
       parse5: 8.0.1

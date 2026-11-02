@@ -7,7 +7,7 @@ import { buildApplication, devApplication, loadConfig, previewApplication, type 
 import { formatMessage, resolveTranslations, textDirection, type TranslationOverrides, type Translations } from './i18n.js';
 import { readFrontMatter, isIndex, type FrontMatter, type OutlineItem, type PagerLink, type SearchSection } from './content.js';
 import { lastUpdated } from './git.js';
-import { compilePage, markdown } from './markdown.js';
+import { compilePage, controllerImports, markdown } from './markdown.js';
 import { editionScope, localeSources, type LocaleSource } from './locale-sources.js';
 import { footer, generatedSidebar, siteLink, type Link, type NavItem, type SidebarNode } from './navigation.js';
 import { themeScript } from './theme.js';
@@ -485,7 +485,7 @@ export function markupress(options: MarkupressOptions = {}): MarkupKitPlugin {
     }) : [];
     function layout(edition: Edition) { return { component: layoutFile, server: { load: (context: LoadContext) => load(context, edition.locale) } }; }
     // layout: home names this layout; a site's app/layouts/home.html takes its place, as MarkupKit resolves a name.
-    return { ...(searchConfiguration.algolia ? { csp: hostedPolicy(markupkit.csp, algoliaOrigin(searchConfiguration.algolia.appId)) } : {}), headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
+    return { imports: controllerImports, ...(searchConfiguration.algolia ? { csp: hostedPolicy(markupkit.csp, algoliaOrigin(searchConfiguration.algolia.appId)) } : {}), headScript: themeScript, css: pageStyles, layouts: { home: { component: homeLayout, server: { load } } },
       // The default version owns its locale root. Only historical versions use /v/<id>/;
       // another version serving the same files is an alias and stays out of the sitemap.
       pages: [...editions.map((edition, index) => ({ dir: edition.directory, prefix: edition.prefix, layout: layout(edition), include: published, ...nativeScope(edition),
