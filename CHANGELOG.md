@@ -12,7 +12,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.3
 
 - Declare package-owned code-controller imports so documentation builds work when a tooling package installs Markupress as a dependency.
 
