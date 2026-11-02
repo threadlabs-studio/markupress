@@ -12,7 +12,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.1
 
 - Add `draft: true` front matter: `markupress dev` serves the page, and `markupress build` leaves it out of the site, its navigation, search and sitemap. The `drafts` option and `--drafts` flag include drafts in a build, such as a staging site.
 - Embed a file with a link, `[button.html](../examples/button.html "{embed}")`, as Expressive Markdown defines it: its code, or with `{embed=example}` its HTML working above its code. The path is relative to the page, so other Markdown renderers show a working link. A missing file fails the build, and `markupress dev` reloads the page when the file changes. Requires expressmark 0.6.0.
