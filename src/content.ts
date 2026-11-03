@@ -358,7 +358,8 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
       components.add('ui-icon');
       const content = context.renderChildren();
       const label = textContent(parseFragment(content)).replace(/\\([\\{])/g, '$1');
-      return `<h${node.level} id="${escapeHTML(id)}">${content}<a class="heading-anchor" href="#${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h${node.level}>`;
+      // The permalink keeps its keyboard name without repeating it in the heading’s native name.
+      return `<h${node.level} id="${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}">${content}<a class="heading-anchor" href="#${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h${node.level}>`;
     },
     'container:tabs': (node, context) => {
       if (!node.body?.length || !node.body.every(child => child.type === 'container' && child.subType === 'tab')) return undefined;
