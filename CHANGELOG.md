@@ -12,7 +12,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.4
 
 - Give Markdown headings their visible text as an accessible name so screen readers announce it once while heading permalinks remain keyboard accessible.
 
