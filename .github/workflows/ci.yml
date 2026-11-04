@@ -30,6 +30,9 @@ jobs:
       - run: npm install --global --ignore-scripts --force corepack@0.34.7
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - name: Limit test concurrency on the shared VM pool
+        if: runner.environment == 'self-hosted'
+        run: echo 'VITEST_MAX_WORKERS=1' >> "$GITHUB_ENV"
       - run: pnpm verify:pr
 
   required:
