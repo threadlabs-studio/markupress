@@ -5,8 +5,11 @@ import { isAbsolute, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium, type Page } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import type { ApplicationServer } from '@threadlabs/markupkit';
+
+// A page's first render in the development server transforms its modules on demand, which outlasts Vitest's 1 s default on a busy machine.
+vi.setConfig({ expect: { poll: { timeout: 30_000 } } });
 
 async function openLanguages(page: Page): Promise<void> {
   const trigger = page.getByRole('button', { name: /^(Languages|Langues|اللغات)$/, exact: true });
@@ -324,15 +327,15 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
       // MarkupKit commits the URL before the page arrives. v1's counter has its own controller, which this
       // document cannot also define, so MarkupKit loads v1 as a document, at its top, without logging; wait for it before clicking.
-      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.waitForLoadState();
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
       // The document load takes the place of the committed entry, so back returns to the current version's page once,
       // and forward shows v1's page again under its URL, as soon as each document starts.
       await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.waitForLoadState(); expect(page.url()).toBe(server.url + 'v/v1/guide/install/'); expect(logged).toEqual([]);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
@@ -342,7 +345,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The page's imported stylesheet styles its own heading.
       expect(await page.locator('main h1').evaluate(element => getComputedStyle(element).letterSpacing)).toBe('2px');
       await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="next"]').click();
-      await expect.poll(async () => (await page.locator('h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Blocks');
+      await expect.poll(async () => (await page.locator('h1').textContent())?.trim()).toBe('Blocks');
       // The page rendered in place, and the theme drew its pending bar while it did.
       expect(await page.evaluate(() => (window as unknown as { load: { pending: string[] } }).load.pending)).toContain('3px');
       // Code blocks: build-time highlighted lines and numbers, and keyboard-operable copy and wrap buttons.
@@ -469,7 +472,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       const chosen = await page.locator(':focus').evaluate(button => button.closest<HTMLElement>('[data-href]')!.dataset.href);
       expect(chosen).toBe(secondHref);
       await page.keyboard.press('Enter');
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(new URL(chosen!, server.url).href);
+      await expect.poll(() => page.url()).toBe(new URL(chosen!, server.url).href);
       await expect.poll(() => dialog.isVisible()).toBe(false);
       // Ctrl+K opens it too, Escape closes it, and each version searches its own pages: v1 has no "New document".
       await page.goto(server.url + 'v/v1/guide/install/');
@@ -522,12 +525,12 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       // A generated folder index is a page of links, which navigate like any other.
       await main.getByRole('link', { name: 'Reference' }).click();
-      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Reference');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim()).toBe('Reference');
       await expect.poll(() => main.getByRole('link', { name: 'Reference' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('ul.contents p').textContent()).toBe('Configure the site.');
       const indexAudit = await new AxeBuilder({ page }).analyze(); expect(indexAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       await page.locator('ul.contents').getByRole('link', { name: 'Options' }).click();
-      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim(), { timeout: 30_000 }).toBe('Options');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim()).toBe('Options');
       // An unknown path renders the 404 page in the shell.
       expect((await page.goto(server.url + 'nowhere/'))!.status()).toBe(404);
       expect((await page.locator('h1').textContent())?.trim()).toBe('Nothing here');
@@ -559,7 +562,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => homeNavigation.isVisible()).toBe(true);
       expect(await homeNavigation.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       await homeNavigation.getByRole('link', { name: 'Outline', exact: true }).click();
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'guide/outline/');
+      await expect.poll(() => page.url()).toBe(server!.url + 'guide/outline/');
       expect(await page.locator('#home-navigation:popover-open').count()).toBe(0);
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(server.url + '');
@@ -573,8 +576,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       }
       // Its actions are links: the first leads to the guide, in the shell.
       await page.getByRole('link', { name: 'Installation' }).click();
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'guide/install/#install');
-      await expect.poll(() => page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').count(), { timeout: 30_000 }).toBe(1);
+      await expect.poll(() => page.url()).toBe(server!.url + 'guide/install/#install');
+      await expect.poll(() => page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').count()).toBe(1);
       if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + ''); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
       await page.goto(server.url + 'about/');
       const group = page.locator('#documentation-navigation :is([component~="ui-disclosure"], [data-component~="ui-disclosure"]:not([component]))').filter({ has: page.getByRole('button', { name: 'guide', exact: true }) });
