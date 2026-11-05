@@ -93,7 +93,7 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   // MarkupKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
   expect(html).toContain('href="/manual/guide/install/" aria-current="page"');
-  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
+  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toMatch(/<[^>]*\scomponent="fake-page"/);
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
   expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
   // Whitespace inside <pre> survives rendering, so each highlighted line stays on its own line.
