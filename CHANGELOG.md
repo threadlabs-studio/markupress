@@ -14,6 +14,10 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- **Breaking:** Component roots render with the `component` attribute, from HTML Next alpha.81. Update site CSS and scripts that select `[data-component~="markupress-header"]` or another component identity to `[component~="markupress-header"]`. Markupress theme selectors and controllers read both attributes, and `component` takes precedence.
+- Qualify HTML Next alpha.91 and Looma 0.52.11. Developing Markupress requires HTML Next alpha.81 for its canonical identity checks and public site styles; the published peer minimums are HTML Next alpha.74 and Looma 0.51.4.
+- Hide the public site's header title text through its canonical component identity, so the wordmark appears once.
+
 - Give Markdown headings their visible text as an accessible name so screen readers announce it once while heading permalinks remain keyboard accessible.
 
 - Declare package-owned code-controller imports so documentation builds work when a tooling package installs Markupress as a dependency.
