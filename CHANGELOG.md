@@ -2,6 +2,7 @@
 
 ## 0.18.0
 
+- The guide's Embeds page builds a YouTube embed as an HTML Next component, with a typed `video` prop and a lazy-loaded `youtube-nocookie.com` frame.
 - Require MarkupKit 0.6.0 for semantic version routes and isolated navigation queries, and Looma 0.51.4 for navigation disclosure spacing and theme-aware content/chrome surfaces.
 
 - **Breaking:** The default documentation version now lives only at the locale root. Current links use `/guide/` or `/fr/guide/`; reserve `/v/<id>/` for historical versions, including semantic version IDs such as `1.2.3`. Update bookmarks and integrations that used `/v/current/`.
