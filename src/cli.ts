@@ -7,13 +7,13 @@ import { snapshotVersion } from './versions.js';
 
 async function main() {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
-    root: { type: 'string' }, base: { type: 'string' }, port: { type: 'string' }, help: { type: 'boolean', short: 'h' },
+    root: { type: 'string' }, base: { type: 'string' }, port: { type: 'string' }, help: { type: 'boolean', short: 'h' }, drafts: { type: 'boolean' },
   } });
-  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000]\n       markupress snapshot <version-id> [--root directory]\nConfiguration: markupress.config.ts, .js or .json, and htmlkit.config.ts for HTMLKit options and plugins\n'); return; }
+  if (values.help) { process.stdout.write('Usage: markupress build|dev|preview [--root directory] [--base /docs/] [--port 3000] [--drafts]\n       markupress snapshot <version-id> [--root directory]\nConfiguration: markupress.config.ts, .js or .json, and markupkit.config.ts for MarkupKit options and plugins\n'); return; }
   const root = resolve(values.root ?? process.cwd());
   const config = await loadConfig(root);
   const options: MarkupressOptions = { ...config, root, ...(values.base === undefined ? {} : { base: values.base }),
-    ...(values.port === undefined ? {} : { port: Number(values.port) }) };
+    ...(values.port === undefined ? {} : { port: Number(values.port) }), ...(values.drafts ? { drafts: true } : {}) };
   const command = positionals[0] ?? 'dev';
   if (command === 'snapshot') {
     if (!positionals[1]) throw new Error('snapshot requires a version id.');

@@ -1,38 +1,53 @@
 /* Documentation typography. Each Markdown page component imports this, so its selectors match inside
    that page only and stop at any component the page embeds. The page root itself is .markupress-prose. */
-a { color: var(--ui-accent); text-underline-offset: .2em; }
-h1 { font-size: clamp(1.8rem, 5vw, 2.7rem); line-height: 1.2; }
-h2, h3 { margin-top: 2rem; scroll-margin-top: 2rem; }
-h1 a, h2 a, h3 a { color: inherit; text-decoration: none; }
-pre { overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); border-radius: .5rem; }
+a { color: var(--ui-link-color, var(--ui-accent)); text-underline-offset: .2em; }
+h1 { margin-block: 0 var(--ui-space-5); font: var(--ui-font-bold) clamp(2rem, 5vw, 3rem)/var(--ui-line-height-tight) var(--ui-font-display, var(--ui-font-sans)); letter-spacing: -.025em; }
+h2, h3, h4, h5, h6 { font-family: var(--ui-font-display, var(--ui-font-sans)); }
+h2, h3 { line-height: var(--ui-line-height-tight); }
+h2, h3 { margin-block: 2.5rem 1rem; }
+p, ul, ol { margin-block: 0 1.25rem; }
+li + li { margin-block-start: .35rem; }
+li > :last-child { margin-block-end: 0; }
+blockquote { margin: 1.5rem 0; padding-inline-start: 1.25rem; border-inline-start: 3px solid var(--ui-border-strong, var(--ui-border)); color: var(--ui-text-secondary); }
+:not(pre) > code { padding: .12em .3em; border-radius: var(--ui-radius-sm); background: var(--ui-surface-sunken); }
+hr { margin-block: 2rem; border: 0; border-block-start: 1px solid var(--ui-border); }
+h1, h2, h3, h4, h5, h6 { position: relative; scroll-margin-block-start: calc(var(--_markupress-header-height, var(--markupress-header-height, 4.25rem)) + 1.25rem); }
+.heading-anchor { position: absolute; inset-inline-start: -1.25rem; inset-block-start: .2em; display: inline-flex; align-items: center; justify-content: center; inline-size: 1rem; block-size: 1.25rem; color: var(--ui-text-muted); --ui-icon-size: 1rem; font-size: 1rem; opacity: 0; transition: opacity var(--ui-motion-fast) var(--ui-motion-ease); }
+:is(h1, h2, h3, h4, h5, h6):is(:hover, :focus-within) > .heading-anchor { opacity: 1; }
+@media (hover: none) { .heading-anchor { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .heading-anchor { transition: none; } }
+pre { box-sizing: border-box; overflow: auto; max-width: 100%; padding: 1rem; background: var(--ui-surface-sunken); color: var(--ui-text); border: var(--ui-border-width) solid var(--ui-border); border-radius: var(--ui-radius-md); }
 figure.code { margin: 1rem 0; }
 figure.code figcaption { margin-bottom: .25rem; font: .85rem ui-monospace, monospace; color: var(--ui-text-muted, inherit); }
-code { font-size: .9em; }
+code { font-family: var(--ui-font-mono); font-size: .9em; overflow-wrap: break-word; }
 img, svg { max-width: 100%; }
-table { border-collapse: collapse; display: block; max-width: 100%; overflow: auto; }
-th, td { border: 1px solid var(--ui-border, #8885); padding: .4rem .75rem; }
-:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
-/* Looma Markdown's inline elements and blocks, drawn with the tokens LoomaEditor uses for them. */
-[data-looma-chip] {
+table { border-collapse: collapse; display: block; max-width: 100%; overflow: auto; margin-block: 1.25rem 2rem; font-size: .9rem; line-height: 1.65; }
+th, td { border-bottom: 1px solid var(--ui-border, #8885); padding: .75rem 1rem; text-align: start; vertical-align: top; }
+th { background: var(--ui-surface-sunken); font-weight: var(--ui-font-semibold, 600); }
+:focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }
+[data-type="chip"] {
   --_chip-surface: var(--ui-surface-subtle); --_chip-text: var(--ui-text-secondary);
   padding: .08em .45em; border: var(--ui-border-width, 1px) solid color-mix(in srgb, var(--_chip-surface) 75%, var(--_chip-text) 25%);
   border-radius: var(--ui-radius-round, 999px); background: var(--_chip-surface); color: var(--_chip-text);
   font-size: var(--ui-font-size-sm, .85em); font-weight: var(--ui-font-medium, 500); box-decoration-break: clone;
 }
-[data-looma-chip][data-color="blue"] { --_chip-surface: var(--ui-info-soft); --_chip-text: var(--ui-info-subtle-text); }
-[data-looma-chip][data-color="green"] { --_chip-surface: var(--ui-success-soft); --_chip-text: var(--ui-success-subtle-text); }
-[data-looma-chip][data-color="yellow"] { --_chip-surface: var(--ui-warning-soft); --_chip-text: var(--ui-warning-subtle-text); }
-[data-looma-chip][data-color="red"] { --_chip-surface: var(--ui-danger-soft); --_chip-text: var(--ui-danger-subtle-text); }
-[data-looma-chip][data-color="purple"] { --_chip-surface: var(--ui-accent-soft); --_chip-text: var(--ui-accent-subtle-text); }
-.looma-mention { padding: .08em .28em; border-radius: var(--ui-radius-sm, 4px); background: var(--ui-accent-soft); color: var(--ui-accent-active, var(--ui-accent)); font-weight: var(--ui-font-medium, 500); white-space: nowrap; }
-ul[data-type="taskList"] { padding-left: .25rem; list-style: none; }
-ul[data-type="taskList"] input { margin: 0 .5rem 0 0; accent-color: var(--ui-accent-solid, var(--ui-accent)); }
-nav[data-looma-toc] { margin: 1rem 0; }
-nav[data-looma-toc] :is(ol, ul, div)[role="list"] { margin: .25rem 0; padding-left: 1.25rem; }
-nav[data-looma-toc] > [role="list"] { padding-left: 0; }
-nav[data-looma-toc][data-format="numbered"] > ol, nav[data-looma-toc][data-format="bulleted"] > ul { padding-left: 1.25rem; }
-figure:not(.code) { margin: 1.5rem 0; }
-figure:not(.code) > figcaption { margin-top: .5rem; font-size: .9rem; color: var(--ui-text-muted, inherit); }
+[data-type="chip"][data-tone="blue"] { --_chip-surface: var(--ui-info-soft); --_chip-text: var(--ui-info-subtle-text); }
+[data-type="chip"][data-tone="green"] { --_chip-surface: var(--ui-success-soft); --_chip-text: var(--ui-success-subtle-text); }
+[data-type="chip"][data-tone="yellow"] { --_chip-surface: var(--ui-warning-soft); --_chip-text: var(--ui-warning-subtle-text); }
+[data-type="chip"][data-tone="red"] { --_chip-surface: var(--ui-danger-soft); --_chip-text: var(--ui-danger-subtle-text); }
+[data-type="chip"][data-tone="purple"] { --_chip-surface: var(--ui-accent-soft); --_chip-text: var(--ui-accent-subtle-text); }
+[data-type="mention"] { padding: .08em .28em; border-radius: var(--ui-radius-sm, 4px); background: var(--ui-accent-soft); color: var(--ui-accent-subtle-text); font-weight: var(--ui-font-medium, 500); white-space: nowrap; }
+nav[data-type="toc"] { margin: 1rem 0; }
+nav[data-type="toc"] :is(ol, ul, div)[role="list"] { margin: .25rem 0; padding-inline-start: 1.25rem; }
+nav[data-type="toc"] > [role="list"] { padding-inline-start: 0; }
+nav[data-type="toc"][data-format="numbered"] > ol, nav[data-type="toc"][data-format="bulleted"] > ul { padding-inline-start: 1.25rem; }
+figure.example { margin: 1.5rem 0; }
+figure.example > figcaption { margin-block-end: .5rem; font-weight: var(--ui-font-semibold, 600); }
+.example-preview { padding: var(--ui-space-5, 1.25rem); border: 1px solid var(--ui-border); border-block-end: 0; border-start-start-radius: .5rem; border-start-end-radius: .5rem; }
+figure.example > figure.code { margin: 0; }
+figure.example > figure.code pre { border-start-start-radius: 0; border-start-end-radius: 0; }
+figure:not(.code, .example) { margin: 1.5rem 0; }
+figure:not(.code, .example) > figcaption { margin-top: .5rem; font-size: .9rem; color: var(--ui-text-muted, inherit); }
 img[data-placement="center"] { display: block; margin-inline: auto; }
 img[data-placement="wrap-left"] { float: left; margin: 0 1rem 1rem 0; }
 img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
@@ -43,9 +58,11 @@ img[data-placement="wrap-right"] { float: right; margin: 0 0 1rem 1rem; }
 .hero p { margin: 0 0 1rem; font-size: 1.25rem; color: var(--ui-text-secondary, inherit); }
 .hero .actions { margin-top: 1.5rem; }
 .hero-image img { display: block; margin-inline: auto; max-block-size: min(18rem, 40vh); }
-/* Footnotes: GFM's notes section, below a rule, with its heading for assistive technology only. */
-.footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--ui-border, #8885); font-size: .9rem; color: var(--ui-text-secondary, inherit); }
-.footnotes .sr-only { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
-.footnotes li:target { background: var(--ui-accent-soft); }
+[data-footnotes] { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--ui-border, #8885); font-size: .9rem; color: var(--ui-text-secondary, inherit); }
+[data-footnotes] li:target { background: var(--ui-accent-soft); }
 [data-footnote-ref] { text-decoration: none; }
 :is([id^="fn:"], [id^="fnref:"]) { scroll-margin-top: 5rem; }
+
+/* Code retains its program order within a document of either reading direction. */
+pre { direction: ltr; unicode-bidi: isolate; text-align: start; }
+code { unicode-bidi: isolate; }

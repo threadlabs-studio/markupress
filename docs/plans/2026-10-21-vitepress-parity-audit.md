@@ -6,7 +6,7 @@ date: 2026-10-21
 
 # VitePress parity audit
 
-Each feature in VitePress's guide and reference at [vitepress.dev](https://vitepress.dev), read on 2026-10-21, checked against Markupress `main` at `75fef03` (after 0.6.4, with the merged 0.7.0 work), the HTMLKit features it uses, and Looma's components. The [1.0 definition](./2026-10-14-markupress-1.0-definition.md) sets the bar: a feature is in 1.0 when VitePress and Docusaurus both ship it by default and a typical documentation site needs it.
+Each feature in VitePress's guide and reference at [vitepress.dev](https://vitepress.dev), read on 2026-10-21, checked against Markupress `main` at `75fef03` (after 0.6.4, with the merged 0.7.0 work), the MarkupKit features it uses, and Looma's components. The [1.0 definition](./2026-10-14-markupress-1.0-definition.md) sets the bar: a feature is in 1.0 when VitePress and Docusaurus both ship it by default and a typical documentation site needs it.
 
 Content features are judged against **Expressive Markdown** ([specification](https://nextwebwg.org/expressive-markdown/language), [expressmark README](https://github.com/nextwebwg/expressmark#what-you-can-write)), Markupress's content language. Markupress renders Markdown today with Looma's markdown-it renderer, and 0.8.0 moves it to expressmark's `parse` and `renderHtml`. Where the Expressive Markdown syntax differs from the one Markupress renders today, the notes give both.
 
@@ -28,7 +28,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | Custom anchors `{#id}` | Has (Expressive Markdown) | `## Title {#id}`, an attribute on the heading. `tests/content.test.ts` ("takes a heading id from a trailing {#id} marker"). |
 | Links between pages | Has | Relative `.md` links resolve to the target page in the same version and fail the build when missing: `src/markdown.ts` `link()`, `tests/site.test.ts`. |
 | Extensionless relative links (`./getting-started`) | Has | A relative path with no extension names a page from the file's folder, number prefixes optional: `tests/site.test.ts` ("resolves extensionless relative links"). |
-| Links to a heading on another page | Has | `[x](./page.md#heading)` keeps the fragment, and the link check verifies it (HTMLKit V8). |
+| Links to a heading on another page | Has | `[x](./page.md#heading)` keeps the fragment, and the link check verifies it (MarkupKit V8). |
 | External links get `target="_blank"` and `rel` | Missing | Links stay as written (scratch). |
 | Frontmatter | Has (Expressive Markdown) | YAML front matter, validated per field: `src/content.ts` `validFrontMatter`. |
 | GitHub tables | Has (Expressive Markdown) | GFM tables, plus Expressive Markdown's list tables. |
@@ -64,7 +64,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| Relative assets copied with hashed names | Has | `page.asset()` serves them from `/_htmlkit/files/` with a content hash (scratch); `tests/site.test.ts`. |
+| Relative assets copied with hashed names | Has | `page.asset()` serves them from `/_markupkit/files/` with a content hash (scratch); `tests/site.test.ts`. |
 | Inlining small images | Missing | Not needed for parity. |
 | `public/` directory | Has | Copied to the output root; root-relative image paths resolve from it: `website/docs/01.guide/03.writing/01.pages.md`. |
 | Base handling for public paths | Has | Root-relative paths get the base: `tests/site.test.ts` ("resolves root-relative Markdown links … under its base"). |
@@ -95,19 +95,19 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| File-based routing, `index.md` | Has | HTMLKit routes each file; a folder's index page is its URL: `tests/site.test.ts`. |
+| File-based routing, `index.md` | Has | MarkupKit routes each file; a folder's index page is its URL: `tests/site.test.ts`. |
 | Source directory | Has | `contentDir`. |
 | Linking to non-Markupress pages | Has | Links to files outside the docs stay as written; root-relative file links are public files. |
 | Clean URLs | Has | Every page is a folder URL, `/guide/install/`, with no `.html`: `website/docs/01.guide/03.writing/01.pages.md`. |
-| `rewrites` | Not applicable | Folders are URLs by decision (Decision 1, no `slug`); `aliases` and HTMLKit `redirects` cover moved pages. |
-| Dynamic routes `[pkg].md` with `paths` | Partial | HTMLKit's `[param].html` pages with `entries()` cover HTML pages; Markdown pages have no parameters. |
+| `rewrites` | Not applicable | Folders are URLs by decision (Decision 1, no `slug`); `aliases` and MarkupKit `redirects` cover moved pages. |
+| Dynamic routes `[pkg].md` with `paths` | Partial | MarkupKit's `[param].html` pages with `entries()` cover HTML pages; Markdown pages have no parameters. |
 
 ## Data loading
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| `.data.js` loaders | Partial | HTMLKit loaders (`*.server.ts`) feed HTML pages and layouts; a Markdown page has no loader of its own. |
-| `createContentLoader` | Missing | The `markdown()` plugin's `onPage` and HTMLKit's `generate` hook (1.0.0-alpha.68) are the building blocks. |
+| `.data.js` loaders | Partial | MarkupKit loaders (`*.server.ts`) feed HTML pages and layouts; a Markdown page has no loader of its own. |
+| `createContentLoader` | Missing | The `markdown()` plugin's `onPage` and MarkupKit's `generate` hook (1.0.0-alpha.68) are the building blocks. |
 
 ## Internationalization
 
@@ -123,7 +123,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | --- | --- | --- |
 | Build and preview, `--port` | Has | `website/docs/02.reference/02.cli.md`. |
 | Base path | Has | `base`, `--base`: `website/docs/01.guide/09.deploy.md`. |
-| Relative base `./` | Missing | HTMLKit's `base` starts and ends with `/`. |
+| Relative base `./` | Missing | MarkupKit's `base` starts and ends with `/`. |
 | Cache headers | Missing | The deploy guide has no cache-header section. |
 | GitHub Pages, Vercel, Netlify, any static host | Has | `website/docs/01.guide/09.deploy.md`; this documentation deploys with the GitHub Pages workflow. |
 | Other platforms | Partial | Cloudflare Pages, GitLab Pages, Firebase and the rest follow the static host section. |
@@ -133,14 +133,14 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
 | `sitemap.xml` with a hostname | Has | `origin` writes it, canonical pages only: `tests/site.test.ts` ("passes origin and robots"). |
-| `lastmod` | Missing | HTMLKit writes no `lastmod`. |
-| `transformItems` | Partial | A site's own `public/sitemap.xml`, or an HTMLKit plugin's generated one, takes the place of the built-in file. |
+| `lastmod` | Missing | MarkupKit writes no `lastmod`. |
+| `transformItems` | Partial | A site's own `public/sitemap.xml`, or an MarkupKit plugin's generated one, takes the place of the built-in file. |
 
 ## MPA mode
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| No client JavaScript, `<script client>` | Not applicable | HTMLKit renders every page to HTML that reads without JavaScript (browser proof with JavaScript off), and compiled components ship only their own code. |
+| No client JavaScript, `<script client>` | Not applicable | MarkupKit renders every page to HTML that reads without JavaScript (browser proof with JavaScript off), and compiled components ship only their own code. |
 
 ## Using Vue in Markdown
 
@@ -161,16 +161,16 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | `title` | Has | |
 | `titleTemplate` | Has | See Frontmatter. |
 | `description` (site-wide) | Missing | Per page only. |
-| `head` (site-wide) | Has | A site layout's `<defs>` and HTMLKit's `app/head.js`: `website/docs/01.guide/07.security.md`. |
+| `head` (site-wide) | Has | A site layout's `<defs>` and MarkupKit's `app/head.js`: `website/docs/01.guide/07.security.md`. |
 | `lang`, `dir` | Partial | `lang` (see Internationalization); `dir` with i18n, 1.1. |
 | `base`, `srcDir`, `outDir` | Has | `base`, `contentDir`, `outDir`. |
 | `srcExclude` | Partial | Files starting with `_` are not routed. |
-| `assetsDir`, `assetsBase`, `cacheDir` | Not applicable | HTMLKit owns `_htmlkit/`. |
-| `ignoreDeadLinks` | Has | HTMLKit `linkCheck: "warn"`: `website/docs/02.reference/01.configuration.md`. |
+| `assetsDir`, `assetsBase`, `cacheDir` | Not applicable | MarkupKit owns `_markupkit/`. |
+| `ignoreDeadLinks` | Has | MarkupKit `linkCheck: "warn"`: `website/docs/02.reference/01.configuration.md`. |
 | `appearance` | Partial | Light and dark with a saved toggle and no flash: browser proof. No option to force one theme. |
 | `lastUpdated` | Has | Always on in a git checkout: `tests/site.test.ts`. |
-| `markdown`, `vite`, `vue` | Not applicable | Decision 6; HTMLKit owns the Vite configuration. |
-| `buildEnd`, `transformHead`, `transformHtml`, `transformPageData` | Partial | HTMLKit plugins in `htmlkit.config.ts` add `buildStart`, `buildEnd`, `generate` and page compilers: `website/docs/01.guide/02.project-structure.md`. |
+| `markdown`, `vite`, `vue` | Not applicable | Decision 6; MarkupKit owns the Vite configuration. |
+| `buildEnd`, `transformHead`, `transformHtml`, `transformPageData` | Partial | MarkupKit plugins in `markupkit.config.ts` add `buildStart`, `buildEnd`, `generate` and page compilers: `website/docs/01.guide/02.project-structure.md`. |
 | Typed config | Has | `markupress.config.ts` with `defineConfig`: `tests/config.test.ts`. |
 
 ## Runtime API
@@ -178,7 +178,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
 | `useData` | Has | A layout declares props and receives them: `website/docs/01.guide/06.theme/03.layouts.md`. |
-| `useRoute`, `useRouter` | Not applicable | HTMLKit navigates through the Navigation API. |
+| `useRoute`, `useRouter` | Not applicable | MarkupKit navigates through the Navigation API. |
 | `withBase` | Not applicable | Loader data carries resolved URLs. |
 | `<Content />` | Has | `<slot name="page">` in a layout. |
 | `$frontmatter`, `$params` | Partial | `page` in layouts; Markdown pages have no parameters. |
@@ -269,7 +269,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| Local search with keyboard shortcut | Has | A per-version JSON index from HTMLKit's `generate` hook and Looma's `ui-search-shell`, opened with `/`, Ctrl+K or Cmd+K: `tests/site.test.ts`, browser proof, `website/docs/01.guide/08.search.md`. |
+| Local search with keyboard shortcut | Has | A per-version JSON index from MarkupKit's `generate` hook and Looma's `ui-search-shell`, opened with `/`, Ctrl+K or Cmd+K: `tests/site.test.ts`, browser proof, `website/docs/01.guide/08.search.md`. |
 | `search: false` front matter | Missing | |
 | Search i18n, MiniSearch options, custom renderer | Missing | 1.1. |
 | Algolia DocSearch | Missing | Plan row S2, 1.1. |
@@ -278,7 +278,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| From navigation order | Has | HTMLKit's `<hk-pager>`: browser proof. |
+| From navigation order | Has | MarkupKit's `<mk-pager>`: browser proof. |
 | Front matter `prev`, `next`, `false` | Has | `previous` and `next`, as `false` or `{ label, href }`. |
 
 ## Edit link
@@ -302,7 +302,7 @@ Items marked "scratch" were checked by building a page in a scratch site with th
 
 | VitePress | Status | Evidence and notes |
 | --- | --- | --- |
-| `carbonAds` | Missing | A site adds an ad script through HTMLKit's `app/head.js` and `csp` option. |
+| `carbonAds` | Missing | A site adds an ad script through MarkupKit's `app/head.js` and `csp` option. |
 
 ## Ranked gaps
 
@@ -330,8 +330,8 @@ All six are in 0.7.0.
 7. External link icon in the theme.
 8. Image lazy loading.
 9. Home page: hero name label, light and dark hero images, and whole-card feature links.
-10. Data loading for Markdown: a content loader over compiled pages, built on `onPage` and HTMLKit's `generate` hook, and parameters for Markdown pages.
-11. Sitemap `lastmod` from git (HTMLKit).
+10. Data loading for Markdown: a content loader over compiled pages, built on `onPage` and MarkupKit's `generate` hook, and parameters for Markdown pages.
+11. Sitemap `lastmod` from git (MarkupKit).
 12. GitHub alert titles (`> [!NOTE] Title`) and `{no-title}`, decided with the Expressive Markdown move in 0.8.0, since Expressive Markdown's callouts are colon containers.
 13. `:line-numbers=N`, inline footnotes `^[…]` (with Expressive Markdown footnotes) and emoji shortcodes (an Expressive Markdown language proposal).
 14. Chip text left out of a heading's outline label.
@@ -339,7 +339,7 @@ All six are in 0.7.0.
 16. A team page from Looma's avatar and card components.
 17. Cache-header guidance and more platforms in the deploy guide.
 18. A site-wide `description`, hiding the site title beside the logo, and an appearance setting that fixes one theme.
-19. Relative `./` base (HTMLKit).
+19. Relative `./` base (MarkupKit).
 
 ### Won't do, by decision
 
@@ -347,5 +347,5 @@ All six are in 0.7.0.
 2. **Vue in Markdown** (interpolation, directives, `<script setup>`, `v-pre`, `<ClientOnly>`). HTML Next components with TypeScript controllers take their place, and Markdown text is literal.
 3. **`rewrites`.** Folders are URLs (Decision 1); `aliases` and redirects cover moved pages.
 4. **Explicit sidebar configuration and nav dropdowns.** Folders, `order` and `navigation` shape navigation (0.2.0).
-5. **MPA mode.** HTMLKit pages are HTML that reads without JavaScript, and compiled components ship only their own code.
-6. **Carbon Ads.** An ad script is a site's own, through HTMLKit's `app/head.js` and `csp`; the 1.0 definition leaves the announcement bar (T8) out for the same reason.
+5. **MPA mode.** MarkupKit pages are HTML that reads without JavaScript, and compiled components ship only their own code.
+6. **Carbon Ads.** An ad script is a site's own, through MarkupKit's `app/head.js` and `csp`; the 1.0 definition leaves the announcement bar (T8) out for the same reason.

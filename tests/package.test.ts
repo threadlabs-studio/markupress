@@ -3,10 +3,30 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { AxeBuilder } from '@axe-core/playwright';
-import { afterAll, beforeAll, expect, it } from 'vitest';
-import type { ApplicationServer } from '@nextwebwg/htmlkit';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import type { ApplicationServer } from '@threadlabs/markupkit';
+
+// A page's first render in the development server transforms its modules on demand, which outlasts Vitest's 1 s default on a busy machine.
+vi.setConfig({ expect: { poll: { timeout: 30_000 } } });
+
+async function openLanguages(page: Page): Promise<void> {
+  const trigger = page.getByRole('button', { name: /^(Languages|Langues|اللغات)$/, exact: true });
+  if (await trigger.isVisible()) await trigger.click();
+}
+
+async function chooseAppearance(page: Page, choice: 'automatic' | 'light' | 'dark') {
+  const button = page.getByRole('button', { name: /^Appearance:/ });
+  const desired = `Appearance: ${choice.charAt(0).toUpperCase()}${choice.slice(1)}`;
+  for (let step = 0; step < 3; step++) {
+    const before = await button.getAttribute('aria-label');
+    if (before === desired) return;
+    await button.click();
+    await expect.poll(() => button.getAttribute('aria-label')).not.toBe(before);
+  }
+  expect(await button.getAttribute('aria-label')).toBe(desired);
+}
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const workspace = mkdtempSync(join(tmpdir(), 'markupress-consumer-'));
@@ -19,22 +39,28 @@ beforeAll(() => {
   const packed = execFileSync('corepack', ['pnpm', 'pack', '--pack-destination', workspace], { cwd: root, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
   const tarball = isAbsolute(packed) ? packed : join(workspace, packed);
   write('package.json', '{"name":"markupress-consumer","private":true,"type":"module"}');
-  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? '[]') as string[];
+  // Default consumers use the verified Looma release; newer releases may require a newer Markupress.
+  const looma = JSON.parse(readFileSync(join(root, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+  const platform = JSON.parse(process.env.MARKUPRESS_PLATFORM_TARBALLS ?? JSON.stringify([`@threadlabs/looma@${looma.version}`])) as string[];
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball, ...platform]);
+  if (process.env.MARKUPRESS_EXPECT_LOOMA) {
+    const actual = JSON.parse(readFileSync(join(workspace, 'node_modules/@threadlabs/looma/package.json'), 'utf8')) as { version: string };
+    expect(actual.version, 'The installed compatibility probe must use its intended Looma release').toBe(process.env.MARKUPRESS_EXPECT_LOOMA);
+  }
   mkdirSync(join(workspace, 'docs/01.guide'), { recursive: true }); mkdirSync(join(workspace, 'components')); mkdirSync(join(workspace, 'public'));
   // Conventions supply the logo (public/logo.svg) and footer (docs/_footer.md); config adds only extra links.
   // A typed config, which the installed package's defineConfig types.
-  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
-  // The site's own page-wide stylesheet sets a Markupress theme token.
+  write('markupress.config.ts', `import { defineConfig } from 'markupress';\n\nexport default defineConfig(${JSON.stringify({ title: 'Example docs with a deliberately long product title', headerNotice: 'Custom theme', base: '/manual/', nav: [{ label: 'Outline', href: '/guide/outline/' }], editLink: 'https://example.com/edit/' })});\n`);
+  // The site's stylesheet shares Looma typography and sizes the Markupress layout.
   mkdirSync(join(workspace, 'app'));
-  write('app/site.css', ':root { --markupress-sidebar-width: 17rem; }');
-  write('htmlkit.config.js', 'export default { css: ["app/site.css"] };');
+  write('app/site.css', ':root { --ui-font-sans: Arial, sans-serif; --ui-link-color: light-dark(#6945c2, #cbb9ff); --markupress-sidebar-width: 17rem; }');
+  write('markupkit.config.js', 'export default { css: ["app/site.css"] };');
   write('public/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="teal"/></svg>');
   write('public/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle r="20" cx="20" cy="20" fill="teal"/></svg>');
   write('docs/_footer.md', '## Docs\n\n- [Home](/)\n\nCopyright Example.\n');
   write('docs/01.index.md', '# Welcome\n\n[Installation](01.guide/02.install.md#install)\n\n![Mark](/mark.svg)');
-  write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="@/components/counter.html">\n\n<demo-counter></demo-counter>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
-  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><state name="count" type="number" value="0"></state></defs><div><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
+  write('docs/01.guide/02.install.md', `---\ntitle: Installation\nid: install\naliases: [/getting-started/]\n---\n# Install\n\n<link rel="component" href="@/components/counter.html">\n\n<demo-counter label="From Markdown"></demo-counter>\n\n## Install\n\n\`\`\`html\n<template component="fake-page"><p>{count}</p></template>\n<link rel="component" href="missing.html">\n\`\`\`\n\n\`\`\`less\n@color: #123;\n.box { color: @color; }\n\`\`\`\n\n\`\`\`css\n.box { color: red; }\n\`\`\`\n\n\`\`\`js\nconst count = 1;\n\`\`\`\n\n\`\`\`ts\nconst count: number = 1;\n\`\`\`\n`);
+  write('components/counter.html', '<template component="demo-counter" controller="./counter.js"><defs><prop name="label" type="string" required>Label</prop><state name="count" type="number" value="0"></state></defs><div><strong $if="$label">{$label}</strong><button aria-label="Increment example">Increment</button><output>{$count}</output></div><style>@import "./counter.css";</style></template>');
   write('components/counter.css', 'button { border: 2px solid rgb(20, 30, 40); }');
   write('components/counter.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; import { increment } from "./value.js"; export default function(host: ComponentHost) { host.on("connect", () => { const button = host.root.querySelector("button")!; const click = () => { host.state.count = Number(host.state.count) + increment; }; button.addEventListener("click", click); return () => button.removeEventListener("click", click); }); }');
   write('components/value.ts', 'export const increment = 1;');
@@ -48,25 +74,29 @@ beforeAll(() => {
   // The current version's home is a home page; v1 keeps the plain one.
   write('docs/01.index.md', '---\nlayout: home\n---\n# Welcome\n\nExample documentation.\n\n![Mark](/mark.svg)\n\n[Installation](01.guide/02.install.md#install) [Reference](02.reference/index.md)\n\n' +
     '## Components\n\nNative components in Markdown.\n\n## Versions\n\nEvery snapshot stays readable.\n');
-  write('docs/03.about.md', '# About');
+  write('docs/03.about.md', '# About\n\n<div data-search-ignore>unindexedsectionquartz</div>');
+  write('docs/excluded.md', '---\nsearch: false\n---\n# Excluded\n\nundiscoverablequartz');
+  mkdirSync(join(workspace, 'docs/workspace'));
+  write('docs/workspace/index.md', '---\nsidebar: false\n---\n# Workspace');
+  write('docs/workspace/edit.md', '# Edit workspace');
   mkdirSync(join(workspace, 'docs/02.reference'));
   write('docs/02.reference/index.md', '---\ntitle: Reference\ndescription: Every option.\n---\n');
   write('docs/02.reference/01.options.md', '---\ndescription: Configure the site.\n---\n# Options');
   write('docs/404.md', '# Nothing here\n\n[Home](01.index.md)');
-  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::toc{depth=2}\n\n```ts {1} :line-numbers title="example.ts"\nconst first = 1;\nconst second = {braces}; // [!code highlight]\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning Breaking {x}\nBack up first.\n:::\n\n> [!CAUTION]\n> Alerts too.\n\n::: details More\nHidden text\n:::\n\n' +
-    '::: code-group\n```sh title="pnpm"\npnpm add markupress\n```\n\n```sh title="npm"\nnpm install markupress\n```\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm markupress build\n```\n\n```sh title="npm"\nnpx markupress build\n```\n:::\n\n' +
-    '## Über uns\n\nStatus :chip[Ready]{tone=green}, by :mention[Ada]{id=u1}, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure The *mark*\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
+  write('docs/01.guide/04.blocks.md', '# Blocks\n\n::: toc [Contents] {depth=2}\n:::\n\n```ts {highlight="1-2" show-line-numbers title="example.ts"}\nconst first = 1;\nconst second = {braces};\nconst third = "a long line that wraps when the reader turns wrapping on, so it never needs a horizontal scroll bar";\n```\n\n::: warning [Breaking {x}]\nBack up first.\n:::\n\n::: danger\nAlerts too.\n:::\n\n::: details [More]\nHidden text\n:::\n\n' +
+    '::: tab [pnpm] {group="code-group"}\n```sh\npnpm add markupress\n```\n:::\n\n::: tab [npm] {group="code-group"}\n```sh\nnpm install markupress\n```\n:::\n\nBuild the same project:\n\n::: tab [pnpm] {group="code-group"}\n```sh\npnpm markupress build\n```\n:::\n\n::: tab [npm] {group="code-group"}\n```sh\nnpx markupress build\n```\n:::\n\n' +
+    '::: table\n\n- Field: `redirectFrom`\n  Effect: Old URLs of the page redirect to the page, with status 308 in development and preview, and as a redirect page at the old URL in a build.\n:::\n\n## Über uns\n\nStatus :chip[Ready]{tone=green}, by @[Ada]#u1, with a note[^1].\n\n- [x] Read the changelog\n- [ ] Run the migration\n\n::: figure [The *mark*]\n![Mark](/mark.svg){width=40 placement=center}\n:::\n\n[^1]: The footnote.\n');
   run(process.execPath, [cli, 'build']);
 }, 150_000);
 afterAll(() => rmSync(workspace, { recursive: true, force: true }));
 
 it('builds an installed Markdown site with frozen resource imports, owned metadata and literal migration examples', () => {
-  const html = readFileSync(join(workspace, 'site/v/current/guide/install/index.html'), 'utf8');
-  expect(html).toContain('<title data-component-head="">Installation | Example docs</title>'); expect(html).toContain('id="install-1"');
-  // HTMLKit's generated policy comes before any script, and allows the theme script by its hash.
+  const html = readFileSync(join(workspace, 'site/guide/install/index.html'), 'utf8');
+  expect(html).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>'); expect(html).toContain('id="install-1"');
+  // MarkupKit's generated policy comes before any script, and allows the theme script by its hash.
   expect(html).toMatch(/<head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-[^']+'; object-src 'none'; base-uri 'none'"><script>/);
-  expect(html).toContain('href="/manual/v/current/guide/install/" aria-current="page"');
-  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toContain('data-component="fake-page"');
+  expect(html).toContain('href="/manual/guide/install/" aria-current="page"');
+  expect(html.replace(/<[^>]*>/g, '')).toContain('&lt;template component="fake-page"&gt;&lt;p&gt;{count}'); expect(html).not.toMatch(/<[^>]*\scomponent="fake-page"/);
   for (const lang of ['html', 'less', 'css', 'js', 'ts']) expect(html).toContain(`language-${lang}`);
   expect(html).toContain('<pre class="shiki shiki-themes github-light-default github-dark-default"');
   // Whitespace inside <pre> survives rendering, so each highlighted line stays on its own line.
@@ -74,18 +104,18 @@ it('builds an installed Markdown site with frozen resource imports, owned metada
   expect(html).not.toContain('controller="');
   // The editLink option links each page to its file; outside a git checkout no page has a date.
   expect(html).toContain('<a href="https://example.com/edit/docs/01.guide/02.install.md">Edit this page</a>');
-  expect(html).not.toContain('Last updated');
-  expect(readFileSync(join(workspace, 'site/v/current/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs</title>');
+  expect(html).not.toContain('<time ');
+  expect(readFileSync(join(workspace, 'site/getting-started/index.html'), 'utf8')).toContain('<title data-component-head="">Installation | Example docs with a deliberately long product title</title>');
   // An index page with an empty body lists its folder's pages with their descriptions.
-  expect(readFileSync(join(workspace, 'site/v/current/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
-    .toContain('<ul class="contents"><li><a href="/manual/v/current/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
+  expect(readFileSync(join(workspace, 'site/reference/index.html'), 'utf8').replace(/<!--[^>]*-->| data-[\w-]+="[^"]*"/g, ''))
+    .toContain('<ul class="contents"><li><a href="/manual/reference/options/">Options</a><p>Configure the site.</p></li></ul>');
   expect(run(process.execPath, ['--input-type=module', '--eval', "import('markupress').then(() => process.stdout.write('ok'))"])).toBe('ok');
 });
 
 it('creates a starter site from the packed create-markupress, at the shared version, that builds with the installed package', () => {
   const created = mkdtempSync(join(tmpdir(), 'markupress-create-'));
   try {
-    const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string; peerDependencies: Record<string, string> };
+    const own = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string; peerDependencies: Record<string, string>; devDependencies: Record<string, string> };
     const creator = join(root, 'packages/create-markupress');
     expect((JSON.parse(readFileSync(join(creator, 'package.json'), 'utf8')) as { version: string }).version).toBe(own.version);
     const packed = execFileSync('npm', ['pack', '--pack-destination', created], { cwd: creator, encoding: 'utf8', shell }).trim().split('\n').at(-1)!;
@@ -94,9 +124,9 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     expect(create('my-docs')).toContain('npm run dev');
     const site = join(created, 'my-docs');
     const starter = JSON.parse(readFileSync(join(site, 'package.json'), 'utf8')) as { name: string; dependencies: Record<string, string> };
-    // The starter depends on this release of Markupress and on the HTML Next and Looma it pins.
+    // The starter keeps the required alpha runtime and the same compatible Looma range.
     expect(starter.name).toBe('my-docs');
-    expect(starter.dependencies).toEqual({ ...own.peerDependencies, markupress: `^${own.version}` });
+    expect(starter.dependencies).toEqual({ '@nextwebwg/html-next': own.peerDependencies['@nextwebwg/html-next'], '@threadlabs/looma': own.peerDependencies['@threadlabs/looma'], markupress: `>=${own.version}` });
     expect(readFileSync(join(site, '.gitignore'), 'utf8')).toContain('node_modules/');
     // A folder with files is refused.
     expect(() => create('my-docs')).toThrow(/already has files/);
@@ -104,7 +134,7 @@ it('creates a starter site from the packed create-markupress, at the shared vers
     execFileSync(process.execPath, [cli, 'build'], { cwd: site, encoding: 'utf8', timeout: 120_000, stdio: ['ignore', 'pipe', 'pipe'] });
     expect(readFileSync(join(site, 'site/index.html'), 'utf8')).toContain('My project');
     expect(readFileSync(join(site, 'site/guide/getting-started/index.html'), 'utf8')).toContain('Getting started');
-    expect(readFileSync(join(site, 'site/guide/writing/index.html'), 'utf8')).toContain('data-component="demo-counter"');
+    expect(readFileSync(join(site, 'site/guide/writing/index.html'), 'utf8')).toMatch(/<(?:div|section|p)[^>]*\s(?:component|data-component)="demo-counter"/);
   } finally { rmSync(created, { recursive: true, force: true }); }
 }, 150_000);
 
@@ -116,6 +146,56 @@ it('accepts maintained TypeScript controllers and rejects an invalid lifecycle c
   write('components/invalid.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; export default function(host: ComponentHost) { host.on("connect", "invalid"); }');
   expect(() => run(process.execPath, [compiler, ...args.slice(0, -1), 'components/invalid.ts'])).toThrow();
 });
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('keeps code blocks bounded when code and page surfaces share a color', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...await product.loadConfig(workspace), root: workspace, port: 0 });
+      try {
+        const page = await browser.newPage();
+        try {
+          await page.goto(server.url + 'guide/install/');
+          await page.addStyleTag({ content: ':root { --ui-surface-sunken: white; --ui-surface-content: white; --ui-radius-md: 12px; }' });
+          const appearance = await page.locator('figure.code pre').first().evaluate(pre => {
+            const style = getComputedStyle(pre);
+            return { border: parseFloat(style.borderTopWidth), edge: style.borderTopStyle, radius: style.borderTopLeftRadius, width: pre.getBoundingClientRect().width, container: pre.parentElement!.getBoundingClientRect().width };
+          });
+          expect(appearance.border).toBeGreaterThan(0);
+          expect(appearance.edge).toBe('solid');
+          expect(appearance.radius).toBe('12px');
+          expect(appearance.width).toBeLessThanOrEqual(appearance.container);
+          if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `code-${mode}.png`) });
+        } finally { await page.close(); }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 150_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('keeps short home and documentation footers at the viewport bottom', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite']({ ...await product.loadConfig(workspace), root: workspace, port: 0 });
+      try {
+        for (const viewport of [{ width: 1280, height: 1800 }, { width: 390, height: 1100 }]) {
+          const page = await browser.newPage({ viewport, javaScriptEnabled: false });
+          try {
+            for (const path of ['', 'about/']) {
+              await page.goto(server.url + path);
+              const geometry = await page.locator('footer').evaluate(footer => ({ bottom: footer.getBoundingClientRect().bottom, viewport: innerHeight, document: document.documentElement.scrollHeight }));
+              expect(geometry.document, 'short content and navigation fit in the viewport').toBe(geometry.viewport);
+              expect(Math.abs(geometry.bottom - geometry.viewport), 'the footer ends at the viewport bottom').toBeLessThanOrEqual(1);
+              if (process.env.MARKUPRESS_SCREENSHOTS && path === 'about/') await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `footer-${mode}-${viewport.width}.png`) });
+            }
+          } finally { await page.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 150_000);
 
 it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and production controllers, keyboard navigation, themes and version fallbacks', async () => {
   const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
@@ -136,8 +216,8 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         Object.assign(window, { load });
         document.addEventListener('securitypolicyviolation', event => (window as unknown as { reportViolation(text: string): void })
           .reportViolation(`${location.pathname}: ${event.violatedDirective} ${event.blockedURI || 'inline'} ${event.sample}`));
-        new MutationObserver(() => { if (document.documentElement.hasAttribute('data-hk-navigating')) load.pending.push(getComputedStyle(document.body, '::before').blockSize); })
-          .observe(document, { subtree: true, attributeFilter: ['data-hk-navigating'] });
+        new MutationObserver(() => { if (document.documentElement.hasAttribute('data-mk-navigating')) load.pending.push(getComputedStyle(document.body, '::before').blockSize); })
+          .observe(document, { subtree: true, attributeFilter: ['data-mk-navigating'] });
         const record = () => {
           if (document.querySelector('[data-action="theme"]')) load.theme = document.documentElement.dataset.theme;
           else requestAnimationFrame(record);
@@ -145,38 +225,99 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         requestAnimationFrame(record);
         document.addEventListener('transitionrun', event => { if (event.target instanceof Element && event.target.closest('[data-action="theme"]')) load.transitions.push(event.propertyName); }, true);
       });
-      const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+      const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(`${page.url()}: ${error.stack ?? error.message}`));
       const logged: string[] = []; page.on('console', message => { if (['error', 'warning'].includes(message.type())) logged.push(`${message.type()}: ${message.text()}`); });
-      await page.goto(server.url + 'v/current/guide/install/');
-      expect(await page.locator('[data-component="markupress-shell"]').evaluate(element => getComputedStyle(element).fontFamily)).toContain('system-ui');
+      await page.goto(server.url + 'guide/install/');
+      const permalink = page.locator('article h1 .heading-anchor').first();
+      expect(await permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('0');
+      await page.locator('article h1').first().hover();
+      await expect.poll(() => permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+      expect(await permalink.evaluate(link => link.getBoundingClientRect().right < link.parentElement!.getBoundingClientRect().left)).toBe(true);
+      await page.mouse.move(0, 0); await permalink.focus();
+      await expect.poll(() => permalink.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+      await permalink.blur();
+      const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      try {
+        const phone = await touch.newPage(); await phone.goto(server.url + 'guide/install/');
+        const link = phone.locator('article h1 .heading-anchor').first();
+        expect(await link.evaluate(link => getComputedStyle(link).opacity)).toBe('1');
+        expect(await link.evaluate(link => link.getBoundingClientRect().left)).toBeGreaterThanOrEqual(0);
+      } finally { await touch.close(); }
+      expect(await page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
       // On a wide screen the sidebar is in the page, and the shell's style hides the drawer's Navigation button it projects into the header.
       expect(await page.getByRole('button', { name: 'Navigation', exact: true }).isVisible()).toBe(false);
       // The site's stylesheet sizes the sidebar through --markupress-sidebar-width.
       expect(await page.locator('#documentation-navigation').evaluate(element => element.getBoundingClientRect().width)).toBe(272);
       // Looma's tokens and theme are page-wide, so they reach :root, the shell, and the page component's prose styles.
-      const surfaces = () => page.evaluate(() => ({ scheme: getComputedStyle(document.documentElement).colorScheme,
-        shell: getComputedStyle(document.querySelector('[data-component="markupress-shell"]')!).backgroundColor,
-        code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor }));
-      expect(await surfaces()).toEqual({ scheme: 'light', shell: 'rgb(255, 255, 255)', code: 'rgb(240, 240, 236)' });
-      // The theme's global stylesheet reaches HTMLKit's built-in sidebar navigation, breadcrumbs and pager.
-      expect(await page.locator('#documentation-navigation [data-component="hk-nav"] ul').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
-      expect(await page.locator('[data-component="hk-breadcrumbs"] a').allTextContents()).toEqual(['Welcome', 'Installation']);
-      expect(await page.locator('[data-component="hk-breadcrumbs"] ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
-      expect(await page.locator('[data-component="hk-pager"] a[rel="prev"]').getAttribute('href')).toBe('/manual/v/current/');
+      const surfaces = () => page.evaluate(() => {
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+        const ctx = canvas.getContext('2d')!;
+        const brightness = (selector: string) => {
+          ctx.clearRect(0, 0, 1, 1); ctx.fillStyle = getComputedStyle(document.querySelector(selector)!).backgroundColor; ctx.fillRect(0, 0, 1, 1);
+          const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+          return .2126 * r! + .7152 * g! + .0722 * b!;
+        };
+        const reading = brightness(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))');
+        return { scheme: getComputedStyle(document.documentElement).colorScheme,
+          readingLighter: reading > brightness('header') && reading > brightness(':is([component="markupress-footer"], [data-component="markupress-footer"]:not([component]))'),
+          code: getComputedStyle(document.querySelector('.markupress-prose pre')!).backgroundColor };
+      });
+      expect(await surfaces()).toEqual({ scheme: 'light', readingLighter: true, code: 'rgb(254, 254, 254)' });
+      expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) a').first().evaluate(element => getComputedStyle(element).color)).toBe('rgb(105, 69, 194)');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
+      await page.emulateMedia({ colorScheme: 'dark' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await page.emulateMedia({ colorScheme: 'light' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
+      // Navigation uses Looma rows; MarkupKit supplies the breadcrumbs and pager.
+      expect(await page.locator('#documentation-navigation :is([component~="markupress-nav-items"], [data-component~="markupress-nav-items"]:not([component]))').first().evaluate(element => getComputedStyle(element).listStyleType)).toBe('none');
+      expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) a').allTextContents()).toEqual(['Welcome', 'Installation']);
+      expect(await page.locator(':is([component="mk-breadcrumbs"], [data-component="mk-breadcrumbs"]:not([component])) ol').evaluate(element => getComputedStyle(element).display)).toBe('flex');
+      expect(await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="prev"]').getAttribute('href')).toBe('/manual/');
+      expect(await page.locator(':is([component="demo-counter"], [data-component="demo-counter"]:not([component])) strong').textContent()).toBe('From Markdown');
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('2');
+      // Navigation has a full selectable row, with the same public theme roles as controls.
+      const selectedNavigation = page.locator('#documentation-navigation :is([component~="ui-nav-item"], [data-component~="ui-nav-item"]:not([component]))[aria-current="page"]');
+      expect(await selectedNavigation.evaluate(element => getComputedStyle(element).textDecorationLine)).toBe('none');
+      expect(await selectedNavigation.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(32);
+      const scopes = await page.evaluate(() => {
+        const outer = document.createElement('section'); outer.dataset.theme = 'dark';
+        const inner = document.createElement('section'); inner.dataset.theme = 'light';
+        const nested = document.createElement('section'); nested.dataset.theme = 'dark';
+        for (const node of [outer, inner, nested]) node.style.cssText = 'background:var(--ui-surface);color:var(--ui-text)';
+        outer.append(inner); inner.append(nested); document.body.append(outer);
+        const read = (node: Element) => { const style = getComputedStyle(node); return { background: style.backgroundColor, color: style.color, scheme: style.colorScheme }; };
+        const result = [outer, inner, nested].map(read); outer.remove(); return result;
+      });
+      expect(scopes).toEqual([
+        { background: 'rgb(15, 14, 11)', color: 'rgb(235, 236, 238)', scheme: 'dark' },
+        { background: 'rgb(247, 245, 240)', color: 'rgb(36, 42, 58)', scheme: 'light' },
+        { background: 'rgb(15, 14, 11)', color: 'rgb(235, 236, 238)', scheme: 'dark' },
+      ]);
       // Highlighted code follows the theme's color-scheme through light-dark().
       const token = page.locator('pre.shiki span[style]').first(); const color = () => token.evaluate(element => getComputedStyle(element).color);
       const light = await color();
-      await page.getByRole('button', { name: 'Dark theme' }).click();
+      await chooseAppearance(page, 'dark');
       await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(surfaces).toEqual({ scheme: 'dark', shell: 'rgb(26, 26, 26)', code: 'rgb(46, 46, 46)' });
+      await expect.poll(surfaces).toEqual({ scheme: 'dark', readingLighter: true, code: 'rgb(8, 7, 5)' });
       await expect.poll(color).not.toBe(light);
-      await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       await page.reload(); await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
-      await expect.poll(() => page.getByRole('button', { name: 'Dark theme' }).getAttribute('aria-pressed')).toBe('true');
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Dark');
       // A saved theme is applied before first paint, so nothing fades out of the default theme.
       expect(await page.evaluate(() => (window as unknown as { load: object }).load)).toEqual({ theme: 'dark', transitions: [], pending: [] });
+      // An explicit choice ignores the system, while Automatic clears that choice and follows it again.
+      await page.emulateMedia({ colorScheme: 'light' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await chooseAppearance(page, 'automatic');
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('light');
+      expect(await page.evaluate(() => localStorage.getItem('markupress:theme'))).toBeNull();
+      await page.emulateMedia({ colorScheme: 'dark' });
+      await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('dark');
+      await page.reload();
+      await expect.poll(() => page.getByRole('button', { name: /^Appearance:/ }).getAttribute('aria-label')).toBe('Appearance: Automatic');
+      await chooseAppearance(page, 'dark');
       const versions = page.getByRole('navigation', { name: 'Documentation versions' });
       await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('href')).toBe('/manual/v/v1/guide/install/');
       await versions.getByRole('link', { name: 'v1', exact: true }).focus();
@@ -184,27 +325,27 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       logged.length = 0;
       await Promise.all([page.waitForURL(server.url + 'v/v1/guide/install/'), page.keyboard.press('Enter')]);
-      // HTMLKit commits the URL before the page arrives. v1's counter has its own controller, which this
-      // document cannot also define, so HTMLKit loads v1 as a document, at its top, without logging; wait for it before clicking.
-      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      // MarkupKit commits the URL before the page arrives. v1's counter has its own controller, which this
+      // document cannot also define, so MarkupKit loads v1 as a document, at its top, without logging; wait for it before clicking.
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.waitForLoadState();
       expect(logged).toEqual([]); expect(await page.evaluate(() => window.scrollY)).toBe(0);
       // The document load takes the place of the committed entry, so back returns to the current version's page once,
       // and forward shows v1's page again under its URL, as soon as each document starts.
-      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'v/current/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await page.goBack(); await expect.poll(() => page.url()).toBe(server.url + 'guide/install/');
+      await expect.poll(() => versions.getByRole('link', { name: 'Current', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.goForward(); await expect.poll(() => page.url()).toBe(server.url + 'v/v1/guide/install/');
-      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current'), { timeout: 30_000 }).toBe('page');
+      await expect.poll(() => versions.getByRole('link', { name: 'v1', exact: true }).getAttribute('aria-current')).toBe('page');
       await page.waitForLoadState(); expect(page.url()).toBe(server.url + 'v/v1/guide/install/'); expect(logged).toEqual([]);
       await page.getByRole('button', { name: 'Increment example' }).click();
       await expect.poll(() => page.locator('output').textContent()).toBe('1');
       await page.reload(); expect(page.url()).toContain('/manual/v/v1/guide/install/');
       // Shared blocks hydrate after client navigation: Looma's callout and tabs, and native details.
-      await page.goto(server.url + 'v/current/guide/new/');
+      await page.goto(server.url + 'guide/new/');
       // The page's imported stylesheet styles its own heading.
       expect(await page.locator('main h1').evaluate(element => getComputedStyle(element).letterSpacing)).toBe('2px');
-      await page.locator('[data-component="hk-pager"] a[rel="next"]').click();
-      await expect.poll(() => page.locator('h1').textContent(), { timeout: 30_000 }).toBe('Blocks');
+      await page.locator(':is([component="mk-pager"], [data-component="mk-pager"]:not([component])) a[rel="next"]').click();
+      await expect.poll(async () => (await page.locator('h1').textContent())?.trim()).toBe('Blocks');
       // The page rendered in place, and the theme drew its pending bar while it did.
       expect(await page.evaluate(() => (window as unknown as { load: { pending: string[] } }).load.pending)).toContain('3px');
       // Code blocks: build-time highlighted lines and numbers, and keyboard-operable copy and wrap buttons.
@@ -221,19 +362,20 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => example.getByRole('button', { name: 'Wrap' }).getAttribute('aria-pressed')).toBe('true');
       expect(await scrolls()).toBe(false);
       const callout = page.getByRole('note').filter({ hasText: 'Breaking {x}' });
+      expect(await example.getByRole('button', { name: 'Wrap' }).evaluate(element => getComputedStyle(element).fontFamily)).toContain('Arial');
       expect(await callout.getAttribute('data-ui-callout-prop-tone')).toBe('warning');
-      const surface = (tone: string) => page.locator(`[data-component="ui-callout"][data-ui-callout-prop-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
+      const surface = (tone: string) => page.locator(`:is([component="ui-callout"], [data-component="ui-callout"]:not([component]))[data-ui-callout-prop-tone="${tone}"]`).evaluate(element => getComputedStyle(element).backgroundColor);
       expect(await surface('warning')).not.toBe(await surface('danger'));
       expect(await surface('warning')).not.toBe('rgba(0, 0, 0, 0)');
       const details = page.locator('main details');
       await page.locator('main summary').focus(); await page.keyboard.press('Enter');
       await expect.poll(() => details.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
-      const groups = page.locator('[data-component="ui-tabs"]');
+      const groups = page.locator(':is([component="ui-tabs"], [data-component="ui-tabs"]:not([component]))');
       const selected = (group: number, name: string) => groups.nth(group).getByRole('tab', { name, exact: true }).getAttribute('aria-selected');
       await expect.poll(() => groups.nth(1).getByRole('tab').count()).toBe(2);
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('pnpm markupress build');
       // The theme's global block styles reach the Markdown projected into Looma's components.
-      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(46, 46, 46)');
+      expect(await groups.nth(1).locator('pre').first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(8, 7, 5)');
       await groups.first().getByRole('tab', { name: 'npm', exact: true }).click();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.nth(1).getByRole('tabpanel').textContent()).toContain('npx markupress build');
@@ -245,13 +387,21 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await page.reload();
       await expect.poll(() => selected(1, 'npm')).toBe('true');
       expect(await groups.first().getByRole('tabpanel').textContent()).toContain('npm install markupress');
-      // Looma Markdown's newer forms: ::toc links reach their headings, a chip takes its hue, and task items are checkboxes.
-      expect(await page.locator('main nav[data-looma-toc] a').evaluateAll(links => links.map(link =>
-        (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent))).toEqual(['Blocks', 'Über uns']);
-      expect(await page.locator('main [data-looma-chip][data-color="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-      expect(await page.locator('main ul[data-type="taskList"] input[type="checkbox"]').count()).toBe(2);
-      // A footnote reference links to its note, whose section heading is only for assistive technology.
-      expect(await page.locator('main .footnotes h2').evaluate(element => element.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
+      // Standard semantic output: toc links reach headings, chips use their tone, and task status is inert text.
+      expect(await page.locator('main nav[data-type="toc"] a').evaluateAll(links => links.map(link =>
+        (link.getRootNode() as Document).getElementById(decodeURIComponent((link as HTMLAnchorElement).hash.slice(1)))?.textContent?.trim()))).toEqual(['Blocks', 'Über uns']);
+      expect(await page.locator('main [data-type="chip"][data-tone="green"]').evaluate(element => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+      expect(await page.locator('main').textContent()).toContain('☑ Read the changelog');
+      expect(await page.locator('main').textContent()).toContain('☐ Run the migration');
+      const identifier = page.locator('main td code').filter({ hasText: 'redirectFrom' });
+      const tableWidths = await identifier.evaluate(element => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        return { text: range.getBoundingClientRect().width, cell: element.closest('td')!.clientWidth, line: parseFloat(getComputedStyle(element).lineHeight), height: element.getBoundingClientRect().height };
+      });
+      expect(tableWidths.cell).toBeGreaterThanOrEqual(tableWidths.text);
+      expect(tableWidths.height).toBeLessThan(tableWidths.line * 2);
+      // Standard footnotes expose a labelled section and linked references.
+      expect(await page.locator('main [data-footnotes]').getAttribute('aria-label')).toBe('Footnotes');
       await page.locator('main [data-footnote-ref]').click();
       await expect.poll(() => page.url()).toContain('#fn:1');
       expect(await page.locator('main [id="fn:1"]').textContent()).toContain('The footnote.');
@@ -260,7 +410,7 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       if (mode === 'preview') {
         // Without JavaScript the blocks still read: the callout is server-rendered, details is native, and every tab panel shows.
         const still = await browser.newContext({ javaScriptEnabled: false }); const plain = await still.newPage();
-        await plain.goto(server.url + 'v/current/guide/blocks/');
+        await plain.goto(server.url + 'guide/blocks/');
         expect(await plain.getByRole('note').filter({ hasText: 'Breaking {x}' }).isVisible()).toBe(true);
         expect(await plain.getByText('npx markupress build').isVisible()).toBe(true);
         expect(await plain.getByText('pnpm markupress build').isVisible()).toBe(true);
@@ -268,14 +418,14 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
         expect(await plain.locator('.code-actions').first().isVisible()).toBe(false);
         expect(await plain.getByText('const first = 1;').isVisible()).toBe(true);
         // Without JavaScript the outline still links its headings, and the narrow-screen drawer still opens.
-        await plain.goto(server.url + 'v/current/guide/outline/');
+        await plain.goto(server.url + 'guide/outline/');
         expect(await plain.getByRole('navigation', { name: 'On this page' }).getByRole('link', { name: 'Third' }).getAttribute('href')).toBe('#third');
         await plain.setViewportSize({ width: 390, height: 844 });
         await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
         expect(await plain.getByRole('navigation', { name: 'Documentation', exact: true }).isVisible()).toBe(true);
         await still.close();
       }
-      await page.goto(server.url + 'v/current/guide/new/');
+      await page.goto(server.url + 'guide/new/');
       expect(await versions.getByText(/unavailable in v1/).textContent()).toContain('documentation home');
       await versions.getByRole('link', { name: 'v1', exact: true }).click(); await expect.poll(() => page.url()).toBe(server!.url + 'v/v1/');
       expect(await page.locator('main img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
@@ -283,14 +433,20 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       expect(await page.locator('main').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       const audit = await new AxeBuilder({ page }).analyze(); expect(audit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       // The outline tracks the heading in view, and its links stay plain fragment links.
-      await page.goto(server.url + 'v/current/guide/outline/');
+      await page.goto(server.url + 'guide/outline/');
       const outline = page.getByRole('navigation', { name: 'On this page' });
       expect(await outline.getByRole('link').allTextContents()).toEqual(['First', 'Second', 'Third']);
+      // Page-local navigation stays smaller than the documentation's links and section labels.
+      const navigationSizes = await page.locator('#documentation-navigation :is(:is([component~="ui-nav-item"], [data-component~="ui-nav-item"]:not([component])) .label, :is([component~="ui-disclosure"], [data-component~="ui-disclosure"]:not([component])) .trigger)').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      const outlineSizes = await outline.locator('strong, a').evaluateAll(elements =>
+        elements.map(element => parseFloat(getComputedStyle(element).fontSize)));
+      expect(Math.max(...outlineSizes), 'On this page must be smaller than the main navigation').toBeLessThan(Math.min(...navigationSizes));
       await page.locator('#second').evaluate(element => element.scrollIntoView());
       await expect.poll(() => outline.getByRole('link', { name: 'Second' }).getAttribute('aria-current')).toBe('location');
       expect(await outline.locator('[aria-current]').count()).toBe(1);
       // Search: / opens Looma's search dialog, typing finds a heading on another page, and Enter opens it.
-      await page.goto(server.url + 'v/current/guide/install/');
+      await page.goto(server.url + 'guide/install/');
       const dialog = page.getByRole('dialog', { name: 'Search the documentation' });
       await page.getByRole('button', { name: 'Search' }).waitFor();
       await page.keyboard.press('/');
@@ -298,14 +454,25 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       // The dialog's field takes focus as it opens.
       await expect.poll(() => page.getByRole('searchbox').evaluate(element => element === element.ownerDocument.activeElement)).toBe(true);
       await page.keyboard.type('secnd');
-      await expect.poll(() => dialog.getByRole('status').textContent()).toBe('No results for "secnd"');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/guide/outline/#second');
       await page.getByRole('searchbox').fill('second');
-      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/current/guide/outline/#second');
+      await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/guide/outline/#second');
       expect(await dialog.locator('[data-href]').first().textContent()).toContain('Outline');
-      const searchAudit = await new AxeBuilder({ page }).include('[data-component="ui-search-shell"]').analyze();
+      const searchAudit = await new AxeBuilder({ page }).include(':is([component="ui-search-shell"], [data-component="ui-search-shell"]:not([component]))').analyze();
       expect(searchAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
+      for (const query of ['absentquartz nonexistentquartz', 'undiscoverablequartz', 'unindexedsectionquartz']) {
+        await page.getByRole('searchbox').fill(query);
+        await expect.poll(() => dialog.getByRole('status').textContent()).toBe(`No results for "${query}"`);
+      }
+      await page.getByRole('searchbox').fill('outline');
+      await expect.poll(() => dialog.locator('[data-href]').count()).toBeGreaterThan(1);
+      const secondHref = await dialog.locator('[data-href]').nth(1).getAttribute('data-href');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      const chosen = await page.locator(':focus').evaluate(button => button.closest<HTMLElement>('[data-href]')!.dataset.href);
+      expect(chosen).toBe(secondHref);
       await page.keyboard.press('Enter');
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server.url + 'v/current/guide/outline/#second');
+      await expect.poll(() => page.url()).toBe(new URL(chosen!, server.url).href);
       await expect.poll(() => dialog.isVisible()).toBe(false);
       // Ctrl+K opens it too, Escape closes it, and each version searches its own pages: v1 has no "New document".
       await page.goto(server.url + 'v/v1/guide/install/');
@@ -319,57 +486,146 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => dialog.locator('[data-href]').first().getAttribute('data-href')).toBe('/manual/v/v1/guide/outline/#second');
       await page.keyboard.press('Escape');
       await expect.poll(() => dialog.isVisible()).toBe(false);
-      await page.goto(server.url + 'v/current/guide/outline/');
+      await page.goto(server.url + 'guide/outline/');
       // The top navigation links each section folder with an index page, then the configured links; the logo and footer come from conventions.
       const main = page.getByRole('navigation', { name: 'Main' });
-      expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      expect(await main.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await main.getByRole('link', { name: 'Outline' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('header img.logo-light').getAttribute('src')).toBe('/manual/logo.svg');
+      const baselineDelta = await page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))').evaluate(header => {
+        const probes = [header.querySelector('.brand-title')!, header.querySelector('.navigation a')!].map(label => {
+          const probe = document.createElement('span'); probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline'; label.append(probe); return probe;
+        });
+        const delta = Math.abs(probes[0]!.getBoundingClientRect().top - probes[1]!.getBoundingClientRect().top); probes.forEach(probe => probe.remove()); return delta;
+      });
+      expect(baselineDelta).toBeLessThan(1);
+      for (const height of ['32px', '56px', '72px']) {
+        const style = await page.addStyleTag({ content: `:root { --ui-control-size-sm: ${height}; }` });
+        const delta = await page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))').evaluate(header => {
+          const center = (node: Element) => { const box = node.getBoundingClientRect(); return box.y + box.height / 2; };
+          return Math.abs(center(header.querySelector('.identity')!) - center(header.querySelector('.actions')!));
+        });
+        expect(delta).toBeLessThan(1);
+        await style.evaluate(element => element.parentNode?.removeChild(element));
+      }
+
+      const headerCenterDelta = await page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))').evaluate(header => {
+        const bar = header.getBoundingClientRect();
+        const boxes = [...header.querySelectorAll('.brand, .navigation, .actions')].map(element => element.getBoundingClientRect()).filter(box => box.width && box.height);
+        const top = Math.min(...boxes.map(box => box.top)), bottom = Math.max(...boxes.map(box => box.bottom));
+        return Math.abs((top + bottom) / 2 - bar.y - bar.height / 2);
+      });
+      expect(headerCenterDelta).toBeLessThan(2);
+      await page.evaluate(() => { (window as unknown as {noticeDismissed:boolean}).noticeDismissed=false; window.addEventListener('markupress-header-notice-dismiss',()=>{ (window as unknown as {noticeDismissed:boolean}).noticeDismissed=true; document.documentElement.style.setProperty('--markupress-header-notice-display','none'); }); });
+      expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
+      await page.getByRole('button',{name:'Remove Custom theme',exact:true}).click();
+      expect(await page.evaluate(() => (window as unknown as {noticeDismissed:boolean}).noticeDismissed)).toBe(true);
+      await expect.poll(() => page.getByRole('button',{name:'Search',exact:true}).evaluate(el => el === document.activeElement)).toBe(true);
+
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
       // A generated folder index is a page of links, which navigate like any other.
       await main.getByRole('link', { name: 'Reference' }).click();
-      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Reference');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim()).toBe('Reference');
       await expect.poll(() => main.getByRole('link', { name: 'Reference' }).getAttribute('aria-current')).toBe('page');
       expect(await page.locator('ul.contents p').textContent()).toBe('Configure the site.');
       const indexAudit = await new AxeBuilder({ page }).analyze(); expect(indexAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       await page.locator('ul.contents').getByRole('link', { name: 'Options' }).click();
-      await expect.poll(() => page.locator('main h1').textContent(), { timeout: 30_000 }).toBe('Options');
+      await expect.poll(async () => (await page.locator('main h1').textContent())?.trim()).toBe('Options');
       // An unknown path renders the 404 page in the shell.
-      expect((await page.goto(server.url + 'v/current/nowhere/'))!.status()).toBe(404);
-      expect(await page.locator('h1').textContent()).toBe('Nothing here');
+      expect((await page.goto(server.url + 'nowhere/'))!.status()).toBe(404);
+      expect((await page.locator('h1').textContent())?.trim()).toBe('Nothing here');
       expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(1);
       // The home page reads its hero and feature cards from its Markdown, between the top navigation and footer, with no sidebar.
-      await page.goto(server.url + 'v/current/');
-      expect(await page.locator('[data-component="markupress-home"] .hero h1').textContent()).toBe('Welcome');
+      await page.goto(server.url + '');
+      expect(await page.locator(':is([component="markupress-home"], [data-component="markupress-home"]:not([component])) .hero h1').innerText()).toBe('Welcome');
       expect(await page.locator('.hero-image img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(40);
-      expect(await page.locator('.features [data-component="ui-card"] h2').allTextContents()).toEqual(['Components', 'Versions']);
-      expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Outline']);
+      const primaryAction = page.getByRole('link', { name: 'Installation', exact: true });
+      expect(await primaryAction.getAttribute('data-ui-button-prop-tone')).toBe('accent');
+      const actionGap = await page.locator('.hero').evaluate(hero => {
+        const story = hero.querySelector('.hero-text > p')!.getBoundingClientRect();
+        const action = hero.querySelector('.actions')!.getBoundingClientRect();
+        return action.y - story.y - story.height;
+      });
+      expect(actionGap).toBeGreaterThan(16);
+      expect((await page.locator('.features :is([component="ui-card"], [data-component="ui-card"]:not([component])) h2').allTextContents()).map(text => text.trim())).toEqual(['Components', 'Versions']);
+      expect(await page.getByRole('navigation', { name: 'Main' }).getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
       expect(await page.locator('footer').textContent()).toContain('Copyright Example.');
-      expect(await page.locator('#documentation-navigation, [data-component="hk-pager"]').count()).toBe(0);
+      expect(await page.locator('#documentation-navigation, :is([component="mk-pager"], [data-component="mk-pager"]:not([component]))').count()).toBe(0);
+      await page.setViewportSize({ width: 375, height: 812 });
+      const homeHeader = page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))');
+      // Media-query events apply the drawer state during the next rendering pass.
+      await expect.poll(async () => (await homeHeader.boundingBox())!.height).toBeLessThanOrEqual(68);
+      expect(await page.locator('header img.logo-light:visible, header img.logo-dark:visible').count()).toBe(1);
+      expect(await page.getByRole('navigation', { name: 'Main', exact: true }).isVisible()).toBe(false);
+      await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+      const homeNavigation = page.getByRole('navigation', { name: 'Sections', exact: true });
+      await expect.poll(() => homeNavigation.isVisible()).toBe(true);
+      expect(await homeNavigation.getByRole('link').allTextContents()).toEqual(['Reference', 'Workspace', 'Outline']);
+      await homeNavigation.getByRole('link', { name: 'Outline', exact: true }).click();
+      await expect.poll(() => page.url()).toBe(server!.url + 'guide/outline/');
+      expect(await page.locator('#home-navigation:popover-open').count()).toBe(0);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(server.url + '');
+
       // Audited in both themes: the saved dark theme, then light.
       for (const theme of ['dark', 'light']) {
         // A reload settles the theme, so no color is caught mid-transition.
-        if (theme === 'light') { await page.getByRole('button', { name: 'Dark theme' }).click(); await page.reload(); }
+        if (theme === 'light') { await chooseAppearance(page, 'light'); await page.reload(); }
         await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe(theme);
         const homeAudit = await new AxeBuilder({ page }).analyze(); expect(homeAudit.violations.map(issue => `${issue.id}: ${issue.nodes.map(node => node.target).join(', ')}`)).toEqual([]);
       }
       // Its actions are links: the first leads to the guide, in the shell.
       await page.getByRole('link', { name: 'Installation' }).click();
-      await expect.poll(() => page.url(), { timeout: 30_000 }).toBe(server!.url + 'v/current/guide/install/#install');
-      await expect.poll(() => page.locator('[data-component="markupress-shell"]').count(), { timeout: 30_000 }).toBe(1);
-      if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + 'v/current/'); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
-      // The root sidebar is HTMLKit's navigation tree in <hk-nav>: the guide folder is an open native <details> after hydration.
-      await page.goto(server.url + 'v/current/about/');
-      const group = page.locator('#documentation-navigation details').filter({ has: page.locator('summary', { hasText: 'guide' }) });
-      await expect.poll(() => group.evaluate(element => (element as HTMLDetailsElement).open)).toBe(true);
-      expect(await group.getByRole('link').allTextContents()).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
+      await expect.poll(() => page.url()).toBe(server!.url + 'guide/install/#install');
+      await expect.poll(() => page.locator(':is([component="markupress-shell"], [data-component="markupress-shell"]:not([component]))').count()).toBe(1);
+      if (process.env.MARKUPRESS_SCREENSHOTS) { await page.goto(server.url + ''); await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-home.png`), fullPage: true }); }
+      await page.goto(server.url + 'about/');
+      const group = page.locator('#documentation-navigation :is([component~="ui-disclosure"], [data-component~="ui-disclosure"]:not([component]))').filter({ has: page.getByRole('button', { name: 'guide', exact: true }) });
+      const trigger = group.getByRole('button', { name: 'guide', exact: true });
+      await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('true');
+      expect((await group.getByRole('link').allTextContents()).map(text => text.trim())).toEqual(['Installation', 'New document', 'Blocks', 'Outline']);
+      expect(await trigger.locator('svg').count()).toBeGreaterThan(0);
+      await trigger.click(); await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('false');
+      await trigger.press('Enter'); await expect.poll(() => trigger.getAttribute('aria-expanded')).toBe('true');
+      const linkedGroup = page.getByRole('button', { name: 'Reference', exact: true });
+      expect(await linkedGroup.evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(40);
+      expect(await page.getByRole('link', { name: 'Reference overview', exact: true }).getAttribute('href')).toContain('/reference/');
       await page.goto(server.url + 'v/v1/');
       // On a narrow screen the sidebar is a closed popover drawer; following a link in it closes it.
       await page.setViewportSize({ width: 390, height: 844 });
+      expect(await page.locator('html').evaluate(element => element.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.getByRole('button',{name:'Remove Custom theme',exact:true}).locator('svg').count()).toBe(1);
+      if(process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({path:join(process.env.MARKUPRESS_SCREENSHOTS,`markupress-${mode}-mobile-notice.png`)});
+      await page.locator('html').evaluate(element=>element.style.setProperty('--markupress-header-notice-display','none'));
+      await expect.poll(() => page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(68);
+      const brand = page.getByRole('link', { name: /^Example docs with a deliberately long product title /, exact: true });
+      expect(await brand.locator('.brand-title').evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+      for (const label of ['Navigation', 'Search']) expect(await page.getByRole('button', { name: label, exact: true }).isVisible()).toBe(true);
+      expect(await page.getByRole('button', { name: /^Appearance:/ }).count()).toBe(1);
+      // Invisible targets fit their own cells; the shared comfort preference remains adjustable.
+      const searchAction = page.getByRole('button', { name: 'Search', exact: true });
+      const appearanceAction = page.getByRole('button', { name: /^Appearance:/ });
+      const assertSeparateTargets = async () => {
+        const searchBox = (await searchAction.boundingBox())!;
+        const appearanceBox = (await appearanceAction.boundingBox())!;
+        const preferred = await appearanceAction.evaluate(element => parseFloat(getComputedStyle(element).getPropertyValue('--ui-control-min-block-size')));
+        const searchTarget = Math.max(searchBox.width, preferred), appearanceTarget = Math.max(appearanceBox.width, preferred);
+        expect((appearanceBox.x + appearanceBox.width / 2) - (searchBox.x + searchBox.width / 2)).toBeGreaterThanOrEqual((searchTarget + appearanceTarget) / 2 - .5);
+      };
+      expect(await page.locator('html').evaluate(el=>el.scrollWidth <= innerWidth)).toBe(true);
+      await assertSeparateTargets();
+      const actionWidth = async () => { const first=(await searchAction.boundingBox())!,last=(await appearanceAction.boundingBox())!; return last.x+last.width-first.x; };
+      const originalActionWidth = await actionWidth();
+      await page.evaluate(() => document.documentElement.style.setProperty('--ui-control-min-block-size', '30px'));
+      await assertSeparateTargets();
+      expect(await actionWidth()).toBeLessThan(originalActionWidth);
+      await page.evaluate(() => document.documentElement.style.removeProperty('--ui-control-min-block-size'));
+
       const sidebar = page.getByRole('navigation', { name: 'Documentation', exact: true });
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
       await expect.poll(() => sidebar.isVisible()).toBe(true);
+      expect(await page.getByRole('navigation', { name: 'Sections', exact: true }).isVisible()).toBe(true);
       await page.keyboard.press('Escape');
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       await page.getByRole('button', { name: 'Navigation', exact: true }).click();
@@ -378,10 +634,388 @@ it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('runs installed dev and p
       await expect.poll(() => sidebar.isVisible()).toBe(false);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.MARKUPRESS_SCREENSHOTS) await page.screenshot({ path: join(process.env.MARKUPRESS_SCREENSHOTS, `markupress-${mode}-mobile.png`), fullPage: true });
+      // Workspace pages retain a mobile section menu without duplicating documentation navigation.
+      await page.goto(server.url + 'workspace/edit/');
+      expect(await page.getByRole('navigation', { name: 'Documentation', exact: true }).count()).toBe(0);
+      await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+      expect(await page.getByRole('navigation', { name: 'Sections', exact: true }).isVisible()).toBe(true);
+      await page.keyboard.press('Escape');
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      expect(await page.locator('#documentation-navigation').isVisible()).toBe(false);
+      await page.goto(server.url + 'guide/outline/');
+      const outlineTitle = page.getByText('On this page', { exact: true });
+      const header = page.locator(':is([component~="markupress-header"], [data-component~="markupress-header"]:not([component]))');
+      expect((await outlineTitle.boundingBox())!.y).toBeGreaterThan((await header.boundingBox())!.y + (await header.boundingBox())!.height + 10);
+      await page.locator('html').evaluate(element => element.style.setProperty('--markupress-header-height', '96px'));
+      await page.evaluate(() => scrollTo(0, 500));
+      await expect.poll(async () => (await outlineTitle.boundingBox())!.y).toBeGreaterThanOrEqual(106);
+      await page.locator('html').evaluate(element => element.style.removeProperty('--markupress-header-height'));
+      await page.setViewportSize({ width: 390, height: 844 });
       // The home page fits a narrow screen too.
-      await page.goto(server.url + 'v/current/');
+      await page.goto(server.url + '');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      if (mode === 'preview') {
+        const noScript = await browser.newContext({ javaScriptEnabled: false });
+        try {
+          const plain = await noScript.newPage(); await plain.goto(server.url + 'about/');
+          const fallback = plain.locator('.native details').filter({ has: plain.locator('summary', { hasText: 'guide' }) });
+          expect(await fallback.isVisible()).toBe(true);
+          await fallback.locator('summary').click();
+          expect(await fallback.getAttribute('open')).toBe(null);
+          expect(await plain.locator('.enhanced').isVisible()).toBe(false);
+          await plain.setViewportSize({ width: 375, height: 812 });
+          await plain.goto(server.url + '');
+          await plain.getByRole('button', { name: 'Navigation', exact: true }).click();
+          const sections = plain.getByRole('navigation', { name: 'Sections', exact: true });
+          expect(await sections.isVisible()).toBe(true);
+          await sections.getByRole('link', { name: 'Outline', exact: true }).click();
+          expect(plain.url()).toBe(server.url + 'guide/outline/');
+        } finally { await noScript.close(); }
+      }
       expect(errors).toEqual([]); expect(violations).toEqual([]); await context.close(); await server.close(); server = undefined;
     }
   } finally { await server?.close(); await browser.close(); }
+}, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('installed section navigation changes category by following links in dev, production and without JavaScript', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'section-navigation');
+  for (const [file, text] of Object.entries({
+    'docs/index.md': '# Documentation',
+    'docs/_footer.md': '## Project\n\n- [Home](/)\n',
+    'docs/reference/index.md': '# Reference',
+    'docs/reference/01.(Layout)/00.layout.md': '---\nnavigation: overview\n---\n# Layout',
+    'docs/reference/01.(Layout)/01.stack.md': '# Stack\n\n' + 'A long reference paragraph.\n\n'.repeat(100),
+    'docs/reference/01.(Layout)/02.grid.md': '# Grid',
+    'docs/reference/02.forms/index.md': '# Forms',
+    'docs/reference/02.forms/button.md': '# Button',
+  })) { mkdirSync(join(site, file, '..'), { recursive: true }); writeFileSync(join(site, file), text); }
+  const options = { root: site, base: '/manual/', sidebarNavigation: 'sections' as const, port: 0 };
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        for (const javaScriptEnabled of mode === 'preview' ? [true, false] : [true]) {
+          const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1280, height: 900 } });
+          try {
+            const page = await context.newPage();
+            await page.goto(server.url + 'reference/stack/');
+            const nav = page.getByRole('navigation', { name: 'Documentation', exact: true });
+            expect(await nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Stack', 'Grid', 'Forms']);
+            expect(await nav.locator('button, details, summary, [aria-expanded]').count()).toBe(0);
+            expect(await nav.getByRole('link', { name: 'Layout', exact: true }).getAttribute('aria-current')).toBe('location');
+            const sidebarReachesFooter = () => page.evaluate(() => {
+              const sidebar = document.querySelector('#documentation-navigation')!.getBoundingClientRect();
+              const footer = document.querySelector(':is([component~=markupress-footer], [data-component~=markupress-footer]:not([component]))')!.getBoundingClientRect();
+              return Math.abs(sidebar.bottom - footer.top) < 2;
+            });
+            expect(await sidebarReachesFooter()).toBe(true);
+            await page.evaluate(() => scrollTo(0, 400));
+            expect(await page.locator('.sidebar-content').evaluate(element => {
+              const header = document.querySelector(':is([component~=markupress-header], [data-component~=markupress-header]:not([component]))')!.getBoundingClientRect();
+              return Math.abs(element.getBoundingClientRect().top - header.bottom) < 2;
+            })).toBe(true);
+            expect(await nav.getByRole('link', { name: 'Stack', exact: true }).getAttribute('aria-current')).toBe('page');
+            await nav.getByRole('link', { name: 'Forms', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/forms/');
+            await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
+            expect(await sidebarReachesFooter()).toBe(true);
+            await page.reload();
+            expect(await nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Forms', 'Button']);
+            await nav.getByRole('link', { name: 'Layout', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/layout/');
+            await expect.poll(() => nav.getByRole('link').evaluateAll(links => links.map(link => link.textContent!.trim()))).toEqual(['Reference', 'Layout', 'Stack', 'Grid', 'Forms']);
+            await page.setViewportSize({ width: 375, height: 812 });
+            await page.getByRole('button', { name: 'Navigation', exact: true }).click();
+            expect(await nav.isVisible()).toBe(true);
+            await nav.getByRole('link', { name: 'Forms', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/reference/forms/');
+            await expect.poll(() => page.locator('#documentation-navigation:popover-open').count()).toBe(0);
+          } finally { await context.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('switches installed locale identities and search in dev, production and without JavaScript', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'localized');
+  for (const version of ['docs']) for (const [file, text] of Object.entries({
+    'en/index.md': '# English home', 'en/setup.md': '---\nid: setup\n---\n# Setup\n\nEnglishquartz',
+    'fr/index.md': '# Accueil', 'fr/demarrer.md': '---\nid: setup\n---\n# Installation française\n\nFrançaisquartz\n\n![Marque](./mark.svg)\n\n```js\nconst value = { text: "Français" };\n```\n\n::: details\nTexte masqué\n:::',
+    'fr/mark.svg': '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10"/></svg>',
+    'ar/index.md': '# البداية', 'ar/install.md': '---\nid: setup\n---\n# التثبيت\n\nعربي\n\n```js\nconst value = { text: "عربي" };\n```',
+  })) { mkdirSync(join(site, version, file, '..'), { recursive: true }); writeFileSync(join(site, version, file), text); }
+  mkdirSync(join(site, 'public'), { recursive: true });
+  writeFileSync(join(site, 'public/logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="80"><rect width="600" height="80" fill="teal"/></svg>');
+  const options = { root: site, base: '/manual/', origin: 'https://docs.example', port: 0, locales: { en: { label: 'English' }, fr: { label: 'Français', title: 'Documentation française',
+    editLink: 'https://example.fr/edit/', translations: { codeCopied: 'Copié avec succès', codeCopyFailed: 'Copie impossible' } }, ar: { label: 'العربية' } }, defaultLocale: 'en' };
+  await product.snapshotVersion('v1', options);
+  writeFileSync(join(site, 'docs/fr/demarrer.md'), readFileSync(join(site, 'docs/fr/demarrer.md'), 'utf8') + '\n\ncourantseulement');
+  execFileSync('git', ['init', '--quiet'], { cwd: site });
+  execFileSync('git', ['add', 'docs', 'versions'], { cwd: site });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Documentation'],
+    { cwd: site, env: { ...process.env, GIT_AUTHOR_DATE: '2026-10-28T12:00:00Z', GIT_COMMITTER_DATE: '2026-10-28T12:00:00Z' } });
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        for (const javaScriptEnabled of mode === 'preview' ? [true, false] : [true]) {
+          const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1280, height: 900 } });
+          try {
+            const page = await context.newPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(`${page.url()}: ${error.stack ?? error.message}`));
+            await page.goto(server.url + 'fr/v/v1/demarrer/');
+            const logoAndMenuSeparate = () => page.locator(':is([component~="ui-site-header"], [data-component~="ui-site-header"]:not([component]))').evaluate(header => {
+              const logo = header.querySelector('.logo-light')!.getBoundingClientRect();
+              const menu = header.querySelector('[popovertarget="documentation-navigation"]')!.getBoundingClientRect();
+              return logo.width > 0 && menu.width > 0 && (logo.right <= menu.left || logo.left >= menu.right);
+            });
+            const alternates = () => page.locator('head link[rel="alternate"]').evaluateAll(links => links.map(link => [link.getAttribute('hreflang'), link.getAttribute('href')]));
+            const versionOne = [['en', 'https://docs.example/manual/v/v1/setup/'], ['fr', 'https://docs.example/manual/fr/v/v1/demarrer/'],
+              ['ar', 'https://docs.example/manual/ar/v/v1/install/'], ['x-default', 'https://docs.example/manual/v/v1/setup/']];
+            expect(await alternates()).toEqual(versionOne);
+            expect(await page.getByRole('img', { name: 'Marque' }).evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(24);
+            expect(await page.locator('time').textContent()).toBe('28 octobre 2026');
+            expect(await page.locator('time').getAttribute('datetime')).toBe('2026-10-28');
+            expect(await page.getByRole('link', { name: 'Modifier cette page', exact: true }).getAttribute('href')).toContain('https://example.fr/edit/');
+            expect(await page.locator('summary').filter({ hasText: 'Détails' }).count()).toBe(1);
+            expect(await page.getByRole('button', { name: /^Apparence:/ }).count()).toBe(1);
+            expect(await page.getByRole('button', { name: /^Apparence:/ }).getAttribute('aria-description')).toBe('Activer pour choisir l’apparence suivante.');
+            const languages = page.getByRole('navigation', { name: /^(Languages|Langues|اللغات)$/, exact: true });
+            if (!javaScriptEnabled) expect(await languages.evaluate(nav => nav.closest('header') === null)).toBe(true);
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'Français', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
+            await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('ltr');
+            await expect.poll(alternates).toEqual(versionOne);
+            if (javaScriptEnabled) {
+              const example = page.locator('figure.code');
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { Object.assign(window, { copiedCode: value }); } } }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).press('Enter');
+              await expect.poll(() => example.getByRole('button', { name: 'Copié avec succès', exact: true }).count()).toBe(1);
+              expect(await page.evaluate(() => (window as unknown as { copiedCode: string }).copiedCode)).toBe('const value = { text: "Français" };');
+              await expect.poll(() => example.getByRole('button', { name: 'Copier', exact: true }).count(), { timeout: 5000 }).toBe(1);
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Clipboard denied'); } } }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).click();
+              await expect.poll(() => example.getByRole('button', { name: 'Copie impossible', exact: true }).count()).toBe(1);
+              await expect.poll(() => example.getByRole('button', { name: 'Copier', exact: true }).count(), { timeout: 5000 }).toBe(1);
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+              await example.getByRole('button', { name: 'Copier', exact: true }).click();
+              await expect.poll(() => example.getByRole('button', { name: 'Copie impossible', exact: true }).count()).toBe(1);
+              await example.getByRole('button', { name: 'Retour à la ligne', exact: true }).press('Space');
+              expect(await example.locator('pre').getAttribute('class')).toContain('wrap');
+              await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+              const input = page.getByRole('searchbox', { name: 'Rechercher dans la documentation' });
+              await input.fill('courantseulement');
+              await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
+              await input.fill('Englishquartz');
+              await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
+              await input.fill('Françaisquartz');
+              await expect.poll(() => page.locator(':is([component~="ui-search-result-row"], [data-component~="ui-search-result-row"]:not([component]))').count()).toBeGreaterThan(0);
+              await input.press('Enter');
+              await expect.poll(() => input.isVisible()).toBe(false);
+              await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/fr/v/v1/demarrer/');
+              await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+              await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+              await page.evaluate(() => location.assign('/manual/v/v1/setup/'));
+              await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('en');
+              await expect.poll(() => input.isVisible()).toBe(false);
+              await openLanguages(page);
+              await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'Français', exact: true }).click();
+              await expect.poll(() => page.locator('html').getAttribute('lang')).toBe('fr');
+              await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            }
+            if (mode === 'preview' && javaScriptEnabled) {
+              mkdirSync(join(root, '.context'), { recursive: true });
+              await page.screenshot({ path: join(root, '.context/locales-desktop.png') });
+            }
+            await page.setViewportSize({ width: 375, height: 812 });
+            await expect.poll(logoAndMenuSeparate).toBe(true);
+            await openLanguages(page);
+            await languages.getByRole(javaScriptEnabled ? 'menuitem' : 'link', { name: 'العربية', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/install/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            await expect.poll(() => page.locator('html').getAttribute('dir')).toBe('rtl');
+            expect(await page.locator('pre').evaluate(element => getComputedStyle(element).direction)).toBe('ltr');
+            await expect.poll(logoAndMenuSeparate).toBe(true);
+            await page.getByRole('button', { name: 'التنقل', exact: true }).click();
+            const drawer = page.locator('#documentation-navigation');
+            expect(await drawer.isVisible()).toBe(true);
+            expect(await drawer.evaluate(element => Math.abs(element.getBoundingClientRect().right - innerWidth))).toBeLessThan(1);
+            await page.keyboard.press('Escape');
+            await page.getByRole('button', { name: 'التنقل', exact: true }).click();
+            await drawer.getByRole('link', { name: 'الحالية', exact: true }).click();
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/install/');
+            // MarkupKit commits the URL before its layers and head finish rendering.
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            await expect.poll(alternates).toEqual([['en', 'https://docs.example/manual/setup/'], ['fr', 'https://docs.example/manual/fr/demarrer/'],
+              ['ar', 'https://docs.example/manual/ar/install/'], ['x-default', 'https://docs.example/manual/setup/']]);
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+            if (mode === 'preview' && javaScriptEnabled) await page.screenshot({ path: join(root, '.context/locales-mobile.png') });
+            expect(errors).toEqual([]);
+          } finally { await context.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('serves installed source fallback with localized controls in dev, production and without JavaScript', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'fallback');
+  const write = (file: string, source: string) => { mkdirSync(join(site, file, '..'), { recursive: true }); writeFileSync(join(site, file), source); };
+  write('docs/en/index.md', '# Home'); write('docs/fr/index.md', '# Accueil'); write('docs/ar/index.md', '# البداية');
+  write('docs/en/setup.md', '---\nid: setup\n---\n# Setup');
+  write('docs/fr/demarrer.md', '---\nid: setup\n---\n# Installation française');
+  write('docs/en/reference.md', '---\nid: reference\n---\n# Source reference\n\nFallbackquartz\n\n[Install](./setup.md)\n\n![Mark](./mark.svg)\n\n```text\nconst value = { text: "<source>" };\n```\n\n<link rel="component" href="./_parts/card.html">\n<source-card></source-card>');
+  write('docs/en/mark.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10"/></svg>');
+  write('docs/en/_parts/card.html', '<template component="source-card" controller="./card.js"><defs><state name="count" type="number" value="0"></state></defs><p><button>Source count {$count}</button></p></template>');
+  write('docs/en/_parts/card.ts', 'import type { ComponentHost } from "@nextwebwg/html-next/runtime"; export default function(host: ComponentHost) { host.on("connect", () => { host.root.dataset.sourceReady = "yes"; }); host.on("click", () => { host.state.count = Number(host.state.count) + 1; }); }');
+  const options = { root: site, base: '/manual/', origin: 'https://docs.example', port: 0, localeFallback: 'source' as const,
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } }, defaultLocale: 'en' };
+  await product.snapshotVersion('v1', options);
+  write('docs/en/reference.md', readFileSync(join(site, 'docs/en/reference.md'), 'utf8') + '\n\nCurrentquartz');
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        for (const javaScriptEnabled of mode === 'preview' ? [true, false] : [true]) {
+          const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1280, height: 900 } });
+          try {
+            const page = await context.newPage(), errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+            await page.goto(server.url + 'fr/v/v1/reference/');
+            const article = page.locator('article.markupress-prose');
+            expect(await page.locator('html').getAttribute('lang')).toBe('fr');
+            expect(await article.getAttribute('lang')).toBe('en'); expect(await article.getAttribute('dir')).toBe('ltr');
+            expect(await page.getByRole('note').textContent()).toContain('Ce contenu n’est pas encore disponible en Français.');
+            expect(await page.locator('head link[rel="canonical"]').getAttribute('href')).toBe('https://docs.example/manual/v/v1/reference/');
+            expect(await page.locator('head link[rel="alternate"][hreflang="fr"]').count()).toBe(0);
+            expect(await article.getByRole('link', { name: 'Install', exact: true }).getAttribute('href')).toBe('/manual/fr/v/v1/demarrer/');
+            expect(await page.getByRole('img', { name: 'Mark' }).evaluate(image => (image as HTMLImageElement).naturalWidth)).toBe(24);
+            expect(await article.locator('pre').textContent()).toBe('const value = { text: "<source>" };');
+            if (javaScriptEnabled) {
+              await page.locator('[data-source-ready="yes"]').waitFor();
+              await page.getByRole('button', { name: 'Source count 0', exact: true }).click();
+              await expect.poll(() => page.getByRole('button', { name: 'Source count 1', exact: true }).count()).toBe(1);
+              expect(await article.locator('.code-actions').getAttribute('lang')).toBe('fr');
+              await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { Object.assign(window, { fallbackCode: value }); } } }));
+              await article.getByRole('button', { name: 'Copier', exact: true }).click();
+              await expect.poll(() => page.evaluate(() => (window as unknown as { fallbackCode: string }).fallbackCode)).toBe('const value = { text: "<source>" };');
+              await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+              const input = page.getByRole('searchbox', { name: 'Rechercher dans la documentation' });
+              await input.fill('Currentquartz');
+              await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
+              await input.fill('Fallbackquartz');
+              await expect.poll(() => page.locator('[data-href]').count()).toBeGreaterThan(0);
+              const hrefs = await page.locator('[data-href]').evaluateAll(hits => hits.map(hit => hit.getAttribute('data-href')));
+              expect(hrefs.every(href => href?.startsWith('/manual/fr/v/v1/'))).toBe(true);
+              await input.press('Enter');
+              await expect.poll(() => input.isVisible()).toBe(false);
+            }
+            await page.setViewportSize({ width: 375, height: 812 });
+            const languages = page.getByRole('navigation', { name: /^(Langues|اللغات)$/, exact: true });
+            expect((await languages.getByRole('link').allTextContents()).map(text => text.trim())).toEqual(['English']);
+            expect(await languages.getByRole('button').count()).toBe(0);
+            await page.goto(server.url + 'ar/v/v1/reference/');
+            await expect.poll(() => new URL(page.url()).pathname).toBe('/manual/ar/v/v1/reference/');
+            await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+            expect(await page.locator('html').getAttribute('dir')).toBe('rtl'); expect(await article.getAttribute('dir')).toBe('ltr');
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+            if (javaScriptEnabled) await article.getByRole('button', { name: 'نسخ', exact: true }).waitFor();
+            if (mode === 'preview' && javaScriptEnabled) await page.screenshot({ path: join(root, '.context/fallback-mobile.png') });
+            expect(errors).toEqual([]);
+          } finally { await context.close(); }
+        }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
+}, 90_000);
+
+it.skipIf(process.env.MARKUPRESS_BROWSER_TEST !== '1')('queries contextual hosted search through the installed dev and production theme', async () => {
+  const product = await import(pathToFileURL(join(workspace, 'node_modules/markupress/dist/index.js')).href) as typeof import('../src/index.js');
+  const site = join(workspace, 'hosted');
+  for (const [file, text] of Object.entries({ 'en/index.md': '# Home', 'en/setup.md': '---\nid: setup\n---\n# Setup',
+    'fr/index.md': '# Accueil', 'fr/installer.md': '---\nid: setup\n---\n# Installer', 'ar/index.md': '# البداية', 'ar/install.md': '---\nid: setup\n---\n# التثبيت' })) {
+    mkdirSync(join(site, 'docs', file, '..'), { recursive: true }); writeFileSync(join(site, 'docs', file), text);
+  }
+  const options = { root: site, base: '/manual/', origin: 'https://docs.example', port: 0,
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } },
+    versions: [{ id: 'current', directory: 'docs' }, { id: 'old', directory: 'docs' }],
+    search: { provider: 'algolia' as const, appId: 'APP123', apiKey: 'public-key', indexName: 'docs', debounce: 0, filters: 'audience:public' } };
+  await product.buildSite(options);
+  const browser = await chromium.launch({ headless: true });
+  try {
+    for (const mode of ['preview', 'dev'] as const) {
+      const server = await product[mode === 'preview' ? 'previewSite' : 'devSite'](options);
+      try {
+        const page = await browser.newPage(); const errors: string[] = [], localRequests: string[] = [], requests: string[][] = [];
+        page.on('pageerror', error => errors.push(error.message));
+        page.on('request', request => { if (request.url().endsWith('_search.json')) localRequests.push(request.url()); });
+        // Native navigation commits the URL before its payload finishes; exercise that boundary deliberately.
+        await page.route('**/manual/_markupkit/pages/ar/v/old/install/payload.json', async route => {
+          await new Promise(done => setTimeout(done, 1500)); await route.continue();
+        });
+        await page.route('https://app123-dsn.algolia.net/1/indexes/*/queries', async route => {
+          const body = route.request().postDataJSON() as { requests: { params: string; indexName: string }[] };
+          const params = new URLSearchParams(body.requests[0]!.params), facets = JSON.parse(params.get('facetFilters')!) as string[];
+          requests.push(facets); expect(params.get('filters')).toBe('audience:public'); expect(body.requests[0]!.indexName).toBe('docs');
+          const language = facets[0]!.slice('language:'.length), version = facets[1]!.slice('version:'.length), query = params.get('query');
+          const path = language === 'fr' ? 'installer' : language === 'ar' ? 'install' : 'setup';
+          if (query === 'fail') { await route.fulfill({ status: 503, body: '{}' }); return; }
+          await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ results: [{ hits: query === 'empty' ? [] : [
+            { url: `https://docs.example/manual/${language === 'en' ? '' : language + '/'}${version === 'current' ? '' : `v/${version}/`}${path}/`, language, version,
+              hierarchy: { lvl1: 'Guide', lvl2: 'Literal <result>' }, content: 'Café 👩🏽‍💻 العربية <example>' },
+            { url: 'https://evil.example/', language, version, hierarchy: { lvl1: 'Unsafe' } },
+          ] }] }) });
+        });
+        try {
+          await page.goto(server.url + 'fr/v/old/installer/');
+          await page.getByRole('button', { name: 'Rechercher', exact: true }).click();
+          let input = page.getByRole('searchbox');
+          await input.fill('fail'); await expect.poll(() => page.getByRole('status').textContent()).toContain('indisponible');
+          await input.fill('empty'); await expect.poll(() => page.getByRole('status').textContent()).toContain('Aucun résultat');
+          await input.fill('installer');
+          const rows = page.locator('[data-href]');
+          await expect.poll(() => rows.count()).toBe(1);
+          expect(await rows.textContent()).toContain('Literal <result>'); expect(await rows.locator('result, example').count()).toBe(0);
+          expect(await rows.textContent()).toContain('Café 👩🏽‍💻 العربية <example>');
+          await input.press('ArrowDown'); expect(await rows.locator('button').evaluate(button => button === document.activeElement)).toBe(true);
+          await rows.locator('button').press('Enter'); await expect.poll(() => input.isVisible()).toBe(false);
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          const languages = page.getByRole('navigation', { name: 'Langues', exact: true });
+          await openLanguages(page); await languages.getByRole('menuitem', { name: 'العربية', exact: true }).click();
+          await page.waitForURL('**/manual/ar/v/old/install/');
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          expect(await page.locator('html').getAttribute('lang')).toBe('ar');
+          await page.getByRole('button', { name: 'بحث', exact: true }).click(); input = page.getByRole('searchbox');
+          await input.fill('عربي'); await expect.poll(() => rows.count()).toBe(1);
+          expect(await rows.getAttribute('data-href')).toBe('/manual/ar/v/old/install/');
+          await input.press('Escape');
+          await page.evaluate(() => location.assign('/manual/ar/install/'));
+          await page.waitForURL('**/manual/ar/install/');
+          await page.waitForFunction(() => !document.documentElement.hasAttribute('data-mk-navigating'));
+          expect(new URL(page.url()).pathname).toBe('/manual/ar/install/');
+          await page.getByRole('button', { name: 'بحث', exact: true }).click(); await input.fill('حالي');
+          await expect.poll(() => rows.getAttribute('data-href')).toBe('/manual/ar/install/');
+          expect(requests).toEqual(expect.arrayContaining([['language:fr', 'version:old'], ['language:ar', 'version:old'], ['language:ar', 'version:current']]));
+          expect(localRequests).toEqual([]); expect(errors).toEqual([]);
+          if (mode === 'preview') await page.screenshot({ path: join(root, '.context/hosted-search.png') });
+        } finally { await page.close(); }
+      } finally { await server.close(); }
+    }
+  } finally { await browser.close(); }
 }, 90_000);

@@ -1,44 +1,68 @@
-import { basename, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { applyLoomaCodeNotation, parseLoomaFenceInfo, splitLoomaFrontmatter, type LoomaFenceInfo } from '@threadlabs/looma/markdown';
-import { createLoomaMarkdownIt } from '@threadlabs/looma/markdown/markdown-it';
-import type { Token } from 'markdown-it';
+import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist, type Syntax } from 'expressmark';
+import { renderHtml, type HtmlRenderOptions, type HtmlTransformer } from 'expressmark/render';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
 import { bundledLanguages, createHighlighter, type BundledLanguage, type Highlighter, type ShikiTransformer } from 'shiki';
 import { parseDocument } from 'yaml';
 import { stylesheet } from './styles.js';
+import { english, resolveTranslations, textDirection, type TranslationOverrides, type Translations } from './i18n.js';
 
+export interface LanguageAlternate {
+  readonly hreflang: string;
+  readonly href: string;
+}
 export interface MarkdownOptions {
+  /** Site policy's resolved canonical, including the source owner of a fallback page. */
+  readonly canonical?: string;
+  /** Language of generated reader controls when it differs from the article language. */
+  readonly uiLanguage?: string;
+  /** Declarative alternate-language links in this page's head. */
+  readonly alternates?: readonly LanguageAlternate[];
+  /** Reader labels for code actions and unlabelled details blocks. */
+  readonly translations?: TranslationOverrides;
   readonly file: string;
   readonly pageName: string;
   /** Resolve authored document links and assets from their original source. */
   readonly resolveLink?: (href: string, kind: 'link' | 'asset') => string;
   /** Stylesheet files the page component imports, so their rules style this page's own region. */
   readonly styles?: readonly string[];
-  /** Number the lines of highlighted code blocks unless a fence says `:no-line-numbers`. */
+  /** Number the lines of highlighted code blocks unless a fence says `show-line-numbers=false`. */
   readonly lineNumbers?: boolean;
   /** Front matter the page's own fields override, such as a site-wide default. */
   readonly frontmatter?: FrontMatter;
+  /** The Markdown syntax of pages whose front matter sets no `markdownSyntax`; `standard` by default. */
+  readonly markdownSyntax?: Syntax;
   /** The document `<title>` for the page's title, such as `Install | My site`; the page title by default. */
   readonly documentTitle?: (title: string) => string;
+  /** Called with each file an embed link reads, so development recompiles the page when it changes. */
+  readonly watch?: (file: string) => void;
 }
 /** A page's validated front matter. Unknown or mistyped fields fail with the Markdown file's name. */
 export interface FrontMatter {
+  /** A draft page is served by `markupress dev` and left out of a production build, unless the `drafts` option includes it. */
+  readonly draft?: boolean;
+  /** Whether this page appears in search, true by default. */
+  readonly search?: boolean;
   readonly title?: string;
   /** `<meta name="description">`, and the page's line in its folder's generated index. */
   readonly description?: string;
-  /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (HTMLKit `hk:order`). */
+  /** The page's place among its folder's pages, as a number prefix gives it; on an index page, the folder's place (MarkupKit `mk:order`). */
   readonly order?: number;
   /**
-   * `hidden` leaves the page out of navigation and keeps its route (HTMLKit `hk:navigation`). On a folder's index
-   * page, `collapsed` starts the folder's sidebar group closed.
+   * `hidden` leaves the page out of navigation and keeps its route (MarkupKit `mk:navigation`). On a folder's index
+   * page, `collapsed` starts the folder's sidebar group closed. `overview` makes a
+   * non-index page the containing route group's overview link.
    */
-  readonly navigation?: 'hidden' | 'collapsed';
+  readonly navigation?: 'hidden' | 'collapsed' | 'overview';
+  /** Show documentation navigation; a folder index supplies its descendants' default. */
+  readonly sidebar?: boolean;
   readonly id?: string;
   readonly aliases?: readonly string[];
-  /** Old route paths in the page's version, each a redirect page to the page (HTMLKit `hk:redirect-from`). */
+  /** Old route paths in the page's version, each a redirect page to the page (MarkupKit `mk:redirect-from`). */
   readonly redirectFrom?: readonly string[];
-  /** An HTMLKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
+  /** An MarkupKit layout name (app/layouts/<name>.html) in place of the site's layout, or false for none. */
   readonly layout?: string | false;
   /** The heading levels the page's outline lists, such as [2, 3], or false for no outline. */
   readonly outline?: false | readonly [number, number];
@@ -53,6 +77,10 @@ export interface FrontMatter {
   readonly editLink?: string | false;
   /** This page's language, a BCP 47 tag such as `fr`, in place of the site's `lang`. */
   readonly lang?: string;
+  /** How this page's Markdown reads: `standard` Expressive Markdown or `compatible` CommonMark and GFM. */
+  readonly markdownSyntax?: Syntax;
+  /** Native page direction, overriding the locale's configured or inferred direction. */
+  readonly dir?: 'ltr' | 'rtl' | 'auto';
   /** The pager's link to the page before this one: false for none, or a `label` and `href` in place of its own. */
   readonly previous?: PagerLink;
   /** The pager's link to the page after this one: false for none, or a `label` and `href` in place of its own. */
@@ -90,7 +118,7 @@ export interface CompiledMarkdown {
   readonly sections: readonly SearchSection[];
 }
 const index = /^(?:\d+\.)?index\.md$/;
-/** Whether a Markdown file is its folder's index page, which HTMLKit reads as the folder's own entry. */
+/** Whether a Markdown file is its folder's index page, which MarkupKit reads as the folder's own entry. */
 export const isIndex = (file: string) => index.test(basename(file));
 export function escapeHTML(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -119,64 +147,97 @@ async function highlight(code: string, lang: string, lines: ShikiTransformer): P
   return shiki.codeToHtml(code, { lang, themes, defaultColor: 'light-dark()', transformers: [shikiOutput, lines] });
 }
 // Line highlighting and numbers are classes written at build time; the theme's stylesheet draws them. The fence
-// meta stays on <code> as Looma Markdown's canonical HTML writes it.
+// metadata stays on <code> while Expressmark owns its syntax.
 const lineClasses = (marked: ReadonlySet<number>, numbers: boolean, meta: string): ShikiTransformer => ({
   pre(node) { if (numbers) this.addClassToHast(node, 'line-numbers'); },
   code(node) { if (meta) node.properties['data-meta'] = meta; },
   line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
 });
 // Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
-const codeActions = '<div class="code-actions" hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">Wrap</button>' +
-  '<button type="button" data-code-action="copy">Copy</button></div>';
+const codeActions = (ui: Translations, lang?: string) => '<div class="code-actions"' + (lang === undefined ? '' : ` lang="${escapeHTML(lang)}" dir="${textDirection(lang)}"`) + ' hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">' +
+  literal(escapeHTML(ui.codeWrap)) + '</button><button type="button" data-code-action="copy"' +
+  ` data-code-label-copy="${literal(escapeHTML(ui.codeCopy))}" data-code-label-copied="${literal(escapeHTML(ui.codeCopied))}" data-code-label-failed="${literal(escapeHTML(ui.codeCopyFailed))}">${literal(escapeHTML(ui.codeCopy))}</button></div>`;
 
 function textContent(node: DefaultTreeAdapterMap['node']): string {
   if ('value' in node) return node.value;
   return 'childNodes' in node ? node.childNodes.map(textContent).join('') : '';
 }
 
-/** Per-page render state: fences Shiki highlighted before the synchronous render. */
-interface RenderEnv { readonly highlighted: ReadonlyMap<Token, string> }
-
-// Looma Markdown: Looma's markdown-it plugin parses every form and renders the standard's canonical HTML. Markupress adds its presentation on top: Shiki code figures, heading self-links and literal text.
-const md = createLoomaMarkdownIt();
-const { escapeHtml } = md.utils;
-const rules = md.renderer.rules;
-// Markdown text is literal: braces are escaped so HTML Next never interpolates them. Attributes are always literal
-// in HTML Next, and raw HTML keeps its expressions. Plugin rules escape their text and attributes alike, so their
-// text segments (between tags, where escaped HTML holds no `>`) gain the same escape.
-const literalText = (html: string) => html.replace(/>([^<]+)</g, (_, text: string) => `>${literal(text)}<`);
-for (const name of ['looma_container_open', 'looma_chip', 'looma_mention', 'looma_toc']) {
-  const rule = rules[name]!;
-  rules[name] = (...args) => literalText(rule(...args));
-}
-rules.text = (tokens, index) => literal(escapeHtml(tokens[index]!.content));
-rules.code_inline = (tokens, index, _options, _env, self) => `<code${self.renderAttrs(tokens[index]!)}>${literal(escapeHtml(tokens[index]!.content))}</code>`;
-// Each heading links to its own anchor, which the plugin assigned.
-rules.heading_open = (tokens, index, options, _env, self) => `${self.renderToken(tokens, index, options)}<a href="#${escapeHtml(tokens[index]!.attrGet('id') ?? '')}">`;
-rules.heading_close = (tokens, index, options, _env, self) => `</a>${self.renderToken(tokens, index, options)}`;
-// Code reads as Looma's code notation leaves it: `[!code highlight]` comments are removed from every fence.
-const plainCode = (code: string, { language, meta }: Pick<LoomaFenceInfo, 'language' | 'meta'>) =>
-  `<pre><code${language ? ` class="language-${escapeHtml(language)}"` : ''}${meta ? ` data-meta="${escapeHtml(meta)}"` : ''}>${literal(escapeHtml(applyLoomaCodeNotation(code.replace(/\n$/, '')).code))}</code></pre>`;
-const codeFigure = (pre: string, title?: string) =>
-  `<figure class="code">${title ? `<figcaption>${literal(escapeHtml(title))}</figcaption>` : ''}${codeActions}${pre}</figure>\n`;
-rules.fence = (tokens, index, _options, env: RenderEnv) => {
-  const token = tokens[index]!, info = parseLoomaFenceInfo(token.info), tab = tokens[index - 1];
-  // A code group's tab already shows the fence title that labels it.
-  const title = tab?.type === 'looma_tab_open' && (tab.meta as { label: string }).label === info.title ? undefined : info.title;
-  return codeFigure(env.highlighted.get(token) ?? plainCode(token.content, info), title);
+/** Plain labels are separate from the rich body and remain literal component prop values. */
+const markdownText = (node: MarkdownNode | string | undefined): string => typeof node === 'string' ? node : node === undefined ? ''
+  : node.value ?? (node.body ?? node.children ?? []).map(markdownText).join('');
+const walkMarkdown = (node: MarkdownNode, visit: (node: MarkdownNode) => void): void => {
+  visit(node);
+  if (typeof node.title === 'object') walkMarkdown(node.title, visit);
+  for (const child of node.body ?? node.children ?? []) walkMarkdown(child, visit);
 };
-rules.code_block = (tokens, index) => codeFigure(plainCode(tokens[index]!.content, { meta: '' }));
+const codeFigure = (pre: string, title = '', ui: Translations = english, lang?: string) => `<figure class="code">${title ? `<figcaption>${literal(escapeHTML(title))}</figcaption>` : ''}${codeActions(ui, lang)}${pre}</figure>`;
+const codeLines = (value: string): ReadonlySet<number> => new Set(value.split(',').flatMap(part => {
+  const match = /^(\d+)(?:-(\d+))?$/.exec(part.trim());
+  if (!match) return [];
+  const start = Number(match[1]), end = Number(match[2] ?? start);
+  return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
+}));
+
+/** An example's relative references, written for its own folder, rebased onto the page's. */
+function rebaseExample(html: string, from: string, to: string): string {
+  const fragment = parseFragment(html);
+  const visit = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) for (const attribute of node.attrs) {
+      if (!['href', 'src', 'controller'].includes(attribute.name) || !/^\.\.?\//.test(attribute.value)) continue;
+      const path = relative(to, resolve(from, attribute.value)).split(sep).join('/');
+      attribute.value = path.startsWith('.') ? path : './' + path;
+    }
+    if ('tagName' in node && node.tagName === 'template' && 'content' in node) visit(node.content);
+    if ('childNodes' in node) node.childNodes.forEach(visit);
+  };
+  visit(fragment);
+  return serialize(fragment);
+}
+
+/**
+ * Authored pages are trusted HTML Next source, not submitted HTML. Expressmark still owns the
+ * Markdown grammar and HTML rendering; its host allowlist admits the exact native tags and props
+ * present in that source, plus the components and code styles this presentation emits.
+ */
+/** The page's authored HTML, its examples' included, is the site's own: its elements and attributes stay. */
+function hostHtml(document: MarkdownDocument, examples: readonly string[] = []): HtmlAllowlist {
+  const tags = new Set(['ui-callout', 'ui-tabs', 'ui-icon', 'button', 'input']);
+  const attributes = new Set(['heading', 'tone', 'group', 'type', 'hidden', 'disabled', 'checked', 'role', 'tabindex', 'name', 'aria-hidden', 'data-markupress-example', 'data-search-ignore']);
+  const styles: Record<string, readonly RegExp[]> = { color: [/^light-dark\(.*\)$/], '--shiki-light': [/^#[\da-f]+$/i], '--shiki-dark': [/^#[\da-f]+$/i] };
+  const visit = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) {
+      tags.add(node.tagName);
+      for (const attribute of node.attrs) {
+        attributes.add(attribute.name);
+        if (attribute.name === 'style') for (const declaration of attribute.value.split(';')) {
+          const property = declaration.slice(0, declaration.indexOf(':')).trim();
+          if (property) styles[property] = [/^[\s\S]*$/];
+        }
+      }
+      if ('content' in node) visit(node.content);
+    }
+    if ('childNodes' in node) node.childNodes.forEach(visit);
+  };
+  walkMarkdown(document, node => {
+    if (node.type === 'htmlElement') visit(parseFragment(`${node.open ?? ''}${node.close ?? ''}`));
+    else if (node.type === 'html') visit(parseFragment(node.value ?? ''));
+  });
+  for (const html of examples) visit(parseFragment(html));
+  return { tags: [...tags], attributes: { '*': [...attributes] }, styles };
+}
 
 function frontmatter(source: string, file: string) {
-  const split = splitLoomaFrontmatter(source);
+  const split = /^---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(source);
   if (split === null) return { body: source, fields: {} as Record<string, unknown> };
-  const document = parseDocument(split.yaml);
+  const document = parseDocument(split[1]!);
   if (document.errors.length > 0) throw new Error(`${file}: ${document.errors.map(error => error.message).join('; ')}`);
   const fields: unknown = document.toJS();
   if (fields === null || typeof fields !== 'object' || Array.isArray(fields)) throw new Error(`${file}: frontmatter must be a mapping.`);
-  return { body: split.body, fields: fields as Record<string, unknown> };
+  return { body: source.slice(split[0].length), fields: fields as Record<string, unknown> };
 }
 
+const syntaxes: readonly Syntax[] = ['standard', 'compatible'];
 const text = (value: unknown) => typeof value === 'string' && value !== '';
 const strings = (value: unknown) => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   Object.values(value).every(item => typeof item === 'string' || typeof item === 'number');
@@ -188,17 +249,22 @@ function pagerLink(value: unknown): boolean {
   return entries.length > 0 && entries.every(([key, item]) => (key === 'label' || key === 'href') && text(item));
 }
 const fieldTypes: Readonly<Record<string, readonly [check: (value: unknown) => boolean, expected: string]>> = {
+  search: [value => typeof value === 'boolean', 'true or false'],
+  draft: [value => typeof value === 'boolean', 'true or false'],
   title: [text, 'a nonempty string'], description: [text, 'a nonempty string'],
   order: [value => Number.isSafeInteger(value) && (value as number) >= 0, 'a whole number'],
-  navigation: [value => value === 'hidden' || value === 'collapsed', 'hidden, or collapsed on a folder\'s index page'],
+  navigation: [value => value === 'hidden' || value === 'collapsed' || value === 'overview', 'hidden, overview, or collapsed on a folder\'s index page'],
+  sidebar: [value => typeof value === 'boolean', 'true or false'],
+  markdownSyntax: [value => syntaxes.includes(value as Syntax), 'standard or compatible'],
   id: [text, 'a nonempty string'],
   aliases: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
   redirectFrom: [value => Array.isArray(value) && value.every(item => typeof item === 'string'), 'a list of route paths'],
-  layout: [value => value === false || text(value), 'an HTMLKit layout name or false'],
+  layout: [value => value === false || text(value), 'an MarkupKit layout name or false'],
   outline: [value => value === false || (Array.isArray(value) && value.length === 2 && value.every(level) && (value[0] as number) <= (value[1] as number)), 'false or a heading range such as [2, 3]'],
   head: [value => (value !== null && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([key, item]) =>
     key === 'canonical' ? text(item) : (key === 'meta' || key === 'og') && strings(item))), 'a mapping of meta, og and canonical'],
   editLink: [value => value === false || text(value), 'a URL or false'],
+  dir: [value => value === 'ltr' || value === 'rtl' || value === 'auto', 'ltr, rtl, or auto'],
   lang: [value => text(value) && /^[A-Za-z]{2,8}(?:-[A-Za-z\d]{1,8})*$/.test(value as string), 'a language tag such as fr or pt-BR'],
   previous: [pagerLink, 'false, or a mapping of label and href'],
   next: [pagerLink, 'false, or a mapping of label and href'],
@@ -209,18 +275,18 @@ function validFrontMatter(fields: Readonly<Record<string, unknown>>, file: strin
     if (type === undefined) throw new Error(`${file}: unknown front matter field ${name}. Fields are ${Object.keys(fieldTypes).join(', ')}.`);
     if (!type[0](value)) throw new Error(`${file}: front matter ${name} must be ${type[1]}.`);
   }
-  // HTMLKit reads a folder from its index page, so only an index page can start its folder collapsed.
+  // MarkupKit reads a folder from its index page, so only an index page can start its folder collapsed.
   if (fields.navigation === 'collapsed' && !isIndex(file)) throw new Error(`${file}: front matter navigation collapsed applies to a folder's index page.`);
+  if (fields.navigation === 'overview' && isIndex(file)) throw new Error(`${file}: a folder index is already its overview; navigation overview applies to a non-index page inside a route group.`);
   return fields as FrontMatter;
 }
 
-// Blocks rendered as Looma components, which the page links by package specifier, as the theme's shell links
-// ui-button, so the site resolves Looma.
-const blockComponent = (token: Token) => token.type === 'looma_container_open'
-  ? (token.info === 'tabs' || token.info === 'code-group' ? 'ui-tabs' : token.info === 'details' || token.info === 'figure' ? undefined : 'ui-callout')
-  : token.type === 'blockquote_open' && token.tag === 'ui-callout' ? 'ui-callout' : undefined;
+/** Read the same validated metadata used by compilation, without rendering the document body. */
+export function readFrontMatter(source: string, file: string): FrontMatter {
+  return validFrontMatter(frontmatter(source, file).fields, file);
+}
 
-/** A Markdown document rendered by Looma Markdown and Markupress's presentation, before Markupress's page layer. */
+/** A Markdown document rendered by Expressmark and Markupress's presentation, before Markupress's page layer. */
 export interface RenderedMarkdown {
   /** The document's HTML, as HTML Next template content: Markdown text escapes its braces. */
   readonly html: string;
@@ -236,34 +302,122 @@ export interface RenderedMarkdown {
 }
 
 /**
- * The Looma Markdown layer: splits the front matter, parses with Looma's plugin and renders with Markupress's
- * presentation. Front matter fields are left to the host; compileMarkdown validates Markupress's.
+ * Expressmark owns standard syntax and native HTML rendering. Markupress supplies component presentation,
+ * highlighting and literal text escaping. Its own front matter schema stays in compileMarkdown.
  */
-export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers'>): Promise<RenderedMarkdown> {
+export async function renderMarkdown(source: string, options: Pick<MarkdownOptions, 'file' | 'lineNumbers' | 'markdownSyntax' | 'translations' | 'uiLanguage' | 'watch'>): Promise<RenderedMarkdown> {
   const { body, fields } = frontmatter(source, options.file);
-  const tokens = md.parse(source, { file: options.file });
-  const highlighted = new Map<Token, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
-  let hasCode = false;
-  for (const [index, token] of tokens.entries()) {
-    const component = blockComponent(token);
-    if (component) components.add(component);
-    if (token.type === 'heading_open') {
-      const id = token.attrGet('id')!;
-      const label = textContent(parseFragment(md.renderer.renderInline(tokens[index + 1]!.children ?? [], md.options, { highlighted }))).replace(/\\([\\{])/g, '$1');
-      headings.push({ id, href: `#${id}`, label, depth: Number(token.tag.slice(1)) });
-    }
-    if (token.type === 'code_block') hasCode = true;
-    if (token.type !== 'fence') continue;
-    hasCode = true;
-    const { language, meta, lines, lineNumbers = options.lineNumbers ?? false } = parseLoomaFenceInfo(token.info);
-    // Languages Shiki does not bundle stay escaped plain text.
-    if (!language || !(Object.hasOwn(bundledLanguages, language) || plain.has(language))) continue;
-    // Highlighted lines are the fence's `{1,3-5}` and the lines its `[!code highlight]` comments mark.
-    const { code, lines: noted } = applyLoomaCodeNotation(token.content.replace(/\n$/, ''));
-    const marked = new Set([...lines, ...noted]);
-    highlighted.set(token, await highlight(code, language, lineClasses(marked, lineNumbers, meta)));
+  const ui = options.translations === undefined ? english : resolveTranslations('en', options.translations);
+  const syntax = fields.markdownSyntax ?? options.markdownSyntax ?? 'standard';
+  if (!syntaxes.includes(syntax as Syntax)) throw new Error(`${options.file}: markdownSyntax must be standard or compatible.`);
+  const document = parse(body, { syntax: syntax as Syntax, trustedHtml: true });
+  const highlighted = new Map<MarkdownNode, string>(), components = new Set<string>(), headings: OutlineItem[] = [];
+  const anchors = headingAnchors(document);
+  // A link with an embed setting, alone in its paragraph, embeds the file it links to.
+  const codes: MarkdownNode[] = [], embeds: MarkdownNode[] = [];
+  walkMarkdown(document, node => {
+    if (node.type === 'code') codes.push(node);
+    else if (node.type === 'paragraph' && node.children?.length === 1 && node.children[0]!.type === 'link' && node.children[0]!.attributes?.embed !== undefined) embeds.push(node);
+  });
+  const codeBlock = async (code: string, language: string, settings: MarkdownNode['attributes'], meta: string, title: string) => {
+    const marked = codeLines(String(settings?.highlight ?? ''));
+    const numbers = settings?.showLineNumbers === undefined ? options.lineNumbers ?? false : settings.showLineNumbers !== false && settings.showLineNumbers !== 'false';
+    const known = language && (Object.hasOwn(bundledLanguages, language) || plain.has(language));
+    const pre = known ? await highlight(code, language, lineClasses(marked, numbers, meta))
+      : `<pre tabindex="0"${numbers ? ' class="line-numbers"' : ''}><code${language ? ` class="language-${escapeHTML(language)}"` : ''}${meta ? ` data-meta="${escapeHTML(meta)}"` : ''}>${literal(escapeHTML(code))}</code></pre>`;
+    return codeFigure(pre, title, ui, options.uiLanguage);
+  };
+  for (const node of codes) highlighted.set(node, await codeBlock(node.value ?? '', node.language ?? '', node.attributes, node.meta ?? '', markdownText(node.title)));
+  // An embed reads a file relative to the page, so the link also works where Markdown renders without Markupress.
+  // The build fails on a missing file, as on a missing link target.
+  const embedded = new Map<MarkdownNode, { readonly live?: string; readonly code: string }>();
+  for (const node of embeds) {
+    const link = node.children![0]!, ref = link.url ?? '', embed = link.attributes!.embed;
+    if (embed !== true && embed !== 'code' && embed !== 'example') throw new Error(`${options.file}: embed is code or example, as in [${markdownText(link)}](${ref} "{embed=example}").`);
+    if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|[/#?])/.test(ref)) throw new Error(`${options.file}: the embedded file ${ref} is a path relative to the page.`);
+    const file = resolve(dirname(options.file), decodeURIComponent(ref));
+    options.watch?.(file);
+    let text: string;
+    // The file's final line break ends its last line, as a fence's closing line does.
+    try { text = (await readFile(file, 'utf8')).replace(/\r?\n$/, ''); }
+    catch { throw new Error(`${options.file}: the embedded file ${ref} is not readable (${file}).`); }
+    embedded.set(node, embed === 'example'
+      ? { live: dirname(file) === dirname(options.file) ? text : rebaseExample(text, dirname(file), dirname(options.file)), code: await codeBlock(text, 'html', link.attributes, '', '') }
+      : { code: await codeBlock(text, String(link.attributes!.language ?? extname(file).slice(1)), link.attributes, '', markdownText(link)) });
   }
-  return { html: md.renderer.render(tokens, md.options, { highlighted } satisfies RenderEnv), frontmatter: fields, body, headings, hasCode, components };
+  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []));
+  const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
+    .filter(([name]) => ['id', 'class', 'lang', 'dir', 'dataMarkupressExample', 'dataSearchIgnore'].includes(name))
+    .map(([name, value]) => ` ${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}="${escapeHTML(String(value))}"`).join('');
+  const title = (node: MarkdownNode) => markdownText(node.title);
+  const transformers: Record<string, HtmlTransformer> = {
+    code: node => highlighted.get(node),
+    inlineCode: node => `<code>${literal(escapeHTML(node.value ?? ''))}</code>`,
+    heading: (node, context) => {
+      const id = anchors.get(node)!;
+      components.add('ui-icon');
+      const content = context.renderChildren();
+      const label = textContent(parseFragment(content)).replace(/\\([\\{])/g, '$1');
+      // The permalink keeps its keyboard name without repeating it in the heading’s native name.
+      return `<h${node.level} id="${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}">${content}<a class="heading-anchor" href="#${escapeHTML(id)}" aria-label="${literal(escapeHTML(label))}"><ui-icon name="link" aria-hidden="true"></ui-icon></a></h${node.level}>`;
+    },
+    'container:tabs': (node, context) => {
+      if (!node.body?.length || !node.body.every(child => child.type === 'container' && child.subType === 'tab')) return undefined;
+      components.add('ui-tabs');
+      return `<ui-tabs${attributes(node)} group="${escapeHTML(String(node.attributes?.group ?? node.body[0]?.attributes?.group ?? 'tabs'))}">${context.renderChildren()}</ui-tabs>`;
+    },
+    'container:tab': (node, context) => `<section${attributes(node)} aria-label="${escapeHTML(title(node))}">${context.renderChildren()}</section>`,
+    'container:details': (node, context) => `<details${attributes(node)}${node.attributes?.open ? ' open' : ''}><summary${!title(node) && options.uiLanguage ? ` lang="${escapeHTML(options.uiLanguage)}" dir="${textDirection(options.uiLanguage)}"` : ''}>${literal(escapeHTML(title(node) || ui.details))}</summary>${context.renderChildren()}</details>`,
+  };
+  const callout = (tone: string | undefined): HtmlTransformer => (node, context) => {
+    components.add('ui-callout');
+    return `<ui-callout${attributes(node)}${tone ? ` tone="${tone === 'caution' ? 'danger' : tone}"` : ''}${node.title ? ` heading="${escapeHTML(title(node))}"` : ''}>${context.renderChildren()}</ui-callout>`;
+  };
+  for (const tone of ['note', 'tip', 'info', 'important', 'warning', 'danger', 'caution', 'success', 'neutral']) transformers[`container:${tone}`] = callout(tone);
+  // A container with no type is a callout in Looma's default tone.
+  const defaultCallout = callout(undefined);
+  transformers.container = (node, context) => node.subType === undefined ? defaultCallout(node, context) : undefined;
+  const toc: HtmlTransformer = (node, context) => {
+    const depth = Number(node.attributes?.depth ?? 3), format = String(node.attributes?.format ?? 'plain');
+    const list = format === 'numbered' ? 'ol' : format === 'bulleted' ? 'ul' : 'div';
+    const entries = [...anchors].filter(([heading]) => (heading.level ?? 0) <= depth).map(([heading, id]) => {
+      const link = `<a href="#${escapeHTML(id)}">${literal(escapeHTML(markdownText(heading)))}</a>`;
+      return list === 'div' ? `<div role="listitem">${link}</div>` : `<li>${link}</li>`;
+    }).join('');
+    return `<nav data-type="toc" data-format="${escapeHTML(format)}"${attributes(node)}>${node.title ? `<header>${context.render(typeof node.title === 'string' ? { type: 'title', value: node.title } : node.title)}</header>` : ''}<${list} role="list">${entries}</${list}></nav>`;
+  };
+  transformers['container:toc'] = toc;
+  // An embedded example's HTML renders as the page's own HTML does, then its source.
+  transformers.paragraph = (node, context) => {
+    const parts = embedded.get(node);
+    if (!parts) return undefined;
+    const link = node.children![0]!;
+    return parts.live === undefined ? parts.code : `<figure class="example" data-type="example"${attributes(link)}><figcaption>${link.children ? link.children.map(context.render).join('') : literal(escapeHTML(link.value ?? ''))}</figcaption>` +
+      `<div class="example-preview">${parts.live}</div>${parts.code}</figure>`;
+  };
+  transformers['leaf:toc'] = toc;
+  // Component usage passes through as native HTML. External .html definitions are loaded,
+  // bound and rendered later by HTML Next; Expressmark never sees those definitions.
+  const renderOptions: HtmlRenderOptions = { transformers, trustedHtml, headingIds: true, title: false, escapeText: literal };
+  const html = renderHtml(document, renderOptions);
+  // Markdown and authored HTML share one outline in document order. A template defines
+  // another component; its headings, like escaped code examples, are not page headings.
+  const collectHeadings = (node: DefaultTreeAdapterMap['node']): void => {
+    if ('tagName' in node) {
+      if (node.tagName === 'template' || node.attrs.some(attribute => attribute.name === 'data-markupress-example')) return;
+      const id = node.attrs.find(attribute => attribute.name === 'id')?.value;
+      const hidden = node.attrs.some(attribute => attribute.name === 'hidden' || (attribute.name === 'aria-hidden' && attribute.value === 'true')
+        || (attribute.name === 'class' && attribute.value.split(/\s+/).includes('sr-only')));
+      if (hidden) return;
+      if (/^h[1-6]$/.test(node.tagName) && id) {
+        const label = textContent(node).replace(/\\([\\{])/g, '$1');
+        headings.push({ id, href: `#${id}`, label, depth: Number(node.tagName.slice(1)) });
+      }
+    }
+    if ('childNodes' in node) node.childNodes.forEach(collectHeadings);
+  };
+  collectHeadings(parseFragment(html));
+  return { html, frontmatter: fields, body, headings, hasCode: codes.length + embeds.length > 0, components };
 }
 
 export async function compileMarkdown(source: string, options: MarkdownOptions): Promise<CompiledMarkdown> {
@@ -316,25 +470,29 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
   for (const name of blocks) declarations.push(`<link rel="component" href="@threadlabs/looma/components/${name}/${name}.html">`);
   // A folder's index page with front matter only generates the folder's listing, which the layout's loader supplies.
   const generated = isIndex(options.file) && body.trim() === '';
-  // Front matter becomes head declarations and HTMLKit settings in the page's <defs>: HTMLKit owns navigation labels,
+  // Front matter becomes head declarations and MarkupKit settings in the page's <defs>: MarkupKit owns navigation labels,
   // order, visibility, alias routes, the layout choice, and the document head, where the page's entries win over its layout's.
-  const { meta = {}, og = {}, canonical } = fields.head ?? {};
+  const { meta = {}, og = {} } = fields.head ?? {};
+  const canonical = options.canonical ?? fields.head?.canonical;
   // An authored <title> takes the place of the generated one, since a definition declares one title.
   const head = (metadata.some(item => item.startsWith('<title')) ? '' : `<title>${literal(escapeHTML(options.documentTitle?.(title) ?? title))}</title>`) + (fields.description === undefined ? '' : `<meta name="description" content="${escapeHTML(fields.description)}">`) +
-    `<meta name="hk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="hk:navigation" content="hidden">' : '') +
-    (fields.order === undefined ? '' : `<meta name="hk:order" content="${fields.order}">`) +
-    aliases.map(alias => `<meta name="hk:alias" content="${escapeHTML(alias)}">`).join('') +
-    (fields.redirectFrom ?? []).map(path => `<meta name="hk:redirect-from" content="${escapeHTML(path)}">`).join('') +
-    (fields.layout === undefined ? '' : `<meta name="hk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
+    `<meta name="mk:label" content="${escapeHTML(title)}">` + (fields.navigation === 'hidden' ? '<meta name="mk:navigation" content="hidden">' : '') +
+    (fields.order === undefined ? '' : `<meta name="mk:order" content="${fields.order}">`) +
+    aliases.map(alias => `<meta name="mk:alias" content="${escapeHTML(alias)}">`).join('') +
+    (fields.redirectFrom ?? []).map(path => `<meta name="mk:redirect-from" content="${escapeHTML(path)}">`).join('') +
+    (fields.layout === undefined ? '' : `<meta name="mk:layout" content="${fields.layout === false ? 'none' : escapeHTML(fields.layout)}">`) +
     Object.entries(meta).map(([name, content]) => `<meta name="${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
     Object.entries(og).map(([name, content]) => `<meta property="og:${escapeHTML(name)}" content="${escapeHTML(String(content))}">`).join('') +
-    (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`);
+    (canonical === undefined ? '' : `<link rel="canonical" href="${escapeHTML(canonical)}">`) +
+    (options.alternates ?? []).map(link => `<link rel="alternate" hreflang="${literal(escapeHTML(link.hreflang))}" href="${literal(escapeHTML(link.href))}">`).join('');
   const [from, to] = fields.outline === false ? [0, -1] : fields.outline ?? [2, 3];
   const css = [...(options.styles ?? []).map(file => `@import "${pathToFileURL(file).href}";`), ...imports].join('');
   const styles = css ? `<style>${stylesheet(css, options.file, true).css}</style>` : '';
+  const lang = fields.lang, dir = fields.dir ?? (lang === undefined ? undefined : textDirection(lang));
+  const language = (lang === undefined ? '' : ` lang="${escapeHTML(lang)}"`) + (dir === undefined ? '' : ` dir="${dir}"`);
   return { title, aliases, generated, sections: searchSections(fragment), ...(fields.id === undefined ? {} : { id: fields.id }),
     frontmatter: fields, outline: headings.filter(heading => heading.depth >= from && heading.depth <= to),
-    resource: `<meta name="hk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose">${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
+    resource: `<meta name="mk:page" content="${escapeHTML(options.pageName)}">\n${declarations.join('\n')}\n<template component="${escapeHTML(options.pageName)}"${hasCode ? ' controller="markupress/controllers/code.js"' : ''}><defs>${head}${metadata.join('')}</defs><article class="markupress-prose"${language}>${generated ? `<h1>${literal(escapeHTML(title))}</h1>` : ''}${article}</article>${styles}</template>\n` };
 }
 
 /**
@@ -344,11 +502,15 @@ export async function compileMarkdown(source: string, options: MarkdownOptions):
 const inline = new Set(['a', 'abbr', 'b', 'code', 'del', 'em', 'i', 'ins', 'kbd', 'mark', 's', 'small', 'span', 'strong', 'sub', 'sup', 'u']);
 function searchSections(fragment: DefaultTreeAdapterMap['documentFragment']): SearchSection[] {
   const sections = [{ id: '', heading: '', text: '' }];
+  const ignored = (node: DefaultTreeAdapterMap['element']) => node.attrs.some(attr => attr.name === 'data-search-ignore');
+  const headingText = (node: DefaultTreeAdapterMap['node']): string => 'value' in node ? node.value
+    : 'tagName' in node && ignored(node) ? ' ' : 'childNodes' in node ? node.childNodes.map(headingText).join('') : '';
   const visit = (node: DefaultTreeAdapterMap['node']): void => {
     if ('value' in node && node.nodeName === '#text') { sections.at(-1)!.text += node.value; return; }
     if (!('tagName' in node) || ['template', 'style', 'script'].includes(node.tagName) || node.attrs.some(attr => attr.name === 'class' && attr.value === 'code-actions')) return;
+    if (ignored(node)) { sections.at(-1)!.text += ' '; return; }
     const id = /^h[1-6]$/.test(node.tagName) ? node.attrs.find(attr => attr.name === 'id')?.value : undefined;
-    if (id !== undefined) { sections.push({ id, heading: textContent(node), text: '' }); return; }
+    if (id !== undefined) { sections.push({ id, heading: headingText(node), text: '' }); return; }
     for (const child of node.childNodes) visit(child);
     // Block boundaries separate words that the HTML runs together.
     if (!inline.has(node.tagName)) sections.at(-1)!.text += ' ';
@@ -368,7 +530,7 @@ const only = (node: Node, tag: string): node is Element => element(node, 'p') &&
 /**
  * A home page (`layout: home`) is read from its Markdown structure, so it reads the same as plain Markdown anywhere.
  * Everything before the first h2 is the hero: its h1 is the title, a paragraph of only links is its actions (the first
- * one primary), an image alone in its paragraph is its image, and the rest is its tagline. Each h2 starts a feature card
+ * one primary), an image or an element marked data-hero-media is its media, and the rest is its tagline. Each h2 starts a feature card
  * that holds everything up to the next h2.
  */
 function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string, components: Set<string>): string {
@@ -377,17 +539,17 @@ function home(fragment: DefaultTreeAdapterMap['documentFragment'], title: string
     if (element(node, 'h2')) features.push([node]);
     else (features.at(-1) ?? hero).push(node);
   }
-  // Looma Markdown renders an image alone in its paragraph as a block image, with no paragraph.
-  const actions = hero.find(node => only(node, 'a')), image = hero.find(node => element(node, 'img') || only(node, 'img'));
+  // An image may be a standalone node or the only content of its paragraph.
+  const actions = hero.find(node => only(node, 'a')), image = hero.find(node => ('tagName' in node && node.attrs.some(attr => attr.name === 'data-hero-media')) || element(node, 'img') || only(node, 'img'));
   // Markdown puts text in blocks, so the fragment's own text nodes are only the space between them.
   const outer = (nodes: readonly Node[]) => nodes.map(node => 'tagName' in node ? serializeOuter(node) : '').join('');
   const heading = hero.some(node => element(node, 'h1')) ? '' : `<h1>${literal(escapeHTML(title))}</h1>`;
   const buttons = (actions && 'childNodes' in actions ? actions.childNodes : []).filter(child => element(child, 'a')).map((link, index) =>
-    `<ui-button as="a" href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" size="lg">${serialize(link)}</ui-button>`).join('');
+    `<ui-button href="${escapeHTML(link.attrs.find(attr => attr.name === 'href')?.value ?? '')}" variant="${index === 0 ? 'solid' : 'outline'}" tone="${index === 0 ? 'accent' : 'neutral'}" size="lg">${serialize(link)}</ui-button>`).join('');
   if (buttons) components.add('ui-cluster').add('ui-button');
   if (features.length > 0) components.add('ui-grid').add('ui-card');
   return `<header class="hero"><div class="hero-text">${heading}${outer(hero.filter(node => node !== actions && node !== image))}` +
-    (buttons ? `<ui-cluster class="actions" gap="m">${buttons}</ui-cluster>` : '') + '</div>' +
+    (buttons ? `<div class="actions"><ui-cluster gap="m">${buttons}</ui-cluster></div>` : '') + '</div>' +
     (image ? `<div class="hero-image">${element(image, 'p') ? serialize(image) : outer([image])}</div>` : '') + '</header>' +
     (features.length === 0 ? '' : `<ui-grid class="features" min="md">${features.map(nodes => `<ui-card as="section">${outer(nodes)}</ui-card>`).join('')}</ui-grid>`);
 }

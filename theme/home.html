@@ -1,29 +1,53 @@
+<link rel="component" href="@threadlabs/looma/components/ui-callout/ui-callout.html">
+<link rel="component" href="@threadlabs/looma/components/ui-icon-button/ui-icon-button.html">
+<link rel="component" href="@threadlabs/looma/components/ui-icon/ui-icon.html">
 <link rel="component" href="./chrome.html">
 <!-- The home layout (front matter layout: home): the shell's top navigation and footer around a full-width page, which
      Markupress reads as a hero and feature cards. A site's app/layouts/home.html replaces it. -->
 <template component="markupress-home" controller="../dist/controllers/shell.js">
 <defs>
+<prop name="ui" type="object({ skipToContent: string, mainNavigation: string, navigation: string, documentation: string, sections: string, versions: string, documentationVersions: string, languages: string, appearance: string, appearanceHint: string, noAppearanceChoices: string, automatic: string, light: string, dark: string, removeNotice: string, overview: string, search: string, searchLabel: string, searching: string, noResults: string, searchUnavailable: string, previous: string, next: string, pages: string, breadcrumb: string, onThisPage: string, editThisPage: string, lastUpdated: string, currentVersion: string, versionUnavailable: string, translationUnavailable: string, untranslatedContent: string, codeWrap: string, codeCopy: string, codeCopied: string, codeCopyFailed: string, details: string, searchResults: object({ zero: string, one: string, two: string, few: string, many: string, other: string }) })" required>Resolved reader interface strings</prop>
+<prop name="fallbackNotice" type="string" default="">Notice for source content in the selected locale</prop>
+<prop name="uiLang" type="string" default="en">Language of the reader interface</prop>
+<prop name="noticeLabel" type="string" default="">Accessible name for dismissing the header notice</prop>
+
 <title>{$title}</title>
 <!-- A null favicon leaves the link out. -->
 <link rel="icon" from:href="$favicon">
 <prop name="title" type="string" required>Site title</prop>
+<prop name="locales" type="list(object({ href: string, label: string, lang: string, current: string, note: string }))" default="[]">Language links for the selected document and version</prop>
+
 <prop name="home" type="string" required>Home URL</prop>
 <prop name="logo" type="object({ light: string, dark: string })">Logo images for the light and dark themes</prop>
 <prop name="favicon" type="string">Site icon URL</prop>
 <prop name="badge" type="string" default="">Badge beside the title</prop>
+<prop name="headerNotice" type="string" default="">Removable status chip before search</prop>
+<prop name="hosted" type="object({ appId: string, apiKey: string, indexName: string, filters: string, limit: number, timeout: number, debounce: number, language: string, version: string, base: string, home: string, prefix: string, defaultVersion: boolean, excludedHomes: list(string), origin: string })">Contextual hosted search settings</prop>
+<prop name="searchOptions" type="object({ limit: number, fuzzy: number, prefix: boolean })" default='{"limit":20,"fuzzy":0.2,"prefix":true}'>Local search matching options</prop>
 <prop name="search" type="string" default="">The URL of the version's search index</prop>
 <prop name="nav" type="list(object({ label: string, href: string, current: string, icon: string }))" required>Top navigation: the sections, then the configured links</prop>
 <prop name="footer" type="object({ columns: list(object({ title: string, items: list(object({ label: string, href: string, current: string })) })), copyright: string })" required>Footer link columns and copyright</prop>
-<state name="dark" type="boolean" value="false"></state></defs>
-<div class="site"><a class="skip" href="#documentation-content">Skip to content</a>
-<markupress-header from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:nav="$nav" from:search="$search" from:dark="$dark"></markupress-header>
-<main id="documentation-content" tabindex="-1"><slot name="page"></slot></main>
+<state name="appearance" type="string" value="automatic"></state>
+<state name="appearanceReady" type="boolean" value="false"></state></defs>
+<div class="site" from:lang="$uiLang"><a class="skip" href="#documentation-content">{$ui.skipToContent}</a>
+<markupress-header from:ui="$ui" from:ui-lang="$uiLang" from:notice-label="$noticeLabel" from:locales="$locales" from:title="$title" from:home="$home" from:logo="$logo" from:badge="$badge" from:header-notice="$headerNotice" from:nav="$nav" from:search="$search" from:search-options="$searchOptions" from:hosted="$hosted" from:appearance="$appearance" from:appearance-ready="$appearanceReady">
+<ui-icon-button $if="$nav.length" slot="menu" from:label="$ui.navigation" variant="ghost" tone="neutral" popovertarget="home-navigation"><ui-icon name="menu"></ui-icon></ui-icon-button></markupress-header>
+<nav $if="$nav.length" id="home-navigation" popover from:aria-label="$ui.sections"><ul><li $each="item of $nav"><a from:href="$item.href" from:aria-current="$item.current"><template $match><img $when="$item.icon" class="nav-icon" from:src="$item.icon" from:alt="$item.label"><template $else>{$item.label}</template></template></a></li></ul></nav>
+<main id="documentation-content" tabindex="-1"><ui-callout $if="$fallbackNotice" tone="note">{$fallbackNotice}</ui-callout><slot name="page"></slot></main>
+<markupress-language-links $if="$locales.length > 1 or ($locales.length = 1 and $locales[0].current = 'false')" from:label="$ui.languages" from:locales="$locales"></markupress-language-links>
 <markupress-footer $if="$footer.columns.length or $footer.copyright" from:footer="$footer"></markupress-footer></div>
 <style>
-:host { display: block; background: var(--ui-surface); color: var(--ui-text); font: 1rem/1.7 var(--markupress-font, system-ui, sans-serif); min-height: 100vh; }
-.site { display: flex; flex-direction: column; min-height: 100vh; }
+:host { display: flex; flex-direction: column; background: var(--ui-surface-content); color: var(--ui-text); font: var(--ui-font-size-md)/var(--ui-line-height-relaxed) var(--ui-font-sans); min-height: 100vh; }
 main { flex: 1; inline-size: 100%; max-inline-size: var(--markupress-home-width, 75rem); margin-inline: auto; padding: 2rem 1.5rem 4rem; }
-.skip { position: absolute; top: .5rem; left: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-accent); z-index: 3; } .skip:focus { transform: none; }
-:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+.skip { position: absolute; top: .5rem; inset-inline-start: 1rem; transform: translateY(-200%); padding: .5rem 1rem; background: var(--ui-surface); color: var(--ui-link-color, var(--ui-accent)); z-index: 3; } .skip:focus { transform: none; }
+:focus-visible { outline: 2px solid var(--ui-focus-ring, var(--ui-accent)); outline-offset: 3px; }
+/* The home layout has sections but no documentation sidebar. Native popover owns its mobile drawer. */
+#home-navigation { inset-block: 0; inset-inline: 0 auto; block-size: 100%; max-block-size: none; inline-size: min(20rem, 85vw); margin: 0; padding: 1rem; border: 0; border-inline-end: 1px solid var(--ui-border); background: var(--ui-surface-sunken); color: var(--ui-text); }
+#home-navigation::backdrop { background: rgb(0 0 0 / .4); }
+#home-navigation ul { display: grid; gap: var(--ui-space-1); padding: 0; margin: 0; list-style: none; }
+#home-navigation a { display: block; padding: var(--ui-nav-compact-padding-block) var(--ui-nav-compact-padding-inline); border-radius: var(--ui-selection-radius); color: inherit; text-decoration: none; }
+#home-navigation a:is(:hover, [aria-current="page"], [aria-current="true"]) { background: var(--ui-selection-surface); color: var(--ui-selection-text); }
+.nav-icon { display: block; block-size: 1.25rem; inline-size: auto; }
+@media (min-width: 64rem) { #home-navigation { display: none; } }
 @media (max-width: 768px) { main { padding: 1rem 1rem 3rem; } }
 </style></template>

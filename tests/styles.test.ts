@@ -10,7 +10,7 @@ it('resolves CSS imports and asset URLs without changing comments, remote URLs o
   expect(parsed.css).toContain('data:image/svg+xml,test');
 });
 
-it('leaves @/ imports and URLs, from the project root, for HTMLKit to resolve', () => {
+it('leaves @/ imports and URLs, from the project root, for MarkupKit to resolve', () => {
   const parsed = stylesheet('@import "@/app/styles/page.css"; .logo { background: url("@/public/logo.svg"); }', '/project/docs/guide/page.md', true);
   expect(parsed.css).toBe('@import "@/app/styles/page.css"; .logo { background: url("@/public/logo.svg"); }');
   expect(parsed.files).toEqual([]);

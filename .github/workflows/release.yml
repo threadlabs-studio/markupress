@@ -1,12 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      approve:
-        description: Publish the reviewed immutable versions
-        required: true
-        type: boolean
 
 permissions:
   contents: write
@@ -18,11 +15,13 @@ concurrency:
 
 jobs:
   publish:
-    if: inputs.approve
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: npm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -32,7 +31,8 @@ jobs:
       - run: npm install --global --ignore-scripts --force corepack@0.34.7
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
+      - run: node scripts/release.mjs prepare
       - run: pnpm verify:release
-      - run: node scripts/release.mjs
+      - run: node scripts/release.mjs publish
         env:
           GH_TOKEN: ${{ github.token }}

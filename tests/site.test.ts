@@ -9,9 +9,27 @@ import { lastUpdated } from '../src/git.js';
 import { markdown } from '../src/markdown.js';
 import { buildSite, siteOptions } from '../src/site.js';
 import { themeScript } from '../src/theme.js';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/markupkit';
 
 const roots: string[] = [];
+
+it('uses unversioned current links and semantic version paths for historical documentation', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'versions/1.2.3/docs/index.md', '# Previous release');
+  await write(root, 'versions/1.2.3/docs/guide/install.md', '# Previous installation');
+  const application = await createApplication(siteOptions({ root, base: '/manual/',
+    versions: [{ id: 'current', directory: 'docs' }, { id: '1.2.3', directory: 'versions/1.2.3/docs' }] }));
+  try {
+    const current = (await application.render('/manual/guide/install/')).html;
+    expect(current).toContain('href="/manual/guide/install/"');
+    expect(current).not.toContain('/v/current/');
+    expect((await application.render('/manual/')).html).not.toContain('Previous installation');
+    const legacy = (await application.render('/manual/v/1.2.3/guide/install/')).html;
+    expect(legacy).toContain('Previous installation');
+    expect(legacy).toContain('href="/manual/v/1.2.3/guide/install/"');
+    expect(legacy).not.toContain('/v/current/');
+  } finally { await application.close(); }
+}, 30_000);
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 async function write(root: string, file: string, text: string) { await mkdir(dirname(join(root, file)), { recursive: true }); await writeFile(join(root, file), text); }
 async function fixture() {
@@ -23,13 +41,13 @@ async function fixture() {
   return root;
 }
 
-it('routes Markdown pages through HTMLKit with version-local links and served assets', async () => {
+it('routes Markdown pages through MarkupKit with version-local links and served assets', async () => {
   const root = await fixture(); await linkDependencies(root);
   const application = await createApplication(siteOptions({ root, base: '/manual/' }));
   try {
-    expect(application.routes.map(route => route.pattern)).toEqual(expect.arrayContaining(['/v/current/', '/v/current/guide/install/', '/', '/guide/install/']));
-    expect((await application.render('/manual/')).html).toContain('href="/manual/v/current/guide/install/"');
-    expect((await application.render('/manual/v/current/guide/install/')).html).toMatch(/src="\/manual\/_htmlkit\/files\/[0-9a-f]{16}-mark\.svg"/);
+    expect(application.routes.map(route => route.pattern)).toEqual(expect.arrayContaining(['/', '/guide/install/']));
+    expect((await application.render('/manual/')).html).toContain('href="/manual/guide/install/"');
+    expect((await application.render('/manual/guide/install/')).html).toMatch(/src="\/manual\/_markupkit\/files\/[0-9a-f]{16}-mark\.svg"/);
     expect([...application.files.values()]).toEqual([await realpath(join(root, 'docs/mark.svg'))]);
   } finally { await application.close(); }
   // Markdown compiles in memory; nothing is written beside the content.
@@ -48,7 +66,7 @@ it('rejects missing local document links with the original source location', asy
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow(/broken\.md.*missing\.md/s);
 });
 
-it('builds a static site using the installed HTMLKit package and native navigation', async () => {
+it('builds a static site using the installed MarkupKit package and native navigation', async () => {
   const root = await fixture();
   // The disposable consumer resolves package resources from the installed dependency tree.
   await linkDependencies(root);
@@ -56,11 +74,23 @@ it('builds a static site using the installed HTMLKit package and native navigati
   const result = await buildSite({ root, base: '/manual/' });
   const page = await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8');
   expect(page).toContain('<title data-component-head="">Installation | Documentation</title>');
-  expect(page).toContain('href="/manual/v/current/guide/install/"');
-  expect(page).toMatch(/<nav aria-label="Documentation"[^>]*>/);
+  expect(page).toContain('href="/manual/guide/install/"');
+  expect(page).toMatch(/<nav\b[^>]*aria-label="Documentation"[^>]*>/);
   expect(page).not.toContain('Hidden document');
   expect(await readFile(join(result.outDir, 'guide/hidden/index.html'), 'utf8')).toContain('Hidden document');
-  expect((await readdir(join(result.outDir, '_htmlkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
+  expect((await readdir(join(result.outDir, '_markupkit/files'))).some(name => name.endsWith('-mark.svg'))).toBe(true);
+}, 30_000);
+
+it('leaves draft pages out of a build unless the drafts option includes them', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/01.guide/03.draft.md', '---\ndraft: true\n---\n# Unfinished page');
+  const result = await buildSite({ root, origin: 'https://docs.example' });
+  await expect(stat(join(result.outDir, 'guide/draft/index.html'))).rejects.toThrow();
+  expect(await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8')).not.toContain('Unfinished page');
+  expect(await readFile(join(result.outDir, '_search.json'), 'utf8')).not.toContain('Unfinished page');
+  expect(await readFile(join(result.outDir, 'sitemap.xml'), 'utf8')).not.toContain('/guide/draft/');
+  const staging = await buildSite({ root, outDir: 'staging', drafts: true });
+  expect(await readFile(join(staging.outDir, 'guide/draft/index.html'), 'utf8')).toContain('Unfinished page');
 }, 30_000);
 
 it('switches an aliased URL using the document identity and marks its canonical navigation entry', async () => {
@@ -68,36 +98,46 @@ it('switches an aliased URL using the document identity and marks its canonical 
   await write(root, 'docs/01.guide/02.install.md', '---\nid: install\naliases: [/start/]\n---\n# Install');
   const application = await createApplication(siteOptions({ root, versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] }));
   try {
-    const html = (await application.render('/v/current/start/')).html;
+    const html = (await application.render('/start/')).html;
     expect(html).toContain('href="/v/v1/guide/install/"');
-    expect(html).toContain('href="/v/current/guide/install/" aria-current="page"');
+    expect(html).toContain('href="/guide/install/" aria-current="page"');
   } finally { await application.close(); }
 });
 
 it('renders shared blocks with the Looma components the page links', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/blocks.md', '# Blocks\n\n::: warning Breaking {x}\nBack up {first}.\n:::\n\n> [!TIP]\n> Alerts too.\n\n::: details More\nHidden\n:::\n\n::: code-group\n```sh title="pnpm"\npnpm add x\n```\n\n```sh title="npm"\nnpm install x\n```\n:::');
+  await write(root, 'docs/blocks.md', '# Blocks\n\n::: warning [Breaking {x}]\nBack up {first}.\n:::\n\n::: tip\nAlerts too.\n:::\n\n::: details [More]\nHidden\n:::\n\n::: tab [pnpm] {group="code-group"}\n```sh\npnpm add x\n```\n:::\n\n::: tab [npm] {group="code-group"}\n```sh\nnpm install x\n```\n:::');
   const application = await createApplication(siteOptions({ root }));
   try {
     const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
-    expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="[^"]*">Back up \{first\}\.<\/p>/s);
-    expect(html).toMatch(/data-component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="[^"]*">Alerts too\.<\/p>/s);
+    expect(html).toMatch(/<div role="note" component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="[^"]*">Back up \{first\}\.<\/p>/s);
+    expect(html).toMatch(/ component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="[^"]*">Alerts too\.<\/p>/s);
     expect(html).toContain('<details><summary>More</summary>');
     // Without JavaScript every panel shows; Tabs adds its tab list and hides the others when it connects.
-    expect(html).toMatch(/data-component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="[^"]*">.*<section aria-label="npm" data-slotted="[^"]*">/s);
+    expect(html).toMatch(/ component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="[^"]*">.*<section aria-label="npm" data-slotted="[^"]*">/s);
   } finally { await application.close(); }
 }, 30_000);
 
 it('passes the lineNumbers default through to Markdown pages', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'docs/code.md', '# Code\n\n```ts\nconst a = 1;\n```\n\n```ts :no-line-numbers\nconst b = 2;\n```');
+  await write(root, 'docs/code.md', '# Code\n\n```ts\nconst a = 1;\n```\n\n```ts {show-line-numbers=false}\nconst b = 2;\n```');
   const application = await createApplication(siteOptions({ root, lineNumbers: true }));
   try {
     expect([...(await application.render('/code/')).html.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.includes('line-numbers'))).toEqual([true, false]);
   } finally { await application.close(); }
 }, 30_000);
 
-it('renders front matter head metadata, a named HTMLKit layout, and no layout', async () => {
+it('passes the markdownSyntax default through to Markdown pages', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/indented.md', '# Indented\n\n    code');
+  const application = await createApplication(siteOptions({ root, markdownSyntax: 'compatible' }));
+  try {
+    expect((await application.render('/indented/')).html).toContain('<pre');
+  } finally { await application.close(); }
+  expect(() => siteOptions({ root, markdownSyntax: 'commonmark' } as never)).toThrow('The markdownSyntax option is standard or compatible: commonmark.');
+}, 30_000);
+
+it('renders front matter head metadata, a named MarkupKit layout, and no layout', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/seo.md', '---\ndescription: Search engines.\nhead:\n  og: { title: SEO }\n  canonical: https://example.com/seo/\n---\n# SEO');
   await write(root, 'docs/bare.md', '---\nlayout: false\n---\n# Bare');
@@ -110,10 +150,10 @@ it('renders front matter head metadata, a named HTMLKit layout, and no layout', 
     for (const element of ['<meta name="description" content="Search engines." data-component-head="">', '<meta property="og:title" content="SEO" data-component-head="">', '<link rel="canonical" href="https://example.com/seo/" data-component-head="">']) expect(head).toContain(element);
     const bare = (await application.render('/bare/')).html;
     expect(bare).toContain('Bare');
-    expect(bare).not.toContain('data-component="markupress-shell"');
+    expect(bare).not.toContain('component="markupress-shell"');
     const wide = (await application.render('/wide/')).html;
     expect(wide).toContain('class="wide"');
-    expect(wide).not.toContain('data-component="markupress-shell"');
+    expect(wide).not.toContain('component="markupress-shell"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -136,14 +176,14 @@ it('replaces the shell with the site\'s app/layouts/default.html, which receives
   await write(root, 'docs/01.guide/_layout.server.js', 'export function load({ parent }) { return { props: { section: String(parent.markupress.navigation.length) } }; }');
   const application = await createApplication(siteOptions({ root }));
   try {
-    const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
-    expect(html).not.toContain('data-component="markupress-shell"');
+    const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
+    expect(html).not.toContain('component="markupress-shell"');
     expect(html).toContain('<header class="site">Installation</header>');
-    expect(html).toContain('href="/v/current/guide/install/"');
+    expect(html).toContain('href="/guide/install/"');
     expect(html).toMatch(/<ol class="crumbs">.*Welcome.*Installation.*<\/ol>/s);
     expect(html).toMatch(/<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/);
     expect(html).toContain('<a class="edit" href="https://example.com/edit/install.md">Edit</a>');
-    expect(html).toMatch(/<a class="previous" href="\/v\/current\/">Welcome<\/a>/);
+    expect(html).toMatch(/<a class="previous" href="\/">Welcome<\/a>/);
     expect(html).toMatch(/<section class="guide"[^>]* data-pages="2"[^>]*>.*Install/s);
   } finally { await application.close(); }
 }, 30_000);
@@ -155,18 +195,19 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
   // The folder's index page labels, orders and collapses the folder.
   await write(root, 'docs/02.components/02.layout/index.md', '---\ntitle: Layout\norder: 0\nnavigation: collapsed\n---\n# Layout components');
   await write(root, 'docs/editor.md', '---\norder: 1\n---\n# Editor\n\n## Tables');
-  const sidebar = (html: string) => /<nav aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const sidebar = (html: string) => /<nav\b[^>]*aria-label="Documentation"[^>]*>(.*?)<\/nav>/s.exec(html.replace(/<!--[^>]*-->|<\?[^>]*>/g, ''))![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   const application = await createApplication(siteOptions({ root }));
   try {
     // order 1 orders editor.md as 01.editor.md would: tied with 01.guide, and before it by name.
-    expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Stack forms Button');
-    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->/g, '').replace(/>\s+</g, '><');
-    expect(sidebar(button)).toBe('Layout Stack forms Button');
-    // A collapsed group stays closed unless it holds the current page.
-    // A folder with an index page is that page's node, so its summary links to the page.
-    expect(button).toMatch(/<details(?![^>]* open)[^>]*><summary[^>]*><a href="\/v\/current\/components\/layout\/"[^>]*>Layout<\/a><\/summary>/);
-    expect(button).toMatch(/<details[^>]* open=""[^>]*><summary[^>]*>(?:<[^>]*>)*forms</);
-    expect(button).toContain('href="/v/current/components/forms/button/" aria-current="page"');
+    expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Layout overview Stack forms Button');
+    const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/>\s+</g, '><');
+    expect(sidebar(button)).toBe('Layout Layout overview Stack forms Button');
+    expect(button.match(/ component="ui-disclosure"/g)).toHaveLength(2);
+    expect(button).toContain('<span class="summary">Layout</span>');
+    expect(button).toContain('<span class="summary">forms</span>');
+    expect(button).toContain('Layout overview');
+    expect(button).toContain('href="/components/layout/"');
+    expect(button).toContain('href="/components/forms/button/" aria-current="page"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -180,25 +221,28 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
   await write(root, 'docs/03.loose/page.md', '# Loose page');
   for (const file of ['logo.svg', 'logo-dark.svg', 'favicon.svg', 'github.svg']) await write(root, `public/${file}`, '<svg xmlns="http://www.w3.org/2000/svg"/>');
   await write(root, 'docs/_footer.md', '## Docs\n\n- [Home](/)\n- [Proposal](https://nextwebwg.org/)\n\n## Project\n\n- [GitHub](https://github.com/example)\n\nCopyright 2026 Example.\n');
-  const application = await createApplication(siteOptions({ root, base: '/docs/', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
+  const application = await createApplication(siteOptions({ root, base: '/docs/', headerNotice: 'Preview', nav: [{ label: 'GitHub', href: 'https://github.com/example', icon: '/github.svg' }] }));
   try {
     const html = (await application.render('/docs/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
     expect(/<head>.*<\/head>/s.exec(html)![0]).toContain('<link rel="icon" href="/docs/favicon.svg" data-component-head="">');
-    expect(html).toMatch(/<a class="brand" href="\/docs\/"><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*>Documentation<\/a>/);
+    expect(html).toMatch(/<a class="brand-link"[^>]* href="\/docs\/"[^>]*><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
+    expect(html).toContain('aria-label="Remove Preview"');
     // One version shows no badge.
-    expect(html).not.toContain('data-component="ui-badge"');
-    const top = /<nav class="top"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
+    expect(html).not.toContain('component="ui-badge"');
+    const top = /<nav class="navigation"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
-    expect(top).toBe('<ul><li><a href="/docs/v/current/components/" aria-current="false">Components</a></li><li><a href="/docs/v/current/guide/" aria-current="true">Guide</a></li>' +
-      '<li><a href="https://github.com/example" aria-current="false"><img src="/docs/github.svg" alt="GitHub"></a></li></ul>');
-    expect(html).toMatch(/<footer[^>]*>.*<strong>Docs<\/strong>.*href="\/docs\/v\/current\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
+    expect([...top.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*aria-current="([^"]+)"[^>]*>/g)].map(match => [match[1],match[2]])).toEqual([
+      ['/docs/components/','false'], ['/docs/guide/','true'], ['https://github.com/example','false'],
+    ]);
+    expect(top).toMatch(/<img[^>]*src="\/docs\/github.svg"[^>]*alt="GitHub"/);
+    expect(html).toMatch(/<footer[^>]*>.*<strong>Docs<\/strong>.*href="\/docs\/".*Home.*Proposal.*<strong>Project<\/strong>.*GitHub.*<p>Copyright 2026 Example\.<\/p><\/footer>/s);
     // _footer.md is no page.
     expect((await application.render('/docs/_footer/')).status).toBe(404);
     // The outline is plain fragment links, so it works without JavaScript; its controller tracks the heading in view.
     expect(html).toMatch(/<nav aria-labelledby="markupress-outline-title"[^>]*>.*<li data-depth="2"><a href="#requirements">Requirements<\/a><\/li><li data-depth="3"><a href="#node">Node<\/a><\/li>/s);
     // The sidebar is a native popover, opened on narrow screens by the menu button with no script.
-    expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation">/);
-    expect(html).toMatch(/<button popovertarget="documentation-navigation"/);
+    expect(html).toMatch(/<aside id="documentation-navigation" popover="" aria-label="Documentation" data-sidebar="">/);
+    expect(html).toMatch(/<button\b[^>]* popovertarget="documentation-navigation"/);
   } finally { await application.close(); }
 }, 30_000);
 
@@ -206,11 +250,11 @@ it('renders no logo, icon or missing pager link when the shell receives null for
   const root = await fixture(); await linkDependencies(root);
   const application = await createApplication(siteOptions({ root }));
   try {
-    const first = (await application.render('/')).html.replace(/<!--[^>]*-->/g, '');
-    const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->/g, '');
+    const first = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
+    const last = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     for (const html of [first, last]) {
       expect(html).not.toContain('rel="icon"');
-      expect(html).toMatch(/<a class="brand" href="\/">Documentation<\/a>/);
+      expect(html).toMatch(/<a class="brand-link"[^>]* href="\/"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
     }
     expect(first).not.toContain('rel="prev"');
     expect(first).toMatch(/<a [^>]*rel="next"/);
@@ -225,10 +269,10 @@ it('lets the logo and favicon options override public/, and shows the selected v
   const application = await createApplication(siteOptions({ root, logo: '/mark.svg', favicon: '/icon.png',
     versions: [{ id: 'current', label: 'Next', directory: 'docs' }, { id: 'v1', label: 'Version 1', directory: 'docs' }] }));
   try {
-    const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->/g, '');
+    const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     expect(html).toContain('<link rel="icon" href="/icon.png" data-component-head="">');
     expect(html).toMatch(/<img class="logo logo-light"[^>]* src="\/mark.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/mark.svg"/);
-    expect(html).toMatch(/data-component="ui-badge"[^>]*>.*Version 1/s);
+    expect(html).toMatch(/ component="ui-badge"[^>]*>.*Version 1/s);
     // No folder holds pages and no links are configured, so there is no top navigation.
     expect(html).not.toContain('<nav class="top"');
     expect(html).not.toContain('<footer');
@@ -238,7 +282,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
 it('rejects unknown options and a malformed _footer.md', async () => {
   const root = await fixture(); await linkDependencies(root);
   for (const name of ['sidebar', 'social', 'footer', 'layout', 'versionBadge']) {
-    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are root, contentDir, base, origin, robots, outDir, title, versions, defaultVersion, host, port, lineNumbers, logo, favicon, nav, editLink, titleTemplate, lang.`);
+    expect(() => siteOptions({ root, [name]: {} } as never)).toThrow(`Unknown Markupress option ${name}. Options are translations, dateFormat, locales, defaultLocale, localeFallback, search, root, contentDir, base, origin, robots, outDir, title, headerNotice, sidebarNavigation, versions, defaultVersion, host, port, lineNumbers, markdownSyntax, logo, favicon, nav, editLink, titleTemplate, lang, drafts.`);
   }
   await write(root, 'docs/_footer.md', '- [Home](/)\n');
   let application = await createApplication(siteOptions({ root }));
@@ -255,17 +299,17 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
   try {
     const missing = await application.render('/nowhere/');
     expect(missing.status).toBe(404);
-    expect(missing.html).toContain('data-component="markupress-shell"');
+    expect(missing.html).toContain(' component="markupress-shell"');
     expect(missing.html).toContain('<title data-component-head="">Page not found | Documentation</title>');
-    expect(missing.html).toContain('href="/v/current/guide/install/"');
-    // The not-found page is no page of its version, so it stays out of navigation and /v/current/404/ is missing too.
-    expect(application.routes.map(route => route.pattern)).not.toContain('/v/current/404/');
-    expect((await application.render('/v/current/404/')).status).toBe(404);
+    expect(missing.html).toContain('href="/guide/install/"');
+    // The not-found page is no page of its version, so it stays out of navigation and /404/ is missing too.
+    expect(application.routes.map(route => route.pattern)).not.toContain('/404/');
+    expect((await application.render('/404/')).status).toBe(404);
     expect((await application.render('/')).html).not.toContain('Page not found');
   } finally { await application.close(); }
   const result = await buildSite({ root });
   const page = await readFile(join(result.outDir, '404.html'), 'utf8');
-  expect(page).toContain('data-component="markupress-shell"');
+  expect(page).toContain(' component="markupress-shell"');
   expect(page).toContain('Page not found');
 }, 30_000);
 
@@ -278,33 +322,33 @@ it('renders a folder index page with an empty body as a list of its pages and fo
   await write(root, 'docs/02.components/03.secret.md', '---\nnavigation: hidden\n---\n# Secret');
   await write(root, 'docs/02.components/04.(More)/menu.md', '# Menu');
   const application = await createApplication(siteOptions({ root }));
-  const list = (html: string) => /<ul class="contents"[^>]*>(.*?)<\/ul>/s.exec(html.replace(/<!--[^>]*-->/g, ''))?.[1];
+  const list = (html: string) => /<ul class="contents"[^>]*>(.*?)<\/ul>/s.exec(html.replace(/<!--[^>]*-->|<\?[^>]*>/g, ''))?.[1];
   try {
     const html = (await application.render('/components/')).html;
     expect(html).toMatch(/<article class="markupress-prose"[^>]*><h1>Components<\/h1><\/article>/);
     // Direct children in navigation order: a folder by its index page, pages, and a route group's pages; hidden pages stay out.
-    expect(list(html)!.replace(/ data-[\w-]+="[^"]*"/g, '')).toBe('<li><a href="/v/current/components/forms/">Forms</a><p>Form controls.</p></li>' +
-      '<li><a href="/v/current/components/button/">Button</a><p>Starts an action.</p></li><li><a href="/v/current/components/menu/">Menu</a></li>');
+    expect(list(html)!.replace(/ data-[\w-]+="[^"]*"/g, '')).toBe('<li><a href="/components/forms/">Forms</a><p>Form controls.</p></li>' +
+      '<li><a href="/components/button/">Button</a><p>Starts an action.</p></li><li><a href="/components/menu/">Menu</a></li>');
     // The folder is a page at its own URL in the sidebar and the breadcrumbs.
-    expect(list((await application.render('/v/current/components/forms/')).html)).toContain('href="/v/current/components/forms/input/"');
+    expect(list((await application.render('/components/forms/')).html)).toContain('href="/components/forms/input/"');
     expect(list((await application.render('/components/button/')).html)).toBeUndefined();
-    expect((await application.render('/components/button/')).html).toMatch(/data-component="hk-breadcrumbs".*?<a href="\/v\/current\/components\/"[^>]*>Components<\/a>/s);
+    expect((await application.render('/components/button/')).html).toMatch(/ component="mk-breadcrumbs".*?<a href="\/components\/"[^>]*>Components<\/a>/s);
   } finally { await application.close(); }
 }, 30_000);
 
-it('composes the site\'s htmlkit.config plugins and options with Markupress', async () => {
+it('composes the site\'s markupkit.config plugins and options with Markupress', async () => {
   const root = await fixture(); await linkDependencies(root);
-  await write(root, 'htmlkit.config.js', "export default { base: '/kit/', plugins: [{ name: 'extra', buildEnd: context => context.writeFile('extra.txt', context.base) }] };");
+  await write(root, 'markupkit.config.js', "export default { base: '/kit/', plugins: [{ name: 'extra', buildEnd: context => context.writeFile('extra.txt', context.base) }] };");
   const result = await buildSite({ root });
   expect(await readFile(join(result.outDir, 'extra.txt'), 'utf8')).toBe('/kit/');
-  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/kit/v/current/guide/install/"');
-  // A Markupress base wins over HTMLKit's, and markupress() is the command's to add.
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/kit/guide/install/"');
+  // A Markupress base wins over MarkupKit's, and markupress() is the command's to add.
   expect((await buildSite({ root, base: '/docs/' })).routes).toContain('/docs/guide/install/');
-  await write(root, 'htmlkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
+  await write(root, 'markupkit.config.js', "export default { plugins: [{ name: 'markupress' }] };");
   await expect(buildSite({ root })).rejects.toThrow('remove markupress() from its plugins');
 }, 60_000);
 
-it('carries HTMLKit\'s generated Content Security Policy, which hashes the theme script and takes a site\'s csp sources', async () => {
+it('carries MarkupKit\'s generated Content Security Policy, which hashes the theme script and takes a site\'s csp sources', async () => {
   const root = await fixture(); await linkDependencies(root);
   const hash = (script: string) => `'sha256-${createHash('sha256').update(script).digest('base64')}'`;
   const policy = async () => /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(await readFile(join((await buildSite({ root })).outDir, 'index.html'), 'utf8'))?.[1];
@@ -312,7 +356,7 @@ it('carries HTMLKit\'s generated Content Security Policy, which hashes the theme
   // An analytics snippet: app/head.js loads it, and the site's csp option allows its origin.
   const snippet = "document.head.append(Object.assign(document.createElement('script'), { src: 'https://analytics.example/script.js', defer: true }));\n";
   await write(root, 'app/head.js', snippet);
-  await write(root, 'htmlkit.config.js', "export default { csp: { 'script-src': ['https://analytics.example'] } };");
+  await write(root, 'markupkit.config.js', "export default { csp: { 'script-src': ['https://analytics.example'] } };");
   expect(await policy()).toBe(`script-src 'self' ${hash(themeScript)} ${hash(snippet)} https://analytics.example; object-src 'none'; base-uri 'none'`);
 }, 60_000);
 
@@ -324,9 +368,12 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
   try {
     const rendered = await application.render('/intro/');
     expect(rendered.status).toBe(200);
-    const html = rendered.html.replace(/<!--[^>]*-->/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
-    // The crumbs and pager items have HTMLKit's group field, which the shell's open item types accept.
-    expect(html).toMatch(/<details open=""><summary><span>Getting started<\/span><\/summary><ul><li[^>]*><a href="\/v\/current\/intro\/" aria-current="page">Intro<\/a>/);
+    const html = rendered.html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
+    // The crumbs and pager items have MarkupKit's group field, which the shell's open item types accept.
+    expect(rendered.html).toContain(' component="ui-disclosure"');
+    expect(html).toContain('<span class="summary">Getting started</span>');
+    expect(html).toContain('href="/intro/" aria-current="page"');
+    expect(rendered.html).toContain('class="native"');
     expect(html).toMatch(/rel="next"[^>]*>.*Setup/s);
   } finally { await application.close(); }
 }, 30_000);
@@ -339,15 +386,15 @@ it('renders layout: home in the home layout, with the top navigation and footer 
   const application = await createApplication(siteOptions({ root, title: 'Example' }));
   try {
     const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
-    expect(html).toContain('data-component="markupress-home"');
-    expect(html).not.toContain('data-component="markupress-shell"');
-    expect(html).toMatch(/<nav class="top"[^>]*><ul><li[^>]*><a href="\/v\/current\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
-    expect(html).toMatch(/<a href="\/v\/current\/guide\/install\/"[^>]*data-component="ui-button"[^>]*>.*Install/s);
-    expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
+    expect(html).toContain(' component="markupress-home"');
+    expect(html).not.toContain('component="markupress-shell"');
+    expect(html).toMatch(/<nav class="navigation"[^>]*><a[^>]*href="\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
+    expect(html).toMatch(/<a\b(?=[^>]*href="\/guide\/install\/")(?=[^>]* component="ui-button")[^>]*>.*Install/s);
+    expect(html).toMatch(/ component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
-    for (const absent of ['id="documentation-navigation"', 'data-component="hk-breadcrumbs"', 'data-component="hk-pager"', 'On this page']) expect(html).not.toContain(absent);
+    for (const absent of ['id="documentation-navigation"', 'component="mk-breadcrumbs"', 'component="mk-pager"', 'component="markupress-outline"']) expect(html).not.toContain(absent);
     // Other pages keep the shell.
-    expect((await application.render('/guide/install/')).html).toContain('data-component="markupress-shell"');
+    expect((await application.render('/guide/install/')).html).toContain(' component="markupress-shell"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -359,7 +406,7 @@ it('lets a site\'s app/layouts/home.html replace the home layout', async () => {
   try {
     const html = (await application.render('/')).html;
     expect(html).toMatch(/<div class="site-home"[^>]*>.*<header class="hero">/s);
-    expect(html).not.toContain('data-component="markupress-home"');
+    expect(html).not.toContain('component="markupress-home"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -401,7 +448,7 @@ it('dates each page by the last commit touching its file, from one git log, and 
   expect(Object.fromEntries(await lastUpdated(root, ['docs']))).toEqual({ 'docs/01.guide/02.install.md': '2026-03-04', 'docs/01.index.md': '2026-01-02', 'docs/mark.svg': '2026-01-02' });
   application = await createApplication(siteOptions({ root }));
   try {
-    expect((await application.render('/guide/install/')).html).toContain('Last updated <time datetime="2026-03-04">2026-03-04</time>');
+    expect((await application.render('/guide/install/')).html).toContain('Last updated <time datetime="2026-03-04">March 4, 2026</time>');
     expect(updated((await application.render('/')).html)).toBe('2026-01-02');
     expect(updated((await application.render('/guide/new/')).html)).toBeUndefined();
   } finally { await application.close(); }
@@ -414,11 +461,11 @@ it('resolves root-relative Markdown links within the site under its base, like t
   const result = await buildSite({ root, base: '/looma-next/', versions: [{ id: 'current', directory: 'docs' }, { id: 'v1', directory: 'docs' }] });
   const html = await readFile(join(result.outDir, 'index.html'), 'utf8');
   const links = [...html.matchAll(/<a href="([^"]*)"[^>]*>(?:Install|Install now|Report|Remote)<\/a>/g)].map(match => match[1]);
-  expect(links).toEqual(['/looma-next/v/current/guide/install/', '/looma-next/v/current/guide/install/#install', expect.stringMatching(/^\/looma-next\/_htmlkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
+  expect(links).toEqual(['/looma-next/guide/install/', '/looma-next/guide/install/#install', expect.stringMatching(/^\/looma-next\/_markupkit\/files\/[0-9a-f]{16}-report\.pdf$/), 'https://example.com/']);
   // Every root-relative page link reaches a built page under the base, in each version.
-  for (const version of ['current', 'v1']) {
-    expect(await readFile(join(result.outDir, `v/${version}/index.html`), 'utf8')).toContain(`href="/looma-next/v/${version}/guide/install/"`);
-    await stat(join(result.outDir, `v/${version}/guide/install/index.html`));
+  for (const prefix of ['', 'v/v1/']) {
+    expect(await readFile(join(result.outDir, `${prefix}index.html`), 'utf8')).toContain(`href="/looma-next/${prefix}guide/install/"`);
+    await stat(join(result.outDir, `${prefix}guide/install/index.html`));
   }
   // markdown() alone resolves them from the site's base.
   await write(root, 'app/pages/index.md', '# Plain\n\n[Install](/guide/install/)');
@@ -426,13 +473,13 @@ it('resolves root-relative Markdown links within the site under its base, like t
   try { expect((await plain.render('/kit/')).html).toContain('href="/kit/guide/install/"'); } finally { await plain.close(); }
 }, 60_000);
 
-it('passes origin and robots to HTMLKit, which writes sitemap.xml and robots.txt', async () => {
+it('passes origin and robots to MarkupKit, which writes sitemap.xml and robots.txt', async () => {
   const root = await fixture(); await linkDependencies(root);
   const result = await buildSite({ root, base: '/docs/', origin: 'https://example.com', robots: true });
   // The root serves the default version; its /v/<id>/ copy is an alias, out of the sitemap, that names the root page as canonical.
   const sitemap = await readFile(join(result.outDir, 'sitemap.xml'), 'utf8');
   expect(sitemap).toContain('<loc>https://example.com/docs/guide/install/</loc>'); expect(sitemap).not.toContain('/v/current/');
-  expect(await readFile(join(result.outDir, 'v/current/guide/install/index.html'), 'utf8')).toContain('<link rel="canonical" href="https://example.com/docs/guide/install/">');
+  await expect(stat(join(result.outDir, 'v/current'))).rejects.toThrow();
   expect(await readFile(join(result.outDir, 'guide/install/index.html'), 'utf8')).not.toContain('rel="canonical"');
   expect(await readFile(join(result.outDir, 'robots.txt'), 'utf8')).toContain('Sitemap: https://example.com/docs/sitemap.xml');
 }, 60_000);
@@ -450,19 +497,19 @@ it('resolves a Markdown page\'s @/ component link from the project root, at the 
   await write(root, 'app/components/root-card.html', '<template component="root-card"><p>Card from the root</p></template>');
   await write(root, 'docs/01.guide/03.card.md', '# Card\n\n<link rel="component" href="@/app/components/root-card.html">\n\n<root-card></root-card>');
   const result = await buildSite({ root });
-  for (const page of ['guide/card/index.html', 'v/current/guide/card/index.html']) expect(await readFile(join(result.outDir, page), 'utf8')).toContain('Card from the root');
+  for (const page of ['guide/card/index.html']) expect(await readFile(join(result.outDir, page), 'utf8')).toContain('Card from the root');
 }, 60_000);
 
 it('resolves extensionless relative links as pages, whatever their number prefixes, and rejects a missing one', async () => {
-  const root = await fixture();
+  const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Install](./install) [Install by file](./02.install.md#install) [Guide](../01.guide/) [Home](../) [Reference](../reference) [Options](../reference/options/)');
   await write(root, 'docs/02.reference/index.md', '---\ntitle: Reference\n---\n');
   await write(root, 'docs/01.guide/index.md', '---\ntitle: Guide\n---\n');
   await write(root, 'docs/02.reference/01.options.md', '# Options');
   const application = await createApplication(siteOptions({ root }));
   try {
-    const html = (await application.render('/v/current/guide/setup/')).html;
-    for (const href of ['/v/current/guide/install/', '/v/current/guide/install/#install', '/v/current/guide/', '/v/current/', '/v/current/reference/', '/v/current/reference/options/'])
+    const html = (await application.render('/guide/setup/')).html;
+    for (const href of ['/guide/install/', '/guide/install/#install', '/guide/', '/', '/reference/', '/reference/options/'])
       expect(html).toContain(`href="${href}"`);
   } finally { await application.close(); }
   await write(root, 'docs/01.guide/03.setup.md', '# Setup\n\n[Gone](./gone)');
@@ -476,7 +523,7 @@ it('titles each page with the titleTemplate option, ":title | <site title>" by d
     try { return /<title[^>]*>([^<]*)<\/title>/.exec((await application.render(path)).html)?.[1]; } finally { await application.close(); }
   };
   expect(await title({ title: 'Docs' }, '/guide/install/')).toBe('Installation | Docs');
-  expect(await title({ title: 'Docs' }, '/v/current/')).toBe('Docs');
+  expect(await title({ title: 'Docs' }, '/')).toBe('Docs');
   expect(await title({ title: 'Docs', titleTemplate: ':title · Docs' }, '/guide/install/')).toBe('Installation · Docs');
   expect(await title({ titleTemplate: false }, '/guide/install/')).toBe('Installation');
   expect(() => siteOptions({ root, titleTemplate: 'Docs' })).toThrow('The titleTemplate option places each page\'s title with :title: Docs.');
@@ -489,7 +536,7 @@ it('sets <html lang> from the lang option on every page and version, and from a 
   const application = await createApplication(siteOptions({ root, lang: 'fr' }));
   const lang = async (path: string) => /<html lang="([^"]*)"/.exec((await application.render(path)).html)?.[1];
   try {
-    for (const path of ['/', '/guide/install/', '/v/current/guide/install/', '/nowhere/']) expect(await lang(path)).toBe('fr');
+    for (const path of ['/', '/guide/install/', '/guide/install/', '/nowhere/']) expect(await lang(path)).toBe('fr');
     expect(await lang('/guide/deutsch/')).toBe('de');
   } finally { await application.close(); }
   expect(() => siteOptions({ root, lang: 'French!' })).toThrow('The lang option is a language tag such as fr or pt-BR: French!.');
@@ -505,8 +552,8 @@ it('drops, relabels and retargets the pager links from previous and next front m
     return [...html.matchAll(/<a [^>]*rel="(prev|next)"[^>]*>[\s\S]*?<\/a>/g)].map(match => [match[1], /href="([^"]*)"/.exec(match[0])![1], match[0].replace(/<[^>]*>/g, '').trim()]);
   };
   try {
-    expect(await pager('/v/current/guide/setup/')).toEqual([['prev', '/v/current/guide/install/', expect.stringContaining('Back to installing')]]);
-    expect(await pager('/v/current/guide/last/')).toEqual([['next', '/v/current/', expect.stringContaining('Home')]]);
+    expect(await pager('/guide/setup/')).toEqual([['prev', '/guide/install/', expect.stringContaining('Back to installing')]]);
+    expect(await pager('/guide/last/')).toEqual([['next', '/', expect.stringContaining('Home')]]);
   } finally { await application.close(); }
   await write(root, 'docs/01.guide/04.last.md', '---\nnext: { label: "" }\n---\n# Last');
   await expect(createApplication(siteOptions({ root }))).rejects.toThrow('04.last.md: front matter next must be false, or a mapping of label and href.');
@@ -517,27 +564,177 @@ it('writes each version\'s search index, and the default version\'s at the root,
   await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\n---\nIntro {text}.\n\n## Requirements\n\nNode 22 or `24`.\n\n```sh\nnpm install\n```');
   const result = await buildSite({ root, base: '/docs/' });
   const index = async (path: string) => JSON.parse(await readFile(join(result.outDir, path), 'utf8')) as { page: string; heading: string; href: string; text: string }[];
-  const current = await index('v/current/_search.json');
+  const current = await index('_search.json');
   expect(current).toEqual(expect.arrayContaining([
-    { page: 'Installation', heading: 'Installation', href: '/docs/v/current/guide/install/', text: 'Intro {text}.' },
-    { page: 'Installation', heading: 'Requirements', href: '/docs/v/current/guide/install/#requirements', text: 'Node 22 or 24. npm install' }]));
+    { page: 'Installation', heading: 'Installation', href: '/docs/guide/install/', text: 'Intro {text}.' },
+    { page: 'Installation', heading: 'Requirements', href: '/docs/guide/install/#requirements', text: 'Node 22 or 24. npm install' }]));
   // The root's index links the root's own pages.
   expect((await index('_search.json')).map(entry => entry.href)).toContain('/docs/guide/install/#requirements');
   // Generated files are no pages: the sitemap and navigation leave them out.
   expect(result.routes.some(route => route.includes('_search'))).toBe(false);
 }, 60_000);
 
+it('omits excluded pages from search while keeping their routes and navigation', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/excluded.md', '---\nsearch: false\n---\n# Excluded\n\nUnindexed phrase.');
+  const result = await buildSite({ root });
+  expect(await readFile(join(result.outDir, '_search.json'), 'utf8')).not.toContain('Unindexed phrase');
+  expect(await readFile(join(result.outDir, 'excluded/index.html'), 'utf8')).toContain('Unindexed phrase');
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).toContain('href="/excluded/"');
+}, 60_000);
+
+it('disables search UI and index generation and passes validated search options to the theme', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  const result = await buildSite({ root, search: false });
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).not.toContain('component="markupress-search"');
+  await expect(stat(join(result.outDir, '_search.json'))).rejects.toThrow();
+  const application = await createApplication(siteOptions({ root, search: { limit: 5, fuzzy: false, prefix: false } }));
+  try {
+    const html = (await application.render('/')).html;
+    expect(html).toContain('data-markupress-search-prop-options=');
+    expect(html).toContain('&quot;limit&quot;:5');
+  } finally { await application.close(); }
+}, 60_000);
+
+it('rejects invalid search configuration rather than silently ignoring it', () => {
+  for (const search of [true, null, [], { limit: 0 }, { limit: 1.5 }, { fuzzy: 2 }, { fuzzy: true }, { prefix: 'yes' }, { unknown: true }]) {
+    expect(() => siteOptions({ search } as never)).toThrow(/search/);
+  }
+});
+
 it('redirects a page\'s redirectFrom paths to it in each version, with redirect pages in the build', async () => {
   const root = await fixture(); await linkDependencies(root);
   await write(root, 'docs/01.guide/02.install.md', '---\ntitle: Installation\nredirectFrom: [/setup/, /old/install/]\n---\n# Install');
   const application = await createApplication(siteOptions({ root }));
   try {
-    for (const [from, to] of [['/setup/', '/guide/install/'], ['/v/current/old/install/', '/v/current/guide/install/']]) {
+    for (const [from, to] of [['/setup/', '/guide/install/'], ['/old/install/', '/guide/install/']]) {
       const response = await application.fetch(new Request(`http://localhost${from}`));
       expect([response.status, response.headers.get('location')]).toEqual([308, to]);
     }
   } finally { await application.close(); }
   const result = await buildSite({ root });
   expect(await readFile(join(result.outDir, 'setup/index.html'), 'utf8')).toContain('/guide/install/');
-  expect(await readFile(join(result.outDir, 'v/current/old/install/index.html'), 'utf8')).toContain('/v/current/guide/install/');
+  await expect(stat(join(result.outDir, 'v/current/old/install/index.html'))).rejects.toThrow();
 }, 60_000);
+
+
+it('lets a section hide documentation navigation while a child page can opt back in', async () => {
+  const root = await fixture(); await linkDependencies(root);
+  await write(root, 'docs/workspace/index.md', '---\nsidebar: false\n---\n# Workspace');
+  await write(root, 'docs/workspace/edit.md', '# Edit');
+  await write(root, 'docs/workspace/reference.md', '---\nsidebar: true\n---\n# Reference');
+  await write(root, 'docs/customize.md', '---\nsidebar: false\n---\n# Customize');
+  const app = await createApplication(siteOptions({ root }));
+  try {
+    for (const path of ['/workspace/', '/workspace/edit/', '/customize/']) {
+      const html = (await app.render(path)).html;
+      expect(html).not.toMatch(/<nav[^>]*aria-label="Documentation"/);
+      expect(html).toContain('aria-label="Sections"');
+    }
+    for (const path of ['/workspace/reference/', '/guide/install/']) expect((await app.render(path)).html).toMatch(/<nav[^>]*aria-label="Documentation"/);
+  } finally { await app.close(); }
+}, 30_000);
+
+it('isolates locale/version routes and search, and switches renamed translations by identity', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-locales-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const version of ['docs', 'versions/v1/docs']) {
+    await write(root, `${version}/en/index.md`, '# English home');
+    await write(root, `${version}/en/install.md`, '---\nid: setup\n---\n# English installation\n\nEnglish only');
+    await write(root, `${version}/fr/index.md`, '# Accueil');
+    await write(root, `${version}/fr/demarrer.md`, '---\nid: setup\n---\n# Installation française\n\nFrançais seulement');
+    await write(root, `${version}/ar/index.md`, '# البداية');
+  }
+  await write(root, 'docs/en/404.md', '# English not found');
+  const application = await createApplication(siteOptions({ root, base: '/manual/', locales: {
+    en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية', dir: 'rtl' },
+  }, defaultLocale: 'en' }));
+  try {
+    const html = (await application.render('/manual/fr/v/v1/demarrer/')).html;
+    expect(html).not.toContain('hreflang="ar"');
+    expect(html).toContain('hreflang="en"');
+    expect(html).toContain('hreflang="fr"');
+    expect(html).toContain('<html lang="fr" dir="ltr">');
+    expect(html).toContain('href="/manual/v/v1/install/"');
+    expect(html).not.toContain('href="/manual/ar/v/v1/"');
+    expect(html).toContain('href="/manual/fr/demarrer/"');
+    expect(html).toContain('/manual/fr/v/v1/_search.json');
+    expect(html).not.toContain('English installation');
+    expect((await application.render('/manual/ar/')).html).toContain('<html lang="ar" dir="rtl">');
+    expect((await application.render('/manual/absent/')).html).not.toContain('class="languages"');
+    expect((await application.render('/manual/ar/absent/')).html).toContain('<html lang="en" dir="ltr">');
+    const index = JSON.stringify(application.generated.get('/manual/fr/v/v1/_search.json')?.contents);
+    expect(index).toContain('Français seulement');
+    expect(index).not.toContain('English only');
+    expect(index).toContain('/manual/fr/v/v1/demarrer/');
+    const rootIndex = JSON.stringify(application.generated.get('/manual/fr/_search.json')?.contents);
+    expect(rootIndex).toContain('/manual/fr/demarrer/');
+  } finally { await application.close(); }
+  await write(root, 'docs/fr/autre.md', '---\nid: setup\n---\n# Autre installation');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }))).rejects.toThrow(/identity collision:.*autre\.md.*demarrer\.md|identity collision:.*demarrer\.md.*autre\.md/);
+}, 30_000);
+
+it('rejects ambiguous or escaping locale content folders and unknown defaults', async () => {
+  const root = await fixture();
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English' } }, defaultLocale: 'fr' }))).rejects.toThrow('Unknown defaultLocale: fr');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '..' } } }))).rejects.toThrow('directory must stay inside its version');
+  await expect(createApplication(siteOptions({ root, locales: { en: { label: 'English', directory: '.' }, fr: { label: 'Français' } } }))).rejects.toThrow('Locale directories overlap');
+});
+
+it('localizes reader controls, code labels, dates and locale chrome while inferring native direction', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-ui-locales-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const [locale, title] of [['en', 'Home'], ['fr', 'Accueil'], ['ar', 'البداية']]) {
+    await write(root, `docs/${locale}/index.md`, '# ' + title);
+    await write(root, `docs/${locale}/guide.md`, '---\nid: guide\n---\n# Guide\n\n## Examples\n\n```js\nconst value = 1;\n```\n\n::: details\nMore\n:::');
+  }
+  execFileSync('git', ['init', '--quiet'], { cwd: root });
+  execFileSync('git', ['add', 'docs'], { cwd: root });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '--quiet', '-m', 'Documentation'],
+    { cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: '2026-10-28T12:00:00Z', GIT_COMMITTER_DATE: '2026-10-28T12:00:00Z' } });
+  const application = await createApplication(siteOptions({ root, base: '/manual/', title: 'Global title', editLink: 'https://example.com/edit/',
+    translations: { codeCopy: 'Copy code' }, locales: { en: { label: 'English' }, fr: { label: 'Français', title: 'Documentation française',
+      nav: [{ label: 'Projet', href: 'https://example.fr/' }], editLink: 'https://example.fr/edit/', translations: { codeCopy: 'Copier ce code' } }, ar: { label: 'العربية' } } }));
+  try {
+    const french = (await application.render('/manual/fr/guide/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(french).toContain('>Aller au contenu</a>'); expect(french).toMatch(/<input[^>]*aria-label="Rechercher dans la documentation"/);
+    expect(french).toContain('>Copier ce code</button>'); expect(french).toContain('>Détails</summary>'); expect(french).toContain('aria-label="Apparence: Automatique"'); expect(french).toContain('>Précédent</small>');
+    expect(french).toContain('Documentation française'); expect(french).toContain('href="https://example.fr/edit/docs/fr/guide.md"');
+    expect(french).toContain('datetime="2026-10-28">28 octobre 2026</time>'); expect(french).toContain('Dernière mise à jour');
+    const arabic = (await application.render('/manual/ar/guide/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '');
+    expect(arabic).toContain('<html lang="ar" dir="rtl">'); expect(arabic).toMatch(/<input[^>]*aria-label="البحث في التوثيق"/);
+    expect(arabic).toContain('>التفاف السطور</button>'); expect(arabic).toContain('>Copy code</button>');
+  } finally { await application.close(); }
+}, 30_000);
+
+it('emits reciprocal canonical language alternates for available identities within their native version mounts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-locale-head-')); roots.push(root);
+  await write(root, 'package.json', '{"type":"module"}'); await linkDependencies(root);
+  for (const folder of ['docs', 'versions/v1/docs']) {
+    for (const locale of ['en', 'fr', 'ar']) await write(root, `${folder}/${locale}/index.md`, '# Home');
+    await write(root, `${folder}/en/install.md`, '---\nid: setup\n---\n# Install');
+    await write(root, `${folder}/fr/demarrer.md`, '---\nid: setup\n---\n# Démarrer');
+  }
+  const application = await createApplication(siteOptions({ root, base: '/manual/', origin: 'https://docs.example',
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }));
+  const alternates = (html: string) => [...html.matchAll(/<link\b[^>]*rel="alternate"[^>]*>/g)]
+    .map(([tag]) => [/(?:\s)hreflang="([^"]*)"/.exec(tag)?.[1], /(?:\s)href="([^"]*)"/.exec(tag)?.[1]]);
+  try {
+    const current = [['en', 'https://docs.example/manual/install/'], ['fr', 'https://docs.example/manual/fr/demarrer/'], ['x-default', 'https://docs.example/manual/install/']];
+    expect(alternates((await application.render('/manual/install/')).html)).toEqual(current);
+    expect(alternates((await application.render('/manual/fr/demarrer/')).html)).toEqual(current);
+    const alias = (await application.render('/manual/install/')).html;
+    expect(alias).toContain('href="https://docs.example/manual/install/"');
+    expect(alternates(alias)).toEqual(current);
+    expect(alternates((await application.render('/manual/fr/v/v1/demarrer/')).html)).toEqual([
+      ['en', 'https://docs.example/manual/v/v1/install/'], ['fr', 'https://docs.example/manual/fr/v/v1/demarrer/'], ['x-default', 'https://docs.example/manual/v/v1/install/'],
+    ]);
+  } finally { await application.close(); }
+  await write(root, 'docs/fr/demarrer.md', '---\nid: setup\nhead: { canonical: ../commencer/ }\n---\n# Démarrer');
+  const canonical = await createApplication(siteOptions({ root, base: '/manual/', origin: 'https://docs.example',
+    locales: { en: { label: 'English' }, fr: { label: 'Français' }, ar: { label: 'العربية' } } }));
+  try {
+    expect(alternates((await canonical.render('/manual/install/')).html)).toContainEqual(['fr', 'https://docs.example/manual/fr/commencer/']);
+    expect(alternates((await canonical.render('/manual/fr/demarrer/')).html)).toContainEqual(['fr', 'https://docs.example/manual/fr/commencer/']);
+  } finally { await canonical.close(); }
+}, 30_000);

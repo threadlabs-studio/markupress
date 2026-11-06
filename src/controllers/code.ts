@@ -20,9 +20,9 @@ export default function code(host: ComponentHost): void {
         pre.classList.toggle('wrap', wrap);
         return;
       }
-      void window.navigator.clipboard.writeText(pre.textContent ?? '').then(() => 'Copied', () => 'Copy failed').then(label => {
+      void Promise.resolve().then(() => window.navigator.clipboard.writeText(pre.textContent ?? '')).then(() => button.dataset.codeLabelCopied ?? 'Copied', () => button.dataset.codeLabelFailed ?? 'Copy failed').then(label => {
         button.textContent = label;
-        window.setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+        window.setTimeout(() => { button.textContent = button.dataset.codeLabelCopy ?? 'Copy'; }, 2000);
       });
     };
     root.addEventListener('click', click);

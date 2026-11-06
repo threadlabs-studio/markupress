@@ -4,9 +4,9 @@
 
 - README.md and checked-in plans define the product; threadlabs.config.json defines repository ownership. CLAUDE.md imports this file.
 - Markupress is a public MIT documentation product, published as the unscoped npm package `markupress`.
-- HTMLKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
+- MarkupKit owns routing, general navigation, rendering, and browser adoption. Markupress owns Markdown, documentation versions, navigation labels and policy, and its Looma theme.
 - Use the public HTML Next proposal for declarative component semantics. Do not introduce another component parser or runtime.
-- When Markupress exposes an HTMLKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
+- When Markupress exposes an MarkupKit or HTML Next defect, reproduce and fix it in the owning package with independent regression coverage. Remove consumer workarounds before delivery.
 - Keep document identity, URL paths, and component names separate. Preserve code examples literally and resolve dependency links relative to their original source.
 
 ## Implementation
@@ -22,6 +22,7 @@
 
 - Preserve unrelated changes and never rewrite pushed history without explicit authorization.
 - Preview Foundation plans and review their exact digest, ownership, modules, and verification cost before application.
+- The release workflow and runner are locally owned for the merge-triggered paired-package release policy.
 - Check ownership before editing. Change Foundation templates for managed paths; preserve local paths and stop on ambiguous ownership.
 - Use a single agent and the current model by default. Cross-model review is off unless explicitly requested. Keep automatic PR babysitting enabled.
 - Keep plans under docs/plans and durable verified learnings under docs/solutions. Record execution progress outside plan documents.
@@ -32,4 +33,14 @@
 - Run focused tests and `corepack pnpm verify:inner` during development; run `corepack pnpm verify:pr` before handoff. Report results, skips, and remaining judgment.
 - Exercise packed installed consumers rather than relying on workspace resolution.
 - Run one foreground Playwright runner per repository with `--workers=1` locally.
-- Publish only through the protected, human-approved release workflow. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.
+- Merges to main trigger the release workflow automatically. It verifies a source-specific snapshot, advances the patch when no larger version is declared, and publishes through the npm environment with trusted publishing. Do not request per-release human approval or publish locally. The 0.0.1 npm reservation is immutable; a baseline scaffold is not a product release.
+
+- Use minimum-version ranges for Threadlabs and Nextwebwg dependencies without a
+  speculative 1.0 or later major-version ceiling. Lockfiles record exact tested
+  resolutions. Restrict a range only for a demonstrated API requirement or verified
+  incompatible release, and record the reason.
+
+- The public documentation URL is `https://threadlabs.studio/markupress/`. Keep the
+  `/markupress/` base and `https://threadlabs.studio` origin in the website config.
+  GitHub Pages is the upstream host for the Threadlabs website proxy; use the
+  Threadlabs URL in public links, package metadata, and generated site metadata.

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 /**
  * Copies the starter site into a new folder: `npm create markupress@latest <folder>`. The starter's package.json depends
- * on the Markupress release this package shares its version with, and on the HTML Next and Looma it pins.
+ * on the Markupress release this package shares its version with, and on the required HTML Next artifact and compatible Looma versions.
  */
 const template = fileURLToPath(new URL('./template', import.meta.url));
 const folder = process.argv[2] ?? 'docs';

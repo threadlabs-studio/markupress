@@ -1,11 +1,17 @@
 // Public exports are introduced with implemented, verified product behavior.
 export { defineConfig, loadConfig } from './config.js';
 export { compileMarkdown } from './content.js';
-export type { CompiledMarkdown, FrontMatter, MarkdownOptions, OutlineItem } from './content.js';
+export type { CompiledMarkdown, FrontMatter, LanguageAlternate, MarkdownOptions, OutlineItem } from './content.js';
 export { markdown } from './markdown.js';
 export type { MarkdownPluginOptions } from './markdown.js';
 export type { Link, NavItem, SidebarNode } from './navigation.js';
 export { buildSite, devSite, markupress, previewSite, siteOptions } from './site.js';
-export type { DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
+export type { DocumentationLocale, DocumentationPage, DocumentationVersion, MarkupressOptions } from './site.js';
 export { snapshotVersion, versionLinks } from './versions.js';
 export type { VersionLink } from './versions.js';
+export type { LocalSearchOptions } from './search.js';
+
+export type { Translations, TranslationOverrides } from './i18n.js';
+
+export type { SearchOptions } from './search-config.js';
+export type { AlgoliaSearchOptions } from './algolia.js';

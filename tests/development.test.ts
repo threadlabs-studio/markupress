@@ -10,10 +10,12 @@ it('rebuilds edited and removed Markdown pages through the development server', 
   await mkdir(join(root, 'docs')); await writeFile(join(root, 'package.json'), '{"type":"module"}');
   await writeFile(join(root, 'docs/index.md'), '# Original');
   await writeFile(join(root, 'docs/old.md'), '# Removed');
+  await writeFile(join(root, 'docs/draft.md'), '---\ndraft: true\n---\n# Draft');
   await linkDependencies(root);
   const server = await devSite({ root, port: 0 });
   try {
     expect(await (await fetch(server.url)).text()).toContain('Original');
+    expect(await (await fetch(server.url + 'draft/')).text()).toContain('Draft');
     await writeFile(join(root, 'docs/index.md'), '# Changed');
     await expect.poll(async () => (await fetch(server.url)).text(), { timeout: 5000 }).toContain('Changed');
     await rm(join(root, 'docs/old.md'));
@@ -22,3 +24,39 @@ it('rebuilds edited and removed Markdown pages through the development server', 
     await expect(stat(join(root, '.markupress'))).rejects.toThrow();
   } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
 }, 15000);
+
+it('refreshes translation metadata after identity swaps, failed discoveries, additions and removals', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'markupress-dev-locales-'));
+  const page = (id: string, title: string) => `---\nid: ${id}\n---\n# ${title}`;
+  const put = (locale: string, name: string, text: string) => writeFile(join(root, 'docs', locale, name + '.md'), text);
+  for (const locale of ['en', 'fr']) {
+    await mkdir(join(root, 'docs', locale), { recursive: true });
+    await put(locale, 'index', '# Home');
+    await put(locale, 'a', page('first', locale + ' first'));
+    await put(locale, 'b', page('second', locale + ' second'));
+  }
+  await writeFile(join(root, 'package.json'), '{"type":"module"}'); await linkDependencies(root);
+  const server = await devSite({ root, port: 0, base: '/manual/', origin: 'https://docs.example', locales: { en: { label: 'English' }, fr: { label: 'Français' } } });
+  const frenchAlternate = async () => {
+    const response = await fetch(server.url + 'a/');
+    if (!response.ok) return `HTTP ${response.status}`;
+    return /<link rel="alternate" hreflang="fr" href="([^"]*)"/.exec(await response.text())?.[1];
+  };
+  try {
+    expect(await frenchAlternate()).toBe('https://docs.example/manual/fr/a/');
+    await Promise.all([put('fr', 'a', page('second', 'Français second')), put('fr', 'b', page('first', 'Français first'))]);
+    await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/b/');
+    await put('fr', 'b', '---\nid: {}\n---\n# Invalid');
+    await expect.poll(async () => (await fetch(server.url + 'a/')).status, { timeout: 5000 }).toBe(500);
+    await put('fr', 'b', page('first', 'Recovered'));
+    // The alternate URL is unchanged by recovery, so it alone cannot prove that generation finished.
+    await expect.poll(async () => (await fetch(server.url + 'fr/b/')).text(), { timeout: 5000 }).toContain('Recovered');
+    await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/b/');
+    await rm(join(root, 'docs/fr/b.md'));
+    await expect.poll(async () => (await fetch(server.url + 'fr/b/')).status, { timeout: 5000 }).toBe(404);
+    await expect.poll(frenchAlternate, { timeout: 5000 }).toBeUndefined();
+    await put('fr', 'renamed', page('first', 'Added translation'));
+    await expect.poll(async () => (await fetch(server.url + 'fr/renamed/')).text(), { timeout: 5000 }).toContain('Added translation');
+    await expect.poll(frenchAlternate, { timeout: 5000 }).toBe('https://docs.example/manual/fr/renamed/');
+  } finally { await server.close(); await rm(root, { recursive: true, force: true }); }
+}, 30_000);

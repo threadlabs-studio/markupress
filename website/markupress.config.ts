@@ -2,8 +2,10 @@ import { defineConfig } from 'markupress';
 
 export default defineConfig({
   title: 'Markupress',
+  locales: { en: { label: 'English' } },
+  defaultLocale: 'en',
   base: '/markupress/',
-  origin: 'https://threadlabs-studio.github.io',
+  origin: 'https://threadlabs.studio',
   robots: true,
   editLink: 'https://github.com/threadlabs-studio/markupress/edit/main/website/',
   nav: [

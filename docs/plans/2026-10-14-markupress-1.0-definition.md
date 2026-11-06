@@ -13,7 +13,7 @@ execution: code
 - **Objective:** Markupress 1.0 is a documentation tool a VitePress or Docusaurus
   user can adopt without missing the essentials. It adds what they don't have:
   native HTML Next components in Markdown, and versions.
-- **Means:** Markdown on HTMLKit, with a Looma theme. Callouts and other styled
+- **Means:** Markdown on MarkupKit, with a Looma theme. Callouts and other styled
   blocks share one vocabulary with LoomaEditor and Knit.
 - **Order:** Looma's documentation site (Docusaurus 3.9 today) is the first real
   consumer. Its staged migration decides what is built first, so the tool gets
@@ -21,13 +21,13 @@ execution: code
 - **Authority:** owner direction (2026-10-14); this repository's AGENTS.md; the
   [platform plan](./2026-10-04-1830-feat-markupress-platform-plan.md), whose
   R1–R12 this builds on; the
-  [HTMLKit 1.0 definition](https://github.com/nextwebwg/html-next/blob/main/docs/plans/2026-10-14-htmlkit-1.0-definition.md)
+  [MarkupKit 1.0 definition](https://github.com/nextwebwg/html-next/blob/main/docs/plans/2026-10-14-markupkit-1.0-definition.md)
   for platform features.
 
 ## Feature reference, not architecture reference
 
 VitePress and Docusaurus are a feature reference. Parity means Markupress has their
-capabilities, built on its own model: HTMLKit routing and page metadata, folders as
+capabilities, built on its own model: MarkupKit routing and page metadata, folders as
 pages, and one front matter vocabulary. A site is described by convention first,
 then by its content, and by configuration last, as plain JSON data. Markupress reads no other tool's file formats,
 config shapes or front matter names. A migration converts a site's content into this
@@ -38,9 +38,9 @@ model once.
 A feature is in 1.0 when VitePress 1.6 and Docusaurus 3.10 both ship it by default
 or in their main guide, and a typical open-source documentation site needs it.
 Local search is also in, because VitePress, Starlight and Nextra all ship it.
-"Today" first described `origin/main` at `5b2656a` (package 0.0.2, HTMLKit alpha.41).
+"Today" first described `origin/main` at `5b2656a` (package 0.0.2, MarkupKit alpha.41).
 
-**Audited 2026-10-20** against `origin/main` at `723e3c8` (package 0.6.4, HTMLKit and
+**Audited 2026-10-20** against `origin/main` at `723e3c8` (package 0.6.4, MarkupKit and
 HTML Next 1.0.0-alpha.67, Looma 0.30.7): each **In** row's "Today" is Done, Partial
 (with what is missing) or Missing, checked in the source, theme, tests and README. Rows
 marked Keep or Out keep their 2026-10-14 status. The remaining **In** gaps are C1
@@ -67,7 +67,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | # | Feature | Today | 1.0 |
 |---|---|---|---|
 | N1 | Sidebar generated from the file tree, ordered by `01.` | Present (flat) | Keep |
-| N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by HTMLKit route groups. An index page with an empty body generates the folder's list of pages. | Done | **In** |
+| N2 | Sidebar groups: labeled, collapsible, ordered by the folder's index page front matter, or by MarkupKit route groups. An index page with an empty body generates the folder's list of pages. | Done | **In** |
 | N3 | One sidebar per section (`/components/`, `/editor/`), generated from the section's folder | Done (stage 3 also needs sidebar data inside a page) | **In** |
 | N4 | Top navigation: logo, title, a link per section folder, extra links with optional icons, version badge | Done | **In** |
 | N5 | Breadcrumbs and the previous/next pager | Done | Keep; front matter `previous` and `next` drop or change each pager link |
@@ -75,7 +75,7 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | N7 | Mobile navigation drawer | Done | **In** |
 | N8 | "Edit this page" link | Done | **In** |
 | N9 | Last-updated date from git | Done | **In** |
-| N10 | Themed 404, rendered in the site shell (HTMLKit R7) | Done | **In** |
+| N10 | Themed 404, rendered in the site shell (MarkupKit R7) | Done | **In** |
 
 ### Theme
 
@@ -97,10 +97,10 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | S1 | Local full-text search: a build-time index plus a search dialog with keyboard shortcut and per-version filtering | Done | **In** |
 | S2 | Algolia DocSearch | Missing | Out: 1.1 config option |
 | S3 | Versioning: snapshots, a switcher, document identity | Present | Keep (headline feature) |
-| S4 | Sitemap (HTMLKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Done (`sitemap.xml` with `origin`; front matter `head`, `description` and canonical) | **In** |
+| S4 | Sitemap (MarkupKit S2) and per-page SEO head (front matter `head`, `description`, canonical) | Done (`sitemap.xml` with `origin`; front matter `head`, `description` and canonical) | **In** |
 | S5 | Base path and clean URLs | Present | Keep |
-| S6 | Broken-link and anchor check at build (HTMLKit V8, plus Markdown `.md` targets) | Done | **In** |
-| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (HTMLKit R9). `aliases` keep serving the same content, with a canonical link. | Done | **In**: Looma's old flat URLs need it |
+| S6 | Broken-link and anchor check at build (MarkupKit V8, plus Markdown `.md` targets) | Done | **In** |
+| S7 | Redirects: `redirects` config and front matter `redirectFrom`, emitted as static redirect pages (MarkupKit R9). `aliases` keep serving the same content, with a canonical link. | Done | **In**: Looma's old flat URLs need it |
 | S8 | i18n: locale folders, a locale switcher, RTL | Missing | Out: 1.1. Neither the Looma docs nor nextwebwg.org need it. |
 | S9 | Blog and RSS | Missing | Out |
 
@@ -111,9 +111,9 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | D1 | `npm create markupress@latest`: a starter site with a home page, guide pages, a component and the config | Done (`packages/create-markupress`) | **In** |
 | D2 | `dev`, `build`, `preview`, `snapshot` | Present | Keep; document the flags |
 | D3 | Typed config: `markupress.config.ts` with `defineConfig`. JSON stays accepted. | Done | **In** |
-| D4 | One config path: the `markupress` CLI also reads an `htmlkit.config.ts`, so plugins compose | Done | **In** |
+| D4 | One config path: the `markupress` CLI also reads an `markupkit.config.ts`, so plugins compose | Done | **In** |
 | D5 | Markdown extension hook (markdown-it plugins and Shiki transformers) | Removed | Out: Expressive Markdown keeps markdown-it internal and exposes no parser-plugin or engine-configuration API; content is customized through its open semantic types and attributes (Decision 6) |
-| D6 | Published release on npm with current HTMLKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, HTMLKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
+| D6 | Published release on npm with current MarkupKit, HTML Next and Looma, with Looma and HTML Next as peer dependencies | Done (0.6.4 on npm, MarkupKit and HTML Next 1.0.0-alpha.67, Looma 0.30.7 peer) | **In** |
 | D7 | Deploy guides: GitHub Pages, Vercel, Netlify, and any static host with a base path | Done | **In** |
 
 ### Documentation
@@ -139,8 +139,8 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
     and the "Current" label.
   - Document `markdown()`'s `publicDir` and `onPage`.
 - **CHANGELOG:** add the 0.0.2 entry, and keep later work under the next version.
-- **The 2026-10-04 plan:** correct prefixes from hyphens to dots, `<hk-nav>` (not
-  `htmlkit-navigation`), page-tag derivation, and the source layout. Mark R1–R10
+- **The 2026-10-04 plan:** correct prefixes from hyphens to dots, `<mk-nav>` (not
+  `markupkit-navigation`), page-tag derivation, and the source layout. Mark R1–R10
   done and R11 and R12 partial.
 - **AGENTS.md:** remove `docs/solutions` or create it; fix the stale ownership path
   `tests/index.test.ts`.
@@ -184,14 +184,14 @@ not a cutover. Docusaurus keeps serving `/looma/` until stage 6 passes.
      - Markupress: D6 (current dependencies), C2, C7 (copy and word wrap), N2/N3
        (two sidebars), N4, N6, N7, N10, T4/T6/T7, C6 (Examples/API tabs), and D4
        (plugins compose).
-     - HTMLKit: R5 nested layouts, R7 the 404, V7 the pre-build hook (Looma's
+     - MarkupKit: R5 nested layouts, R7 the 404, V7 the pre-build hook (Looma's
        `generate:api`), and V9 the manifest.
      - Looma: decouple the API generator from the `apps/docs/docs` layout.
    - **Exit:** page text matches Docusaurus, and pages render with JS off.
 2. **Stage 2: all 54 component pages and 11 parts.**
    - Folder-shaped URLs with static redirect pages from the 77 old flat URLs
-     (S7, HTMLKit R9).
-   - Autogenerated sidebar groups (N2, HTMLKit R4 route groups). The migration
+     (S7, MarkupKit R9).
+   - Autogenerated sidebar groups (N2, MarkupKit R4 route groups). The migration
      converts each of Looma's `_category_.json` files into its folder's index page
      once: `label` becomes `title`, `position` becomes `order`, and the folder's
      page is a generated index unless it has content of its own.
@@ -205,7 +205,7 @@ not a cutover. Docusaurus keeps serving `/looma/` until stage 6 passes.
    within the base path.
 5. **Stage 5: the home page** (T5, `layout: home`, `toc: false`).
 6. **Stage 6: parity gates.**
-   - The link and anchor check (S6, HTMLKit V8) over all 85 routes; the manifest
+   - The link and anchor check (S6, MarkupKit V8) over all 85 routes; the manifest
      replaces `docs-coverage.mjs`'s `.docusaurus` reads.
    - A sitemap diff (S4).
    - Ports of the release-docs, reader-journey and interactive-guide tests to

@@ -4,12 +4,12 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import postcss from 'postcss';
 import valueParser from 'postcss-value-parser';
 
-/** CSS syntax is parsed by PostCSS; HTMLKit/Vite still compile and deliver the styles. */
+/** CSS syntax is parsed by PostCSS; MarkupKit/Vite still compile and deliver the styles. */
 export function stylesheet(css: string, file: string, rewrite: boolean): { css: string; files: readonly string[] } {
   const root = postcss.parse(css, { from: file });
   const dependencies = new Set<string>();
   const local = (value: string, imported = false): string => {
-    // HTMLKit resolves @/, the project root, as it does in every page and component.
+    // MarkupKit resolves @/, the project root, as it does in every page and component.
     if (/^(?:[A-Za-z][A-Za-z\d+.-]*:|\/|#|@\/)/.test(value) && !value.startsWith('file:')) return value;
     const clean = value.split(/[?#]/)[0]!;
     let target: string;

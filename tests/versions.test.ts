@@ -1,10 +1,10 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createApplication } from '@nextwebwg/htmlkit';
+import { createApplication } from '@threadlabs/markupkit';
 import { siteOptions } from '../src/site.js';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { expect, it } from 'vitest';
-import { buildApplication } from '@nextwebwg/htmlkit';
+import { buildApplication } from '@threadlabs/markupkit';
 import { freezeRootPaths, versionLinks } from '../src/versions.js';
 import { linkDependencies } from './fixture.js';
 
@@ -71,7 +71,7 @@ it('records immutable snapshots in versions/ and discovers them from its folders
     try {
       // Snapshots follow the current version, highest number first, each labelled by its folder name.
       const html = (await application.render('/')).html;
-      expect(/Versions.*?<\/nav>/s.exec(html)![0].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).toBe('Versions Current v10 v2 v1');
+      expect(/<nav class="versions"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()).toBe('Versions Current v10 v2 v1');
     } finally { await application.close(); }
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 30_000);
@@ -83,7 +83,7 @@ it('freezes only the @/ specifiers whose files a snapshot copies, and warns abou
   try {
     const copied = new Set(['app/components/card.html', 'app/components/card.ts']);
     expect(freezeRootPaths('<link rel="component" href="@/app/components/card.html"><template component="x-y" controller="@/app/components/card.js"></template>' +
-      '<link rel="component" href="@/app/shared/live.html">', 'docs/page.md', 'v2', copied))
+      '<link rel="component" href="@/app/shared/live.html">', 'docs/page.md', 'v2', copied).replace(/>\s+</g, '><').trim())
       .toBe('<link rel="component" href="@/versions/v2/app/components/card.html"><template component="x-y" controller="@/versions/v2/app/components/card.js"></template>' +
         '<link rel="component" href="@/app/shared/live.html">');
     expect(freezeRootPaths("import { a } from '@/app/components/card.js';\n@import url(\"@/app/components/card.html?raw\");", 'app/x.ts', 'v2', copied))
@@ -91,4 +91,25 @@ it('freezes only the @/ specifiers whose files a snapshot copies, and warns abou
     await new Promise(resolve => setImmediate(resolve));
     expect(warnings).toEqual(['docs/page.md: @/app/shared/live.html is outside version v2, so the snapshot reads the project\'s current file.']);
   } finally { process.off('warning', warn); }
+});
+
+it('freezes standard HTML imports while preserving code inside native HTML wrappers', () => {
+  const copied = new Set(['components/card.html']);
+  const source = '<div>\n\n<link rel="component" href="@/components/card.html">\n\n```html\n<link rel="component" href="@/components/card.html">\n```\n\n</div>\n';
+  const frozen = freezeRootPaths(source, 'docs/page.md', 'v1', copied);
+  expect(frozen).toContain('href="@/versions/v1/components/card.html"');
+  expect(frozen).toContain('```html\n<link rel="component" href="@/components/card.html">\n```');
+  // In standard syntax indentation does not turn actual HTML into literal code.
+  expect(freezeRootPaths('    <link rel="component" href="@/components/card.html">', 'docs/page.md', 'v1', copied))
+    .toContain('href="@/versions/v1/components/card.html"');
+});
+
+
+it('freezes native script and style imports while preserving native code examples', () => {
+  const source = '<style>@import "@/components/card.css";</style>\n\n<script>import "@/components/card.js";</script>\n\n<pre><code>href="@/components/card.html"</code></pre>\n\n<code>href="@/components/card.html"</code>\n';
+  const frozen = freezeRootPaths(source, 'docs/page.md', 'v1', new Set(['components/card.css', 'components/card.js', 'components/card.html']));
+  expect(frozen).toContain('@import "@/versions/v1/components/card.css"');
+  expect(frozen).toContain('import "@/versions/v1/components/card.js"');
+  expect(frozen).toContain('<pre><code>href="@/components/card.html"</code></pre>');
+  expect(frozen).toContain('<code>href="@/components/card.html"</code>');
 });
