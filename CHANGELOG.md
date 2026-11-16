@@ -13,7 +13,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.9
 
 - Code fences take `added`, `removed` and `focus` line attributes. Added and removed lines render as `<ins>` and `<del>` with a sign beside each, and `focus` dims the other lines until the reader hovers over or focuses the block.
 - **Breaking:** Component roots render with the `component` attribute, from HTML Next alpha.81. Update site CSS and scripts that select `[data-component~="markupress-header"]` or another component identity to `[component~="markupress-header"]`. Markupress theme selectors and controllers read both attributes, and `component` takes precedence.
