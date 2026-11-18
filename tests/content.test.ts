@@ -318,6 +318,15 @@ it('marks added, removed and focused lines from code attributes', async () => {
   expect(await page('```ts\nplain();\n```')).not.toMatch(/has-focus|<ins|<del/);
 });
 
+it('typesets inline and display math as MathML and keeps prices as text', async () => {
+  const resource = await page('The energy is $E = mc^2$, and $5 stays text.\n\n$$\n\\frac{a}{b}\n$$');
+  expect(resource).toContain('<math><semantics><mrow><mi>E</mi>');
+  expect(resource).toContain('<math display="block"');
+  expect(resource).toContain('<annotation encoding="application/x-tex">\\\\frac\\{a}\\{b}</annotation>');
+  expect(resource).toContain('$5 stays text');
+  await expect(page('$$\n\\frac{a\n$$')).rejects.toThrow(/is not valid TeX/);
+});
+
 it('numbers lines from standard attributes or the page default', async () => {
   const numbered = (source: string, lineNumbers?: boolean) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index', ...(lineNumbers === undefined ? {} : { lineNumbers }) })
     .then(compiled => [...compiled.resource.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.split(' ').includes('line-numbers')));
