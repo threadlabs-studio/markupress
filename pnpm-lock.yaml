@@ -170,8 +170,8 @@ importers:
         specifier: '>=0.6.1'
         version: 0.7.0(@types/node@22.20.1)(yaml@2.9.1)
       expressmark:
-        specifier: '>=0.6.0'
-        version: 0.6.0
+        specifier: '>=0.7.0'
+        version: 0.7.0
       minisearch:
         specifier: 7.2.0
         version: 7.2.0
@@ -187,6 +187,9 @@ importers:
       shiki:
         specifier: 4.6.0
         version: 4.6.0
+      temml:
+        specifier: 0.14.0
+        version: 0.14.0
       vite:
         specifier: 8.3.6
         version: 8.3.6(@types/node@22.20.1)(yaml@2.9.1)
@@ -1238,8 +1241,8 @@ packages:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
 
-  expressmark@0.6.0:
-    resolution: {integrity: sha512-zylsRyr0FUPUovtizSsMOXYI1eY3zPFI3o93dDwB5AVMt7FXYUrTLtz7F/XlcLIR98MQOW2JLAMXAhATn+GaGQ==}
+  expressmark@0.7.0:
+    resolution: {integrity: sha512-nsAGRrSO0nzummSIpLq3FDPEhej282yKRB44srdgB2/93vHhI7WPwFT01Nw4ouv1xhCY2GGrup2PUYKWIB5tfw==}
     engines: {node: '>=22.13 <23 || >=24 <25'}
 
   fdir@6.5.0:
@@ -1574,6 +1577,10 @@ packages:
 
   stringify-entities@4.0.4:
     resolution: {integrity: sha512-IwfBptatlO+QCJUo19AqvrPNqlVMpW9YEL2LIVY+Rpv2qsjCGxaDLNRgeGsQWJhfItebuJhsGSLjaBbNSQ+ieg==}
+
+  temml@0.14.0:
+    resolution: {integrity: sha512-tz1LW/5IZpThK8c7ZpdTSH/n56eAj+ThirLieErtKxYC3EKCIiB4sKdRUehAgH+fQmvIKqMfP3gqTLBdLpy9zw==}
+    engines: {node: '>=18.13.0'}
 
   tinybench@6.2.2:
     resolution: {integrity: sha512-nIZ2N2dFpjBsg2hgitKu7mA+FvsIJuGJOwysRngmVRRmWgR/UyPjwJj8c/fT/dhm8EkHnF5EOogRf+0Z2qrimA==}
@@ -2293,7 +2300,7 @@ snapshots:
       '@js-temporal/polyfill': 0.5.1
       '@nextwebwg/html-next': 1.0.0-alpha.91
       dompurify: 3.4.15
-      expressmark: 0.6.0
+      expressmark: 0.7.0
       highlight.js: 11.11.2
       lowlight: 3.3.0
       lucide: 0.554.0
@@ -2515,7 +2522,7 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  expressmark@0.6.0:
+  expressmark@0.7.0:
     dependencies:
       entities: 8.1.0
       htmlparser2: 12.0.0
@@ -2961,6 +2968,8 @@ snapshots:
     dependencies:
       character-entities-html4: 2.1.0
       character-entities-legacy: 3.0.0
+
+  temml@0.14.0: {}
 
   tinybench@6.2.2: {}
 

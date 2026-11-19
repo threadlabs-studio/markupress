@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 
 ## Next release
 
+- Typeset math: inline `$…$`, display math between `$$` lines and `math` fences render as native MathML at build time, with the TeX kept as an annotation. Pages load no math script or font. TeX that cannot be read fails the build, naming the page and formula. Requires expressmark >=0.7.0.
 - Code fences take `added`, `removed` and `focus` line attributes. Added and removed lines render as `<ins>` and `<del>` with a sign beside each, and `focus` dims the other lines until the reader hovers over or focuses the block.
 - **Breaking:** Component roots render with the `component` attribute, from HTML Next alpha.81. Update site CSS and scripts that select `[data-component~="markupress-header"]` or another component identity to `[component~="markupress-header"]`. Markupress theme selectors and controllers read both attributes, and `component` takes precedence.
 - Qualify HTML Next alpha.91 and Looma 0.52.11. Developing Markupress requires HTML Next alpha.81 for its canonical identity checks and public site styles; the published peer minimums are HTML Next alpha.74 and Looma 0.51.4.

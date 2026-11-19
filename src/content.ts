@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import temml from 'temml';
 import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist, type Syntax } from 'expressmark';
 import { renderHtml, type HtmlRenderOptions, type HtmlTransformer } from 'expressmark/render';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
@@ -325,7 +326,13 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const anchors = headingAnchors(document);
   // A link with an embed setting, alone in its paragraph, embeds the file it links to.
   const codes: MarkdownNode[] = [], embeds: MarkdownNode[] = [];
+  // Math is typeset once, at build time, as MathML that browsers render without scripts or fonts.
+  const typeset = new Map<MarkdownNode, string>();
   walkMarkdown(document, node => {
+    if (node.type === 'math' || node.type === 'inlineMath') {
+      try { typeset.set(node, literal(temml.renderToString(node.value ?? '', { displayMode: node.type === 'math', annotate: true, throwOnError: true }))); }
+      catch (error) { throw new Error(`${options.file}: the math ${JSON.stringify(node.value)} is not valid TeX: ${error instanceof Error ? error.message : String(error)}`); }
+    }
     if (node.type === 'code') codes.push(node);
     else if (node.type === 'paragraph' && node.children?.length === 1 && node.children[0]!.type === 'link' && node.children[0]!.attributes?.embed !== undefined) embeds.push(node);
   });
@@ -356,7 +363,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
       ? { live: dirname(file) === dirname(options.file) ? text : rebaseExample(text, dirname(file), dirname(options.file)), code: await codeBlock(text, 'html', link.attributes, '', '') }
       : { code: await codeBlock(text, String(link.attributes!.language ?? extname(file).slice(1)), link.attributes, '', markdownText(link)) });
   }
-  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []));
+  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []).concat([...typeset.values()]));
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
     .filter(([name]) => ['id', 'class', 'lang', 'dir', 'dataMarkupressExample', 'dataSearchIgnore'].includes(name))
     .map(([name, value]) => ` ${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}="${escapeHTML(String(value))}"`).join('');
@@ -364,6 +371,8 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const transformers: Record<string, HtmlTransformer> = {
     code: node => highlighted.get(node),
     inlineCode: node => `<code>${literal(escapeHTML(node.value ?? ''))}</code>`,
+    inlineMath: node => typeset.get(node),
+    math: node => node.title ? `<figure${attributes(node)}>${typeset.get(node)}<figcaption>${literal(escapeHTML(title(node)))}</figcaption></figure>` : typeset.get(node),
     heading: (node, context) => {
       const id = anchors.get(node)!;
       components.add('ui-icon');

@@ -74,3 +74,8 @@ html[data-mk-navigating] body::before {
 html[dir="rtl"][data-mk-navigating] body::before { transform-origin: right; }
 @keyframes markupress-navigating { from { transform: scaleX(0); } to { transform: scaleX(.9); } }
 @media (prefers-reduced-motion: reduce) { html[data-mk-navigating] body::before { animation: none; opacity: .6; } }
+
+/* Math fonts have a smaller x-height than the body font. Wide display math scrolls rather than overflowing the page. */
+.markupress-prose math { font-size: 1.15em; }
+.markupress-prose math[display="block"] { overflow-x: auto; margin-block: 1rem; }
+.markupress-prose figure:has(> math) { margin-inline: 0; text-align: center; }
