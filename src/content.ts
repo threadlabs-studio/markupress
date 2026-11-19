@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import temml from 'temml';
 import { parse, headingAnchors, type Node as MarkdownNode, type Document as MarkdownDocument, type HtmlAllowlist, type Syntax } from 'expressmark';
 import { renderHtml, type HtmlRenderOptions, type HtmlTransformer } from 'expressmark/render';
 import { parseFragment, serialize, serializeOuter, type DefaultTreeAdapterMap } from 'parse5';
@@ -148,10 +149,20 @@ async function highlight(code: string, lang: string, lines: ShikiTransformer): P
 }
 // Line highlighting and numbers are classes written at build time; the theme's stylesheet draws them. The fence
 // metadata stays on <code> while Expressmark owns its syntax.
-const lineClasses = (marked: ReadonlySet<number>, numbers: boolean, meta: string): ShikiTransformer => ({
-  pre(node) { if (numbers) this.addClassToHast(node, 'line-numbers'); },
+// Added and removed lines are native <ins> and <del>, so the change reaches assistive technology, not only color.
+interface LineMarks { readonly highlight: ReadonlySet<number>; readonly added: ReadonlySet<number>; readonly removed: ReadonlySet<number>; readonly focus: ReadonlySet<number> }
+const lineClasses = (marks: LineMarks, numbers: boolean, meta: string): ShikiTransformer => ({
+  pre(node) {
+    if (numbers) this.addClassToHast(node, 'line-numbers');
+    if (marks.focus.size) this.addClassToHast(node, 'has-focus');
+  },
   code(node) { if (meta) node.properties['data-meta'] = meta; },
-  line(node, line) { if (marked.has(line)) this.addClassToHast(node, 'highlighted'); },
+  line(node, line) {
+    if (marks.highlight.has(line)) this.addClassToHast(node, 'highlighted');
+    if (marks.focus.has(line)) this.addClassToHast(node, 'focused');
+    if (marks.added.has(line)) node.tagName = 'ins';
+    else if (marks.removed.has(line)) node.tagName = 'del';
+  },
 });
 // Hidden until the page's code controller connects, so without JavaScript a code block is only its code.
 const codeActions = (ui: Translations, lang?: string) => '<div class="code-actions"' + (lang === undefined ? '' : ` lang="${escapeHTML(lang)}" dir="${textDirection(lang)}"`) + ' hidden aria-live="polite"><button type="button" data-code-action="wrap" aria-pressed="false">' +
@@ -202,7 +213,7 @@ function rebaseExample(html: string, from: string, to: string): string {
  */
 /** The page's authored HTML, its examples' included, is the site's own: its elements and attributes stay. */
 function hostHtml(document: MarkdownDocument, examples: readonly string[] = []): HtmlAllowlist {
-  const tags = new Set(['ui-callout', 'ui-tabs', 'ui-icon', 'button', 'input']);
+  const tags = new Set(['ui-callout', 'ui-tabs', 'ui-icon', 'button', 'input', 'ins', 'del']);
   const attributes = new Set(['heading', 'tone', 'group', 'type', 'hidden', 'disabled', 'checked', 'role', 'tabindex', 'name', 'aria-hidden', 'data-markupress-example', 'data-search-ignore']);
   const styles: Record<string, readonly RegExp[]> = { color: [/^light-dark\(.*\)$/], '--shiki-light': [/^#[\da-f]+$/i], '--shiki-dark': [/^#[\da-f]+$/i] };
   const visit = (node: DefaultTreeAdapterMap['node']): void => {
@@ -315,12 +326,19 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const anchors = headingAnchors(document);
   // A link with an embed setting, alone in its paragraph, embeds the file it links to.
   const codes: MarkdownNode[] = [], embeds: MarkdownNode[] = [];
+  // Math is typeset once, at build time, as MathML that browsers render without scripts or fonts.
+  const typeset = new Map<MarkdownNode, string>();
   walkMarkdown(document, node => {
+    if (node.type === 'math' || node.type === 'inlineMath') {
+      try { typeset.set(node, literal(temml.renderToString(node.value ?? '', { displayMode: node.type === 'math', annotate: true, throwOnError: true }))); }
+      catch (error) { throw new Error(`${options.file}: the math ${JSON.stringify(node.value)} is not valid TeX: ${error instanceof Error ? error.message : String(error)}`); }
+    }
     if (node.type === 'code') codes.push(node);
     else if (node.type === 'paragraph' && node.children?.length === 1 && node.children[0]!.type === 'link' && node.children[0]!.attributes?.embed !== undefined) embeds.push(node);
   });
   const codeBlock = async (code: string, language: string, settings: MarkdownNode['attributes'], meta: string, title: string) => {
-    const marked = codeLines(String(settings?.highlight ?? ''));
+    const lines = (name: string) => codeLines(String(settings?.[name] ?? ''));
+    const marked = { highlight: lines('highlight'), added: lines('added'), removed: lines('removed'), focus: lines('focus') };
     const numbers = settings?.showLineNumbers === undefined ? options.lineNumbers ?? false : settings.showLineNumbers !== false && settings.showLineNumbers !== 'false';
     const known = language && (Object.hasOwn(bundledLanguages, language) || plain.has(language));
     const pre = known ? await highlight(code, language, lineClasses(marked, numbers, meta))
@@ -345,7 +363,7 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
       ? { live: dirname(file) === dirname(options.file) ? text : rebaseExample(text, dirname(file), dirname(options.file)), code: await codeBlock(text, 'html', link.attributes, '', '') }
       : { code: await codeBlock(text, String(link.attributes!.language ?? extname(file).slice(1)), link.attributes, '', markdownText(link)) });
   }
-  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []));
+  const trustedHtml = hostHtml(document, [...embedded.values()].flatMap(parts => parts.live ?? []).concat([...typeset.values()]));
   const attributes = (node: MarkdownNode) => Object.entries({ ...(node.id === undefined ? {} : { id: node.id }), ...node.attributes })
     .filter(([name]) => ['id', 'class', 'lang', 'dir', 'dataMarkupressExample', 'dataSearchIgnore'].includes(name))
     .map(([name, value]) => ` ${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}="${escapeHTML(String(value))}"`).join('');
@@ -353,6 +371,8 @@ export async function renderMarkdown(source: string, options: Pick<MarkdownOptio
   const transformers: Record<string, HtmlTransformer> = {
     code: node => highlighted.get(node),
     inlineCode: node => `<code>${literal(escapeHTML(node.value ?? ''))}</code>`,
+    inlineMath: node => typeset.get(node),
+    math: node => node.title ? `<figure${attributes(node)}>${typeset.get(node)}<figcaption>${literal(escapeHTML(title(node)))}</figcaption></figure>` : typeset.get(node),
     heading: (node, context) => {
       const id = anchors.get(node)!;
       components.add('ui-icon');

@@ -110,11 +110,11 @@ it('renders shared blocks with the Looma components the page links', async () =>
   const application = await createApplication(siteOptions({ root }));
   try {
     const html = (await application.render('/blocks/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
-    expect(html).toMatch(/<div role="note" data-component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="[^"]*">Back up \{first\}\.<\/p>/s);
-    expect(html).toMatch(/data-component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="[^"]*">Alerts too\.<\/p>/s);
+    expect(html).toMatch(/<div role="note" component="ui-callout"[^>]* data-ui-callout-prop-tone="warning"[^>]*>.*?<strong class="heading">Breaking \{x\}<\/strong><p data-slotted="[^"]*">Back up \{first\}\.<\/p>/s);
+    expect(html).toMatch(/ component="ui-callout"[^>]* data-ui-callout-prop-tone="tip"[^>]*>.*?<p data-slotted="[^"]*">Alerts too\.<\/p>/s);
     expect(html).toContain('<details><summary>More</summary>');
     // Without JavaScript every panel shows; Tabs adds its tab list and hides the others when it connects.
-    expect(html).toMatch(/data-component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="[^"]*">.*<section aria-label="npm" data-slotted="[^"]*">/s);
+    expect(html).toMatch(/ component="ui-tabs"[^>]* data-ui-tabs-prop-group="code-group".*<section aria-label="pnpm" data-slotted="[^"]*">.*<section aria-label="npm" data-slotted="[^"]*">/s);
   } finally { await application.close(); }
 }, 30_000);
 
@@ -150,10 +150,10 @@ it('renders front matter head metadata, a named MarkupKit layout, and no layout'
     for (const element of ['<meta name="description" content="Search engines." data-component-head="">', '<meta property="og:title" content="SEO" data-component-head="">', '<link rel="canonical" href="https://example.com/seo/" data-component-head="">']) expect(head).toContain(element);
     const bare = (await application.render('/bare/')).html;
     expect(bare).toContain('Bare');
-    expect(bare).not.toContain('data-component="markupress-shell"');
+    expect(bare).not.toContain('component="markupress-shell"');
     const wide = (await application.render('/wide/')).html;
     expect(wide).toContain('class="wide"');
-    expect(wide).not.toContain('data-component="markupress-shell"');
+    expect(wide).not.toContain('component="markupress-shell"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -177,7 +177,7 @@ it('replaces the shell with the site\'s app/layouts/default.html, which receives
   const application = await createApplication(siteOptions({ root }));
   try {
     const html = (await application.render('/guide/install/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
-    expect(html).not.toContain('data-component="markupress-shell"');
+    expect(html).not.toContain('component="markupress-shell"');
     expect(html).toContain('<header class="site">Installation</header>');
     expect(html).toContain('href="/guide/install/"');
     expect(html).toMatch(/<ol class="crumbs">.*Welcome.*Installation.*<\/ol>/s);
@@ -202,7 +202,7 @@ it('gives each top-level section its own grouped sidebar, and the root every pag
     expect(sidebar((await application.render('/')).html)).toBe('Welcome Editor guide Installation components Layout Layout overview Stack forms Button');
     const button = (await application.render('/components/forms/button/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/>\s+</g, '><');
     expect(sidebar(button)).toBe('Layout Layout overview Stack forms Button');
-    expect(button.match(/data-component="ui-disclosure"/g)).toHaveLength(2);
+    expect(button.match(/ component="ui-disclosure"/g)).toHaveLength(2);
     expect(button).toContain('<span class="summary">Layout</span>');
     expect(button).toContain('<span class="summary">forms</span>');
     expect(button).toContain('Layout overview');
@@ -228,7 +228,7 @@ it('builds the top navigation from the sections, logo and favicon from public/, 
     expect(html).toMatch(/<a class="brand-link"[^>]* href="\/docs\/"[^>]*><img class="logo logo-light"[^>]* src="\/docs\/logo.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/docs\/logo-dark.svg"[^>]*><span class="brand-title">Documentation<\/span><\/a>/);
     expect(html).toContain('aria-label="Remove Preview"');
     // One version shows no badge.
-    expect(html).not.toContain('data-component="ui-badge"');
+    expect(html).not.toContain('component="ui-badge"');
     const top = /<nav class="navigation"[^>]*>(.*?)<\/nav>/s.exec(html)![1]!.replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // Sections in navigation order, the one holding the page marked current, then the configured links with their icons.
     expect([...top.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*aria-current="([^"]+)"[^>]*>/g)].map(match => [match[1],match[2]])).toEqual([
@@ -272,7 +272,7 @@ it('lets the logo and favicon options override public/, and shows the selected v
     const html = (await application.render('/v/v1/')).html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '');
     expect(html).toContain('<link rel="icon" href="/icon.png" data-component-head="">');
     expect(html).toMatch(/<img class="logo logo-light"[^>]* src="\/mark.svg"[^>]*><img class="logo logo-dark"[^>]* src="\/mark.svg"/);
-    expect(html).toMatch(/data-component="ui-badge"[^>]*>.*Version 1/s);
+    expect(html).toMatch(/ component="ui-badge"[^>]*>.*Version 1/s);
     // No folder holds pages and no links are configured, so there is no top navigation.
     expect(html).not.toContain('<nav class="top"');
     expect(html).not.toContain('<footer');
@@ -299,7 +299,7 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
   try {
     const missing = await application.render('/nowhere/');
     expect(missing.status).toBe(404);
-    expect(missing.html).toContain('data-component="markupress-shell"');
+    expect(missing.html).toContain(' component="markupress-shell"');
     expect(missing.html).toContain('<title data-component-head="">Page not found | Documentation</title>');
     expect(missing.html).toContain('href="/guide/install/"');
     // The not-found page is no page of its version, so it stays out of navigation and /404/ is missing too.
@@ -309,7 +309,7 @@ it('renders the default version\'s 404.md in the shell for unmatched paths and b
   } finally { await application.close(); }
   const result = await buildSite({ root });
   const page = await readFile(join(result.outDir, '404.html'), 'utf8');
-  expect(page).toContain('data-component="markupress-shell"');
+  expect(page).toContain(' component="markupress-shell"');
   expect(page).toContain('Page not found');
 }, 30_000);
 
@@ -332,7 +332,7 @@ it('renders a folder index page with an empty body as a list of its pages and fo
     // The folder is a page at its own URL in the sidebar and the breadcrumbs.
     expect(list((await application.render('/components/forms/')).html)).toContain('href="/components/forms/input/"');
     expect(list((await application.render('/components/button/')).html)).toBeUndefined();
-    expect((await application.render('/components/button/')).html).toMatch(/data-component="mk-breadcrumbs".*?<a href="\/components\/"[^>]*>Components<\/a>/s);
+    expect((await application.render('/components/button/')).html).toMatch(/ component="mk-breadcrumbs".*?<a href="\/components\/"[^>]*>Components<\/a>/s);
   } finally { await application.close(); }
 }, 30_000);
 
@@ -370,7 +370,7 @@ it('renders route groups, whose navigation items carry a group, in the shell', a
     expect(rendered.status).toBe(200);
     const html = rendered.html.replace(/<!--[^>]*-->|<\?[^>]*>/g, '').replace(/ data-[\w-]+="[^"]*"/g, '').replace(/>\s+</g, '><');
     // The crumbs and pager items have MarkupKit's group field, which the shell's open item types accept.
-    expect(rendered.html).toContain('data-component="ui-disclosure"');
+    expect(rendered.html).toContain(' component="ui-disclosure"');
     expect(html).toContain('<span class="summary">Getting started</span>');
     expect(html).toContain('href="/intro/" aria-current="page"');
     expect(rendered.html).toContain('class="native"');
@@ -386,15 +386,15 @@ it('renders layout: home in the home layout, with the top navigation and footer 
   const application = await createApplication(siteOptions({ root, title: 'Example' }));
   try {
     const html = (await application.render('/')).html.replace(/<!--[^>]*-->|<\?[^>]*\?>/g, '').replace(/>\s+</g, '><');
-    expect(html).toContain('data-component="markupress-home"');
-    expect(html).not.toContain('data-component="markupress-shell"');
+    expect(html).toContain(' component="markupress-home"');
+    expect(html).not.toContain('component="markupress-shell"');
     expect(html).toMatch(/<nav class="navigation"[^>]*><a[^>]*href="\/guide\/" aria-current="false"[^>]*>Guide<\/a>/);
-    expect(html).toMatch(/<a\b(?=[^>]*href="\/guide\/install\/")(?=[^>]*data-component="ui-button")[^>]*>.*Install/s);
-    expect(html).toMatch(/data-component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
+    expect(html).toMatch(/<a\b(?=[^>]*href="\/guide\/install\/")(?=[^>]* component="ui-button")[^>]*>.*Install/s);
+    expect(html).toMatch(/ component="ui-card"[^>]*>.*Fast.*Built at build time\./s);
     expect(html).toMatch(/<footer[^>]*>.*Copyright Example\./s);
-    for (const absent of ['id="documentation-navigation"', 'data-component="mk-breadcrumbs"', 'data-component="mk-pager"', 'data-component="markupress-outline"']) expect(html).not.toContain(absent);
+    for (const absent of ['id="documentation-navigation"', 'component="mk-breadcrumbs"', 'component="mk-pager"', 'component="markupress-outline"']) expect(html).not.toContain(absent);
     // Other pages keep the shell.
-    expect((await application.render('/guide/install/')).html).toContain('data-component="markupress-shell"');
+    expect((await application.render('/guide/install/')).html).toContain(' component="markupress-shell"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -406,7 +406,7 @@ it('lets a site\'s app/layouts/home.html replace the home layout', async () => {
   try {
     const html = (await application.render('/')).html;
     expect(html).toMatch(/<div class="site-home"[^>]*>.*<header class="hero">/s);
-    expect(html).not.toContain('data-component="markupress-home"');
+    expect(html).not.toContain('component="markupress-home"');
   } finally { await application.close(); }
 }, 30_000);
 
@@ -586,7 +586,7 @@ it('omits excluded pages from search while keeping their routes and navigation',
 it('disables search UI and index generation and passes validated search options to the theme', async () => {
   const root = await fixture(); await linkDependencies(root);
   const result = await buildSite({ root, search: false });
-  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).not.toContain('data-component="markupress-search"');
+  expect(await readFile(join(result.outDir, 'index.html'), 'utf8')).not.toContain('component="markupress-search"');
   await expect(stat(join(result.outDir, '_search.json'))).rejects.toThrow();
   const application = await createApplication(siteOptions({ root, search: { limit: 5, fuzzy: false, prefix: false } }));
   try {

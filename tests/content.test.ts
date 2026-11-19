@@ -309,6 +309,24 @@ it('highlights standard code attributes without rewriting literal notation comme
   expect(resource).not.toContain('class="line highlighted"');
 });
 
+it('marks added, removed and focused lines from code attributes', async () => {
+  const resource = await page('```ts {added="2" removed="1" focus="2-3"}\nconst a = 0;\nconst a = 1;\nuse(a);\nlater();\n```');
+  expect(resource).toContain('has-focus');
+  expect([...resource.matchAll(/<(span|ins|del) class="line( focused)?">(.*?)<\/\1>(?=\n|<\/code>)/g)]
+    .map(match => `${match[1]}${match[2] ? '*' : ''} ${text(parseFragment(match[3]!))}`)).toEqual([
+    'del const a = 0;', 'ins* const a = 1;', 'span* use(a);', 'span later();']);
+  expect(await page('```ts\nplain();\n```')).not.toMatch(/has-focus|<ins|<del/);
+});
+
+it('typesets inline and display math as MathML and keeps prices as text', async () => {
+  const resource = await page('The energy is $E = mc^2$, and $5 stays text.\n\n$$\n\\frac{a}{b}\n$$');
+  expect(resource).toContain('<math><semantics><mrow><mi>E</mi>');
+  expect(resource).toContain('<math display="block"');
+  expect(resource).toContain('<annotation encoding="application/x-tex">\\\\frac\\{a}\\{b}</annotation>');
+  expect(resource).toContain('$5 stays text');
+  await expect(page('$$\n\\frac{a\n$$')).rejects.toThrow(/is not valid TeX/);
+});
+
 it('numbers lines from standard attributes or the page default', async () => {
   const numbered = (source: string, lineNumbers?: boolean) => compileMarkdown(source, { file: '/docs/index.md', pageName: 'page-index', ...(lineNumbers === undefined ? {} : { lineNumbers }) })
     .then(compiled => [...compiled.resource.matchAll(/<pre class="([^"]*)"/g)].map(match => match[1]!.split(' ').includes('line-numbers')));

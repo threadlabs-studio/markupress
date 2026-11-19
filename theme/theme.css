@@ -38,6 +38,16 @@
 .markupress-prose .code-actions button[aria-pressed="true"] { border-color: var(--ui-link-color, var(--ui-accent)); }
 .markupress-prose pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
 .markupress-prose pre .line.highlighted { display: inline-block; box-sizing: content-box; min-inline-size: 100%; margin-inline: -1rem; padding-inline: 1rem; background: color-mix(in srgb, var(--ui-accent) 10%, var(--ui-surface)); box-shadow: inset 2px 0 var(--ui-accent); }
+.markupress-prose pre :is(ins, del).line { position: relative; display: inline-block; box-sizing: content-box; min-inline-size: 100%; margin-inline: -1rem; padding-inline: 1rem; text-decoration: none; }
+.markupress-prose pre ins.line { background: color-mix(in srgb, var(--ui-success) 14%, var(--ui-surface)); }
+.markupress-prose pre del.line { background: color-mix(in srgb, var(--ui-danger) 14%, var(--ui-surface)); }
+/* The sign repeats the change for readers who can't tell the tints apart; generated content stays out of copied code. */
+.markupress-prose pre :is(ins, del).line::after { position: absolute; inset-inline-start: .3rem; user-select: none; }
+.markupress-prose pre ins.line::after { content: "+"; color: var(--ui-success); }
+.markupress-prose pre del.line::after { content: "−"; color: var(--ui-danger); }
+/* Focused lines stay full strength; the others dim until the reader points at or focuses the block. */
+.markupress-prose pre.has-focus .line:not(.focused) { opacity: .45; transition: opacity var(--ui-motion-fast, .12s); }
+.markupress-prose pre.has-focus:is(:hover, :focus-within) .line { opacity: 1; }
 .markupress-prose pre.line-numbers code { counter-reset: line; }
 .markupress-prose pre.line-numbers .line::before { counter-increment: line; content: counter(line); display: inline-block; inline-size: 2ch; margin-inline-end: 1.5ch; text-align: end; color: var(--ui-text-muted, #888); user-select: none; }
 /* The logo for the theme in use: the head script sets data-theme before first paint, and without it the light logo shows. */
@@ -64,3 +74,8 @@ html[data-mk-navigating] body::before {
 html[dir="rtl"][data-mk-navigating] body::before { transform-origin: right; }
 @keyframes markupress-navigating { from { transform: scaleX(0); } to { transform: scaleX(.9); } }
 @media (prefers-reduced-motion: reduce) { html[data-mk-navigating] body::before { animation: none; opacity: .6; } }
+
+/* Math fonts have a smaller x-height than the body font. Wide display math scrolls rather than overflowing the page. */
+.markupress-prose math { font-size: 1.15em; }
+.markupress-prose math[display="block"] { overflow-x: auto; margin-block: 1rem; }
+.markupress-prose figure:has(> math) { margin-inline: 0; text-align: center; }

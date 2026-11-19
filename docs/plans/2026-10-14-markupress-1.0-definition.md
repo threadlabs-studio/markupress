@@ -57,10 +57,10 @@ footnotes, T3, S1, S7 `redirectFrom`, D1, D3, D5, D7, G1, G2, G6–G9.
 | C5 | Collapsible details (`::: details Title`) | Done | **In** (shared vocabulary) |
 | C6 | Tabs and code groups (`::: tabs`, `::: code-group`), with selection synced across the page and remembered | Done (sync across the page and memory, browser-tested) | **In**: Looma's Examples/API tabs and install tabs need it |
 | C7 | Code blocks: Shiki (dual theme), titles, line highlighting `{1,3-5}` and `// [!code highlight]`, line numbers, a copy button, word wrap | Done | **In** |
-| C8 | Diff and focus markers, and code imports (`<<< ./file{lines}`) | Missing | Out: 1.1 |
+| C8 | Diff and focus markers, and code imports (`<<< ./file{lines}`) | Done: `added`, `removed` and `focus` fence attributes, and embed links (`{embed highlight=2}`) | Out: 1.1 |
 | C9 | Native HTML Next components in Markdown, with TypeScript controllers | Present | Keep (headline feature) |
-| C10 | Images and assets (relative paths, `public/`, hashed) | Present | Keep; fix root-relative links ignoring `base` |
-| C11 | Includes, math, Mermaid | Missing | Out: 1.1, as Expressive Markdown semantic types (Decision 6) |
+| C10 | Images and assets (relative paths, `public/`, hashed) | Present | Keep; root-relative links resolve under `base` |
+| C11 | Includes, math, Mermaid | Math done: Expressive Markdown `math` and `inlineMath`, typeset as MathML at build time. Includes and Mermaid missing | Out: 1.1, as Expressive Markdown semantic types (Decision 6) |
 
 ### Navigation
 

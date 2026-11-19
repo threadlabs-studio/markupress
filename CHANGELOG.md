@@ -2,6 +2,7 @@
 
 ## 0.18.0
 
+- The guide's Embeds page builds a YouTube embed as an HTML Next component, with a typed `video` prop and a lazy-loaded `youtube-nocookie.com` frame.
 - Require MarkupKit 0.6.0 for semantic version routes and isolated navigation queries, and Looma 0.51.4 for navigation disclosure spacing and theme-aware content/chrome surfaces.
 
 - **Breaking:** The default documentation version now lives only at the locale root. Current links use `/guide/` or `/fr/guide/`; reserve `/v/<id>/` for historical versions, including semantic version IDs such as `1.2.3`. Update bookmarks and integrations that used `/v/current/`.
@@ -13,6 +14,12 @@
 All notable changes to this project will be documented in this file.
 
 ## Next release
+
+- Typeset math: inline `$…$`, display math between `$$` lines and `math` fences render as native MathML at build time, with the TeX kept as an annotation. Pages load no math script or font. TeX that cannot be read fails the build, naming the page and formula. Requires expressmark >=0.7.0.
+- Code fences take `added`, `removed` and `focus` line attributes. Added and removed lines render as `<ins>` and `<del>` with a sign beside each, and `focus` dims the other lines until the reader hovers over or focuses the block.
+- **Breaking:** Component roots render with the `component` attribute, from HTML Next alpha.81. Update site CSS and scripts that select `[data-component~="markupress-header"]` or another component identity to `[component~="markupress-header"]`. Markupress theme selectors and controllers read both attributes, and `component` takes precedence.
+- Qualify HTML Next alpha.91 and Looma 0.52.11. Developing Markupress requires HTML Next alpha.81 for its canonical identity checks and public site styles; the published peer minimums are HTML Next alpha.74 and Looma 0.51.4.
+- Hide the public site's header title text through its canonical component identity, so the wordmark appears once.
 
 - Give Markdown headings their visible text as an accessible name so screen readers announce it once while heading permalinks remain keyboard accessible.
 
