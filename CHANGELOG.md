@@ -13,7 +13,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Next release
+## 0.18.10
 
 - Typeset math: inline `$…$`, display math between `$$` lines and `math` fences render as native MathML at build time, with the TeX kept as an annotation. Pages load no math script or font. TeX that cannot be read fails the build, naming the page and formula. Requires expressmark >=0.7.0.
 - Code fences take `added`, `removed` and `focus` line attributes. Added and removed lines render as `<ins>` and `<del>` with a sign beside each, and `focus` dims the other lines until the reader hovers over or focuses the block.
